@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Add Maintenance - {{ equipment.name }}{% endblock %}
+{% block header %}Log Maintenance for {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="maintenance-log-container">
+    <form method="POST" action="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" enctype="multipart/form-data" class="maintenance-form">
+        
+        <div class="form-section">
+            <h3>Service Information</h3>
+            
+            <div class="form-group">
+                <label for="service_type">Service Type *</label>
+                <select id="service_type" name="service_type" required>
+                    <option value="">Select Service Type</option>
+                    {% for service in service_types %}
+                    <option value="{{ service }}">{{ service }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="service_date">Service Date *</label>
+                    <input type="date" id="service_date" name="service_date" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="performed_by">Performed By</label>
+                    <input type="text" id="performed_by" name="performed_by" value="Self" placeholder="Self or shop name">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Current Readings</h3>
+            
+            <div class="form-row">
+                {% if equipment.category == 'Auto' %}
+                <div class="form-group">
+                    <label for="mileage_at_service">Current Mileage</label>
+                    <input type="number" id="mileage_at_service" name="mileage_at_service" 
+                           value="{{ equipment.mileage or '' }}" placeholder="Current mileage">
+                </div>
+                {% else %}
+                <div class="form-group">
+                    <label for="hours_at_service">Current Hours</label>
+                    <input type="number" step="0.1" id="hours_at_service" name="hours_at_service" 
+                           value="{{ equipment.hours or '' }}" placeholder="Current hours">
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="cost">Cost ($)</label>
+                    <input type="number" step="0.01" id="cost" name="cost" placeholder="Service cost">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Service Details</h3>
+            
+            <div class="form-group">
+                <label for="parts_used">Parts Used</label>
+                <textarea id="parts_used" name="parts_used" rows="2" placeholder="List parts used (filters, oil type, etc.)"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Service Notes</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Any notes about the service"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Next Service</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="next_service_months">Next Service In (Months)</label>
+                    <input type="number" id="next_service_months" name="next_service_months" placeholder="e.g., 6">
+                </div>
+                
+                {% if equipment.category == 'Auto' %}
+                <div class="form-group">
+                    <label for="next_service_mileage">Or At Mileage</label>
+                    <input type="number" id="next_service_mileage" name="next_service_mileage" placeholder="e.g., 85000">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Photos</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="before_photo">Before Photo</label>
+                    <input type="file" id="before_photo" name="before_photo" accept="image/*">
+                    <input type="text" name="before_photo_caption" placeholder="Caption (optional)" class="caption-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="after_photo">After Photo</label>
+                    <input type="file" id="after_photo" name="after_photo" accept="image/*">
+                    <input type="text" name="after_photo_caption" placeholder="Caption (optional)" class="caption-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="receipt_photo">Receipt Photo</label>
+                    <input type="file" id="receipt_photo" name="receipt_photo" accept="image/*">
+                    <input type="text" name="receipt_photo_caption" placeholder="Caption (optional)" class="caption-input">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Maintenance Record</button>
+            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.maintenance-log-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.maintenance-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.caption-input {
+    margin-top: 5px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+</style>
+{% endblock %}

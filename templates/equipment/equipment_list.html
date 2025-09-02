@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Equipment - {{ category }}{% endblock %}
+{% block header %}{{ category }} Equipment{% endblock %}
+
+{% block content %}
+<div class="equipment-list-container">
+    <div class="list-header">
+        <h2>{{ category if category != 'all' else 'All' }} Equipment</h2>
+        <div class="list-actions">
+            <a href="{{ url_for('equipment.add') }}" class="btn btn-primary">➕ Add New</a>
+            <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+    </div>
+    
+    <div class="category-tabs">
+        <a href="{{ url_for('equipment.by_category', category='all') }}" 
+           class="tab {{ 'active' if category == 'all' }}">All</a>
+        {% for cat in categories %}
+        <a href="{{ url_for('equipment.by_category', category=cat) }}" 
+           class="tab {{ 'active' if category == cat }}">{{ cat }}</a>
+        {% endfor %}
+    </div>
+    
+    <div class="equipment-table">
+        {% if equipment %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Make/Model</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                    <th>Last Service</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in equipment %}
+                <tr>
+                    <td>
+                        {% if item.profile_photo %}
+                        <img src="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + item.profile_photo) }}" 
+                             alt="{{ item.name }}" class="table-photo">
+                        {% else %}
+                        <div class="table-no-photo">📷</div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.make or '' }} {{ item.model or '' }}</td>
+                    <td>{{ item.year or 'N/A' }}</td>
+                    <td>
+                        <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+                    </td>
+                    <td>
+                        {% if item.maintenance_records %}
+                            {{ item.maintenance_records[0].service_date.strftime('%m/%d/%Y') }}
+                        {% else %}
+                            No records
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="table-actions">
+                            <a href="{{ url_for('equipment.detail', id=item.id) }}" class="btn-small">View</a>
+                            <a href="{{ url_for('equipment.add_maintenance', id=item.id) }}" class="btn-small btn-primary">Service</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-equipment">
+            <p>No equipment found in this category.</p>
+            <a href="{{ url_for('equipment.add') }}" class="btn btn-primary">Add Your First Equipment</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.equipment-list-container {
+    padding: 20px;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.list-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.tab {
+    padding: 8px 16px;
+    background: white;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #2c3e50;
+    white-space: nowrap;
+    transition: all 0.3s;
+}
+
+.tab:hover {
+    background: #ecf0f1;
+}
+
+.tab.active {
+    background: #3498db;
+    color: white;
+}
+
+.equipment-table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #34495e;
+    color: white;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+tbody tr {
+    border-bottom: 1px solid #ecf0f1;
+}
+
+tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.table-photo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.table-no-photo {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ecf0f1;
+    border-radius: 4px;
+    font-size: 1.5rem;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.status-active {
+    background: #2ecc71;
+    color: white;
+}
+
+.status-storage {
+    background: #95a5a6;
+    color: white;
+}
+
+.status-needs_repair {
+    background: #e74c3c;
+    color: white;
+}
+
+.table-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    background: #95a5a6;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.btn-small.btn-primary {
+    background: #3498db;
+}
+
+.btn-small:hover {
+    opacity: 0.8;
+}
+
+.no-equipment {
+    padding: 40px;
+    text-align: center;
+}
+
+.no-equipment p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .equipment-table {
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 600px;
+    }
+}
+</style>
+{% endblock %}

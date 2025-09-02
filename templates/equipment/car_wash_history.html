@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}Car Wash History - {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="car-wash-history-container">
+    <div class="page-header">
+        <div class="header-info">
+            <h2>Car Wash History</h2>
+            <p class="equipment-info">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" class="btn btn-primary">
+                + Add Car Wash
+            </a>
+            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">
+                Back to Equipment
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="card-icon">🚗</div>
+            <div class="card-content">
+                <div class="card-value">{{ washes|length }}</div>
+                <div class="card-label">Total Washes</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon">💰</div>
+            <div class="card-content">
+                <div class="card-value">${{ "%.2f"|format(total_spent) }}</div>
+                <div class="card-label">Total Spent</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+                <div class="card-value">${{ "%.2f"|format(avg_cost) }}</div>
+                <div class="card-label">Average Cost</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon">📅</div>
+            <div class="card-content">
+                <div class="card-value">{{ days_since_last }}</div>
+                <div class="card-label">Days Since Last</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Options -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Filter by Type:</label>
+            <select id="typeFilter" onchange="filterWashes()">
+                <option value="all">All Types</option>
+                {% for wash_type in wash_types %}
+                <option value="{{ wash_type }}">{{ wash_type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Time Period:</label>
+            <select id="periodFilter" onchange="filterWashes()">
+                <option value="all">All Time</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 3 Months</option>
+                <option value="180">Last 6 Months</option>
+                <option value="365">Last Year</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Car Wash Timeline -->
+    <div class="washes-timeline">
+        {% if washes %}
+            {% for wash in washes %}
+            <div class="wash-card" data-type="{{ wash.wash_type }}" data-date="{{ wash.date }}">
+                <div class="wash-date">
+                    <div class="date-month">{{ wash.date.strftime('%b') }}</div>
+                    <div class="date-day">{{ wash.date.strftime('%d') }}</div>
+                    <div class="date-year">{{ wash.date.strftime('%Y') }}</div>
+                </div>
+                
+                <div class="wash-content">
+                    <div class="wash-header">
+                        <h3>{{ wash.wash_type }}</h3>
+                        <span class="wash-cost">${{ "%.2f"|format(wash.cost) }}</span>
+                    </div>
+                    
+                    <div class="wash-details">
+                        <div class="detail-item">
+                            <span class="detail-icon">📍</span>
+                            <span>{{ wash.location }}</span>
+                        </div>
+                        
+                        {% if wash.services %}
+                        <div class="detail-item services">
+                            <span class="detail-icon">✅</span>
+                            <span>{{ wash.services }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if wash.notes %}
+                        <div class="detail-item notes">
+                            <span class="detail-icon">📝</span>
+                            <span>{{ wash.notes }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="wash-actions">
+                        {% if wash.photo %}
+                        <a href="{{ url_for('static', filename='uploads/' + wash.photo) }}" target="_blank" class="action-btn view-photo">
+                            📷 Photo
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('equipment.edit_car_wash', id=wash.id) }}" class="action-btn edit">
+                            ✏️ Edit
+                        </a>
+                        <form method="POST" action="{{ url_for('equipment.delete_car_wash', id=wash.id) }}" style="display: inline;" onsubmit="return confirm('Delete this car wash record?');">
+                            <button type="submit" class="action-btn delete">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🚿</div>
+                <h3>No Car Washes Recorded</h3>
+                <p>Start tracking your car washes to monitor cleanliness and costs.</p>
+                <a href="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" class="btn btn-primary">
+                    Add First Car Wash
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Wash Type Distribution -->
+    {% if washes %}
+    <div class="statistics-section">
+        <h3>Wash Type Distribution</h3>
+        <div class="type-distribution">
+            {% for wash_type, data in type_stats.items() %}
+            <div class="type-stat">
+                <div class="stat-header">
+                    <span class="type-name">{{ wash_type }}</span>
+                    <span class="type-count">{{ data.count }} washes</span>
+                </div>
+                <div class="stat-bar">
+                    <div class="bar-fill" style="width: {{ (data.count / washes|length * 100) }}%"></div>
+                </div>
+                <div class="stat-info">
+                    <span>Total: ${{ "%.2f"|format(data.total) }}</span>
+                    <span>Avg: ${{ "%.2f"|format(data.avg) }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Monthly Trend -->
+        <h3>Monthly Spending Trend</h3>
+        <div class="monthly-trend">
+            {% for month, amount in monthly_spending.items() %}
+            <div class="month-bar">
+                <div class="bar" style="height: {{ (amount / max_monthly * 100) if max_monthly else 0 }}%">
+                    <span class="amount">${{ "%.0f"|format(amount) }}</span>
+                </div>
+                <div class="month-label">{{ month }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function filterWashes() {
+    const typeFilter = document.getElementById('typeFilter').value;
+    const periodFilter = parseInt(document.getElementById('periodFilter').value);
+    const cards = document.querySelectorAll('.wash-card');
+    const today = new Date();
+    
+    cards.forEach(card => {
+        let showType = typeFilter === 'all' || card.dataset.type === typeFilter;
+        let showPeriod = true;
+        
+        if (periodFilter !== 'all' && !isNaN(periodFilter)) {
+            const washDate = new Date(card.dataset.date);
+            const daysDiff = (today - washDate) / (1000 * 60 * 60 * 24);
+            showPeriod = daysDiff <= periodFilter;
+        }
+        
+        card.style.display = (showType && showPeriod) ? 'flex' : 'none';
+    });
+}
+</script>
+
+<style>
+.car-wash-history-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-info h2 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.equipment-info {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.card-icon {
+    font-size: 32px;
+}
+
+.card-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.card-label {
+    color: #7f8c8d;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-top: 5px;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-group label {
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.filter-group select {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Washes Timeline */
+.washes-timeline {
+    margin-bottom: 30px;
+}
+
+.wash-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    display: flex;
+    overflow: hidden;
+}
+
+.wash-date {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.date-month {
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.date-day {
+    font-size: 32px;
+    font-weight: bold;
+    line-height: 1;
+    margin: 5px 0;
+}
+
+.date-year {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.wash-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.wash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.wash-header h3 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.wash-cost {
+    font-size: 20px;
+    font-weight: bold;
+    color: #27ae60;
+}
+
+.wash-details {
+    margin-bottom: 15px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #5d6d7e;
+    font-size: 14px;
+}
+
+.detail-icon {
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.detail-item.services span:last-child {
+    color: #3498db;
+}
+
+.detail-item.notes span:last-child {
+    font-style: italic;
+}
+
+.wash-actions {
+    display: flex;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.action-btn {
+    padding: 5px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.action-btn.view-photo {
+    background: #9b59b6;
+    color: white;
+}
+
+.action-btn.edit {
+    background: #3498db;
+    color: white;
+}
+
+.action-btn.delete {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+/* Statistics Section */
+.statistics-section {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.statistics-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.type-distribution {
+    margin-bottom: 40px;
+}
+
+.type-stat {
+    margin-bottom: 20px;
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.type-name {
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.type-count {
+    color: #7f8c8d;
+}
+
+.stat-bar {
+    height: 20px;
+    background: #ecf0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.stat-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+/* Monthly Trend */
+.monthly-trend {
+    display: flex;
+    align-items: flex-end;
+    height: 200px;
+    gap: 10px;
+    padding: 20px 0;
+    overflow-x: auto;
+}
+
+.month-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 50px;
+    flex: 1;
+}
+
+.month-bar .bar {
+    width: 100%;
+    background: linear-gradient(180deg, #3498db, #2980b9);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    min-height: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.month-bar .amount {
+    position: absolute;
+    top: -20px;
+    font-size: 11px;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.month-label {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wash-card {
+        flex-direction: column;
+    }
+    
+    .wash-date {
+        flex-direction: row;
+        gap: 10px;
+        padding: 15px;
+    }
+    
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .filter-bar {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+</style>
+{% endblock %}

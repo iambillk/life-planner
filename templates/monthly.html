@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Monthly View{% endblock %}
+{% block header %}Monthly View - {{ current_month }}{% endblock %}
+
+{% block content %}
+<div class="monthly-container">
+    <div class="month-overview">
+        <h3>{{ current_month }}</h3>
+        <div class="tasks-summary">
+            <p>Total Tasks: {{ tasks|length }}</p>
+            <p>Completed: {{ tasks|selectattr('completed')|list|length }}</p>
+            <p>Pending: {{ tasks|rejectattr('completed')|list|length }}</p>
+        </div>
+    </div>
+    
+    <div class="month-tasks">
+        {% for task in tasks %}
+        <div class="task-row {{ 'completed' if task.completed }}">
+            <span class="task-date">{{ task.date.strftime('%m/%d') }}</span>
+            <span class="task-text">{{ task.task }}</span>
+            <span class="task-priority priority-{{ task.priority }}">{{ task.priority }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="month-actions">
+        <a href="{{ url_for('weekly.index') }}" class="btn btn-secondary">Back to Weekly View</a>
+    </div>
+</div>
+
+<style>
+.monthly-container {
+    padding: 20px;
+}
+
+.month-overview {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tasks-summary {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.tasks-summary p {
+    color: #7f8c8d;
+}
+
+.month-tasks {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.task-row {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.task-row.completed {
+    opacity: 0.6;
+}
+
+.task-row.completed .task-text {
+    text-decoration: line-through;
+}
+
+.task-date {
+    width: 80px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.task-text {
+    flex: 1;
+    color: #2c3e50;
+}
+
+.task-priority {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.priority-low {
+    background: #95a5a6;
+    color: white;
+}
+
+.priority-medium {
+    background: #f39c12;
+    color: white;
+}
+
+.priority-high {
+    background: #e74c3c;
+    color: white;
+}
+
+.month-actions {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.btn {
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,57 @@
+from flask import Flask, redirect, url_for
+from config import Config
+from models.base import db
+from datetime import datetime
+import os
+
+def create_app():
+    """Application factory pattern"""
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    
+    # Initialize database
+    db.init_app(app)
+    
+    # Create upload directories
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'equipment_profiles'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'maintenance_photos'), exist_ok=True)
+    
+    # Context processors
+    @app.context_processor
+    def inject_datetime():
+        return {'datetime': datetime}
+    
+    # Register blueprints
+    register_blueprints(app)
+    
+    # Root route
+    @app.route('/')
+    def index():
+        return redirect(url_for('daily.index'))
+    
+    # Create database tables
+    with app.app_context():
+        db.create_all()
+    
+    return app
+
+def register_blueprints(app):
+    """Register all module blueprints"""
+    from modules.daily import daily_bp
+    from modules.equipment import equipment_bp
+    from modules.projects import projects_bp
+    from modules.health import health_bp
+    from modules.weekly import weekly_bp
+    from modules.goals import goals_bp
+    
+    app.register_blueprint(daily_bp, url_prefix='/daily')
+    app.register_blueprint(equipment_bp, url_prefix='/equipment')
+    app.register_blueprint(projects_bp, url_prefix='/projects')
+    app.register_blueprint(health_bp, url_prefix='/health')
+    app.register_blueprint(weekly_bp, url_prefix='/weekly')
+    app.register_blueprint(goals_bp, url_prefix='/goals')
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Add Car Wash - {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="car-wash-container">
+    <div class="page-header">
+        <h2>Add Car Wash</h2>
+        <p class="equipment-info">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }}</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" enctype="multipart/form-data" class="car-wash-form">
+        
+        <!-- Quick Select Wash Types -->
+        <div class="form-section">
+            <h3>Wash Type</h3>
+            <div class="wash-type-grid">
+                <button type="button" class="wash-btn" onclick="setWashType('Basic Wash', 10)">
+                    🚿 Basic Wash
+                    <span class="price-hint">~$10</span>
+                </button>
+                <button type="button" class="wash-btn" onclick="setWashType('Deluxe Wash', 15)">
+                    ✨ Deluxe Wash
+                    <span class="price-hint">~$15</span>
+                </button>
+                <button type="button" class="wash-btn" onclick="setWashType('Premium Wash', 20)">
+                    💎 Premium Wash
+                    <span class="price-hint">~$20</span>
+                </button>
+                <button type="button" class="wash-btn" onclick="setWashType('Full Detail', 100)">
+                    🎯 Full Detail
+                    <span class="price-hint">~$100+</span>
+                </button>
+                <button type="button" class="wash-btn" onclick="setWashType('Interior Only', 30)">
+                    🪑 Interior Only
+                    <span class="price-hint">~$30</span>
+                </button>
+                <button type="button" class="wash-btn" onclick="setWashType('Self Service', 5)">
+                    🪣 Self Service
+                    <span class="price-hint">~$5</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Wash Details -->
+        <div class="form-section">
+            <h3>Wash Details</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="wash_type">Wash Type*</label>
+                    <input type="text" id="wash_type" name="wash_type" required 
+                           placeholder="e.g., Premium Wash, Full Detail">
+                </div>
+                <div class="form-group">
+                    <label for="location">Location*</label>
+                    <input type="text" id="location" name="location" required
+                           placeholder="e.g., Mike's Car Wash, Home">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="date">Date*</label>
+                    <input type="date" id="date" name="date" required
+                           value="{{ today }}">
+                </div>
+                <div class="form-group">
+                    <label for="cost">Cost ($)*</label>
+                    <input type="number" step="0.01" id="cost" name="cost" required
+                           placeholder="0.00">
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Included -->
+        <div class="form-section">
+            <h3>Services Included</h3>
+            <div class="services-grid">
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Exterior Wash">
+                    <span>🚗 Exterior Wash</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Wheel Cleaning">
+                    <span>🛞 Wheel Cleaning</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Tire Shine">
+                    <span>✨ Tire Shine</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Interior Vacuum">
+                    <span>🔌 Interior Vacuum</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Dashboard Clean">
+                    <span>🧽 Dashboard Clean</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Window Cleaning">
+                    <span>🪟 Window Cleaning</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Floor Mats">
+                    <span>🦶 Floor Mats</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Air Freshener">
+                    <span>🌸 Air Freshener</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Wax">
+                    <span>🛡️ Wax</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Undercarriage">
+                    <span>🔧 Undercarriage</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Rain-X">
+                    <span>💧 Rain-X</span>
+                </label>
+                <label class="service-item">
+                    <input type="checkbox" name="services" value="Leather Treatment">
+                    <span>🪑 Leather Treatment</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="form-section">
+            <h3>Additional Information</h3>
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3"
+                          placeholder="e.g., Used coupon, monthly unlimited plan, before road trip"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="photo">Photo (optional)</label>
+                <input type="file" id="photo" name="photo" accept="image/*">
+                <small>Capture that clean car shine!</small>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Car Wash</button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Set wash type and suggested price
+function setWashType(type, suggestedPrice) {
+    document.getElementById('wash_type').value = type;
+    document.getElementById('cost').value = suggestedPrice;
+    
+    // Visual feedback
+    document.querySelectorAll('.wash-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.closest('.wash-btn').classList.add('active');
+    
+    // Auto-check common services based on wash type
+    const serviceMap = {
+        'Basic Wash': ['Exterior Wash'],
+        'Deluxe Wash': ['Exterior Wash', 'Wheel Cleaning', 'Tire Shine'],
+        'Premium Wash': ['Exterior Wash', 'Wheel Cleaning', 'Tire Shine', 'Interior Vacuum', 'Window Cleaning'],
+        'Full Detail': ['Exterior Wash', 'Wheel Cleaning', 'Tire Shine', 'Interior Vacuum', 'Dashboard Clean', 'Window Cleaning', 'Floor Mats', 'Wax'],
+        'Interior Only': ['Interior Vacuum', 'Dashboard Clean', 'Window Cleaning', 'Floor Mats'],
+        'Self Service': ['Exterior Wash']
+    };
+    
+    // Uncheck all first
+    document.querySelectorAll('input[name="services"]').forEach(cb => {
+        cb.checked = false;
+    });
+    
+    // Check appropriate services
+    if (serviceMap[type]) {
+        serviceMap[type].forEach(service => {
+            const checkbox = document.querySelector(`input[name="services"][value="${service}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+}
+
+// Set today's date as default
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('date').value) {
+        document.getElementById('date').valueAsDate = new Date();
+    }
+});
+</script>
+
+<style>
+.car-wash-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 30px;
+}
+
+.page-header h2 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.equipment-info {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.car-wash-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+/* Wash Type Grid */
+.wash-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.wash-btn {
+    padding: 15px 10px;
+    background: #ecf0f1;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.wash-btn:hover {
+    background: #d5dbdd;
+    transform: translateY(-2px);
+}
+
+.wash-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #2980b9;
+}
+
+.price-hint {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Services Grid */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.service-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.service-item:hover {
+    background: #e9ecef;
+}
+
+.service-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.service-item input[type="checkbox"]:checked + span {
+    font-weight: 600;
+    color: #27ae60;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 12px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .car-wash-form {
+        padding: 20px;
+    }
+    
+    .wash-type-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

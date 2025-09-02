@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}TCH Projects{% endblock %}
+{% block header %}TCH Work Projects{% endblock %}
+
+{% block content %}
+<div class="projects-container">
+    <div class="add-project-form">
+        <h3>Add New Project</h3>
+        <form method="POST" action="{{ url_for('projects.add_tch') }}">
+            <input type="text" name="name" placeholder="Project Name" required>
+            <textarea name="description" placeholder="Project Description"></textarea>
+            <input type="date" name="deadline">
+            <button type="submit">Add Project</button>
+        </form>
+    </div>
+
+    <div class="projects-grid">
+        {% if projects %}
+            {% for project in projects %}
+            <div class="project-card">
+                <h3>{{ project.name }}</h3>
+                <p>{{ project.description or 'No description' }}</p>
+                <div class="project-meta">
+                    <span class="status status-{{ project.status }}">{{ project.status }}</span>
+                    {% if project.deadline %}
+                    <span class="deadline">Due: {{ project.deadline.strftime('%b %d, %Y') }}</span>
+                    {% endif %}
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ project.progress }}%"></div>
+                    </div>
+                    <form method="POST" action="{{ url_for('projects.update_tch_progress', id=project.id) }}" class="progress-form">
+                        <select name="progress" onchange="this.form.submit()">
+                            <option value="0" {% if project.progress == 0 %}selected{% endif %}>0%</option>
+                            <option value="25" {% if project.progress == 25 %}selected{% endif %}>25%</option>
+                            <option value="50" {% if project.progress == 50 %}selected{% endif %}>50%</option>
+                            <option value="75" {% if project.progress == 75 %}selected{% endif %}>75%</option>
+                            <option value="100" {% if project.progress == 100 %}selected{% endif %}>100%</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="grid-column: 1/-1; text-align: center; color: #7f8c8d;">No TCH projects yet. Add one above!</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.projects-container {
+    padding: 20px;
+}
+
+.add-project-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-project-form form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.add-project-form input[type="text"],
+.add-project-form input[type="date"],
+.add-project-form textarea {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-project-form textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+.add-project-form button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.project-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.project-card h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.project-meta {
+    margin: 15px 0;
+}
+
+.status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.status-active {
+    background: #2ecc71;
+    color: white;
+}
+
+.deadline {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.progress-container {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    background: #ecf0f1;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    background: #3498db;
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.progress-form select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ equipment.name }}{% endblock %}
+{% block header %}Edit {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="edit-equipment-container">
+    <form method="POST" action="{{ url_for('equipment.edit', id=equipment.id) }}" class="equipment-form">
+        <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+                <label for="name">Equipment Name *</label>
+                <input type="text" id="name" name="name" value="{{ equipment.name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" name="category" required>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if equipment.category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="make">Make</label>
+                    <input type="text" id="make" name="make" value="{{ equipment.make or '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="model">Model</label>
+                    <input type="text" id="model" name="model" value="{{ equipment.model or '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <input type="number" id="year" name="year" value="{{ equipment.year or '' }}" min="1900" max="2099">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Current Status</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="active" {% if equipment.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="storage" {% if equipment.status == 'storage' %}selected{% endif %}>In Storage</option>
+                        <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>Under Maintenance</option>
+                        <option value="needs_repair" {% if equipment.status == 'needs_repair' %}selected{% endif %}>Needs Repair</option>
+                        <option value="retired" {% if equipment.status == 'retired' %}selected{% endif %}>Retired</option>
+                        <option value="sold" {% if equipment.status == 'sold' %}selected{% endif %}>Sold</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Storage Location</label>
+                    <input type="text" id="location" name="location" value="{{ equipment.location or '' }}">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                {% if equipment.category == 'Auto' %}
+                <div class="form-group">
+                    <label for="mileage">Current Mileage</label>
+                    <input type="number" id="mileage" name="mileage" value="{{ equipment.mileage or '' }}">
+                </div>
+                {% else %}
+                <div class="form-group">
+                    <label for="hours">Current Hours</label>
+                    <input type="number" step="0.1" id="hours" name="hours" value="{{ equipment.hours or '' }}">
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="serial_number">Serial Number</label>
+                    <input type="text" id="serial_number" name="serial_number" value="{{ equipment.serial_number or '' }}">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3">{{ equipment.notes or '' }}</textarea>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.edit-equipment-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.equipment-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .equipment-form {
+        padding: 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

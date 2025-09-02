@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Add Fuel - {{ equipment.name }}{% endblock %}
+{% block header %}Log Fuel Purchase for {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="fuel-log-container">
+    <form method="POST" action="{{ url_for('equipment.add_fuel', id=equipment.id) }}" enctype="multipart/form-data" class="fuel-form">
+        
+        <div class="form-section">
+            <h3>Station Information</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="station_name">Station Name</label>
+                    <input type="text" id="station_name" name="station_name" placeholder="e.g., Shell">
+                </div>
+                
+                <div class="form-group">
+                    <label for="station_location">Location</label>
+                    <input type="text" id="station_location" name="station_location" placeholder="e.g., Main St & 5th">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Fuel Details</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fuel_type">Fuel Type</label>
+                    <select id="fuel_type" name="fuel_type">
+                        <option value="Regular (87)">Regular (87)</option>
+                        <option value="Mid-Grade (89)">Mid-Grade (89)</option>
+                        <option value="Premium (91+)">Premium (91+)</option>
+                        <option value="Diesel">Diesel</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gallons">Gallons *</label>
+                    <input type="number" step="0.001" id="gallons" name="gallons" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="price_per_gallon">Price per Gallon *</label>
+                    <input type="number" step="0.001" id="price_per_gallon" name="price_per_gallon" required 
+                           onchange="calculateTotal()">
+                </div>
+                
+                <div class="form-group">
+                    <label for="total_cost">Total Cost *</label>
+                    <input type="number" step="0.01" id="total_cost" name="total_cost" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Mileage & Trip</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="odometer">Current Odometer</label>
+                    <input type="number" id="odometer" name="odometer" 
+                           value="{{ last_odometer or '' }}" 
+                           placeholder="Current mileage">
+                    {% if last_odometer %}
+                    <small>Last recorded: {{ last_odometer }}</small>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="trip_purpose">Trip Purpose</label>
+                    <select id="trip_purpose" name="trip_purpose">
+                        <option value="Personal">Personal</option>
+                        <option value="Business">Business</option>
+                        <option value="Mixed">Mixed</option>
+                        <option value="Commute">Commute</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="2" placeholder="Any notes about this fill-up"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Receipt</h3>
+            
+            <div class="form-group">
+                <label for="receipt">Upload Receipt</label>
+                <input type="file" id="receipt" name="receipt" accept="image/*,application/pdf">
+                <small>Upload a photo or PDF of your receipt</small>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Fuel Purchase</button>
+            <a href="{{ url_for('equipment.fuel_history', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function calculateTotal() {
+    const gallons = parseFloat(document.getElementById('gallons').value) || 0;
+    const pricePerGallon = parseFloat(document.getElementById('price_per_gallon').value) || 0;
+    const total = (gallons * pricePerGallon).toFixed(2);
+    document.getElementById('total_cost').value = total;
+}
+
+// Auto-calculate when gallons change too
+document.getElementById('gallons').addEventListener('change', calculateTotal);
+</script>
+
+<style>
+.fuel-log-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.fuel-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 12px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billas Planner 1.0 Beta - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>📋 Billas Planner 1.0 Beta</h2>
+                <p class="sidebar-date">{{ datetime.now().strftime('%B %d, %Y') }}</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('daily.index') }}" class="nav-item {{ 'active' if active == 'daily' }}">
+                    <span class="icon">📅</span>
+                    <span>Daily Planner</span>
+                </a>
+                <a href="{{ url_for('weekly.index') }}" class="nav-item {{ 'active' if active == 'weekly' }}">
+                    <span class="icon">📆</span>
+                    <span>Weekly/Monthly</span>
+                </a>
+                <a href="{{ url_for('projects.tch_index') }}" class="nav-item {{ 'active' if active == 'tch' }}">
+                    <span class="icon">💼</span>
+                    <span>TCH Projects</span>
+                </a>
+                <a href="{{ url_for('projects.personal_index') }}" class="nav-item {{ 'active' if active == 'personal' }}">
+                    <span class="icon">🏠</span>
+                    <span>Personal Projects</span>
+                </a>
+                <a href="{{ url_for('equipment.index') }}" class="nav-item {{ 'active' if active == 'equipment' }}">
+                    <span class="icon">🔧</span>
+                    <span>Equipment Center</span>
+                </a>
+                <a href="{{ url_for('goals.index') }}" class="nav-item {{ 'active' if active == 'goals' }}">
+                    <span class="icon">🎯</span>
+                    <span>Goal Tracking</span>
+                </a>
+                <a href="{{ url_for('health.weight_index') }}" class="nav-item {{ 'active' if active == 'weight' }}">
+                    <span class="icon">⚖️</span>
+                    <span>Weight Loss</span>
+                </a>
+            </nav>
+            
+            <!-- Optional: Quick Stats Section -->
+            <div class="sidebar-footer">
+                <div class="quick-stats">
+                    <p>Quick Stats</p>
+                    <small>Today's Tasks: <span id="task-count">0</span></small>
+                    <small>Active Projects: <span id="project-count">0</span></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1>{% block header %}{% endblock %}</h1>
+                <div class="top-bar-actions">
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">
+                                {{ message }}
+                                <button onclick="this.parentElement.remove()" class="flash-close">&times;</button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <div class="date-time">
+                        <span id="current-time">{{ datetime.now().strftime('%I:%M %p') }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Page Content -->
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Optional: JavaScript for live time update -->
+    <script>
+        // Update time every minute
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
+        
+        // Update immediately and then every minute
+        updateTime();
+        setInterval(updateTime, 60000);
+        
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            const flashes = document.querySelectorAll('.flash');
+            flashes.forEach(flash => {
+                flash.style.transition = 'opacity 0.5s';
+                flash.style.opacity = '0';
+                setTimeout(() => flash.remove(), 500);
+            });
+        }, 5000);
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

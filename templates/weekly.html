@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Weekly View{% endblock %}
+{% block header %}Weekly/Monthly View{% endblock %}
+
+{% block content %}
+<div class="weekly-container">
+    <h3>This Week's Overview</h3>
+    <div class="week-grid">
+        {% set days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        {% for day in days %}
+        <div class="day-card">
+            <h4>{{ day }}</h4>
+            <div class="day-tasks">
+                {% for task in tasks %}
+                    {% if task.date.weekday() == loop.index0 %}
+                    <div class="mini-task {{ 'completed' if task.completed }}">
+                        {{ task.task }}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.day-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.day-card h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #3498db;
+}
+
+.mini-task {
+    padding: 5px;
+    margin: 5px 0;
+    background: #ecf0f1;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.mini-task.completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+</style>
+{% endblock %}

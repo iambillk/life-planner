@@ -1,0 +1,1075 @@
+{% extends "base.html" %}
+{% block title %}{{ equipment.name }}{% endblock %}
+{% block header %}{{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="equipment-detail">
+    <!-- ==================== SECTION 1: EQUIPMENT INFO CARD ==================== -->
+    <div class="info-section">
+        <!-- Left side: Photo and upload -->
+        <div class="photo-section">
+            {% if equipment.profile_photo %}
+            <img src="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + equipment.profile_photo) }}" 
+                 alt="{{ equipment.name }}" class="main-photo">
+            {% else %}
+            <div class="no-photo-large">📷</div>
+            {% endif %}
+            
+            <!-- Photo Upload Form -->
+            <form action="{{ url_for('equipment.upload_photo', id=equipment.id) }}" method="POST" enctype="multipart/form-data" class="photo-upload">
+                <div class="form-group">
+                    <label for="photo" class="file-label">Choose Photo</label>
+                    <input type="file" id="photo" name="photo" accept="image/*" required class="file-input">
+                    <span class="file-name">No file selected</span>
+                </div>
+                <input type="text" name="caption" placeholder="Photo caption (optional)" class="caption-input">
+                <button type="submit" class="upload-btn">Upload Photo</button>
+            </form>
+        </div>
+        
+        <!-- Right side: Equipment details and action buttons -->
+        <div class="details-section">
+            <!-- Equipment Details Grid -->
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Category:</label>
+                    <span>{{ equipment.category }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Make:</label>
+                    <span>{{ equipment.make or 'N/A' }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Model:</label>
+                    <span>{{ equipment.model or 'N/A' }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Year:</label>
+                    <span>{{ equipment.year or 'N/A' }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Serial:</label>
+                    <span>{{ equipment.serial_number or 'N/A' }}</span>
+                </div>
+                {% if equipment.mileage %}
+                <div class="detail-item">
+                    <label>Mileage:</label>
+                    <span>{{ "{:,}".format(equipment.mileage) }}</span>
+                </div>
+                {% endif %}
+                {% if equipment.hours %}
+                <div class="detail-item">
+                    <label>Hours:</label>
+                    <span>{{ equipment.hours }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-item">
+                    <label>Location:</label>
+                    <span>{{ equipment.location or 'N/A' }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Status:</label>
+                    <span class="status-badge status-{{ equipment.status }}">{{ equipment.status }}</span>
+                </div>
+            </div>
+            
+            <!-- Notes Section (if exists) -->
+            {% if equipment.notes %}
+            <div class="notes-section">
+                <h4>Notes:</h4>
+                <p>{{ equipment.notes }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ url_for('equipment.edit', id=equipment.id) }}" class="btn btn-secondary">✏️ Edit</a>
+                <a href="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" class="btn btn-primary">➕ Maintenance</a>
+                
+                {% if equipment.category in ['Auto', 'ATV', 'Marine'] %}
+                <a href="{{ url_for('equipment.add_fuel', id=equipment.id) }}" class="btn btn-info">⛽ Add Fuel</a>
+                <a href="{{ url_for('equipment.fuel_history', id=equipment.id) }}" class="btn btn-secondary">📊 Fuel History</a>
+                {% endif %}
+                
+                <a href="{{ url_for('equipment.add_consumable', id=equipment.id) }}" class="btn btn-warning">🛢️ Add Consumable</a>
+                <a href="{{ url_for('equipment.consumables_history', id=equipment.id) }}" class="btn btn-secondary">📋 Consumable History</a>
+                
+                {% if equipment.category == 'Auto' %}
+                <a href="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" class="btn btn-info">🚿 Add Car Wash</a>
+                <a href="{{ url_for('equipment.car_wash_history', id=equipment.id) }}" class="btn btn-secondary">🚿 Car Wash History</a>
+                {% endif %}
+                
+                <a href="{{ url_for('equipment.cost_analysis', id=equipment.id) }}" class="btn btn-success">💰 Cost Analysis</a>
+                <a href="{{ url_for('equipment.export_pdf', id=equipment.id) }}" class="btn btn-info">📄 Export PDF</a>
+                
+                <form action="{{ url_for('equipment.delete', id=equipment.id) }}" method="POST" style="display:inline;" 
+                      onsubmit="return confirm('Are you sure you want to delete this equipment?');">
+                    <button type="submit" class="btn btn-danger">🗑️ Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SECTION 2: NEXT MAINTENANCE DUE ==================== -->
+    {% if next_due %}
+    <div class="next-due-section {{ next_due.status }}">
+        <h3>Next Maintenance Due</h3>
+        <p><strong>{{ next_due.service }}</strong> - {{ next_due.date.strftime('%B %d, %Y') }}</p>
+        <p>
+            {% if next_due.status == 'overdue' %}
+            <span class="badge danger">{{ abs(next_due.days) }} days overdue!</span>
+            {% elif next_due.status == 'upcoming' %}
+            <span class="badge warning">Due in {{ next_due.days }} days</span>
+            {% else %}
+            <span class="badge success">Due in {{ next_due.days }} days</span>
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- ==================== SECTION 3: PHOTO GALLERY ==================== -->
+    {% if photos %}
+    <div class="photo-gallery">
+        <h3>Photo Gallery</h3>
+        <div class="gallery-grid">
+            {% for photo in photos %}
+            <div class="gallery-item">
+                <div class="photo-container">
+                    <img src="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + photo.filename) }}" 
+                         alt="{{ photo.caption or 'Equipment photo' }}" onclick="openModal(this.src)">
+                    <button class="delete-photo-btn" onclick="confirmDeletePhoto({{ photo.id }}, '{{ photo.filename }}')" title="Delete Photo">
+                        ❌
+                    </button>
+                </div>
+                {% if photo.caption %}
+                <p>{{ photo.caption }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ==================== SECTION 4: MAINTENANCE HISTORY ==================== -->
+    <div class="maintenance-history">
+    <div class="section-header">
+        <h3>Maintenance History</h3>
+        <span class="record-count">{{ maintenance_records|length }} records</span>
+    </div>
+    
+    {% if maintenance_records %}
+    <div class="maintenance-timeline">
+        {% for record in maintenance_records %}
+        <div class="maintenance-card">
+            <!-- Date Badge -->
+            <div class="date-badge">
+                <div class="month">{{ record.service_date.strftime('%b') }}</div>
+                <div class="day">{{ record.service_date.strftime('%d') }}</div>
+                <div class="year">{{ record.service_date.strftime('%Y') }}</div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="card-content">
+                <!-- Header with Service Type and Actions -->
+                <div class="card-header">
+                    <h4 class="service-type">
+                        {% if 'Oil' in record.service_type %}
+                            🛢️
+                        {% elif 'Tire' in record.service_type %}
+                            🛞
+                        {% elif 'Brake' in record.service_type %}
+                            🛑
+                        {% elif 'Filter' in record.service_type %}
+                            🌬️
+                        {% else %}
+                            🔧
+                        {% endif %}
+                        {{ record.service_type }}
+                    </h4>
+                    <div class="card-actions">
+                        <a href="{{ url_for('equipment.edit_maintenance', id=equipment.id, record_id=record.id) }}" 
+                           class="action-btn edit-btn" title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </a>
+                        <form method="POST" action="{{ url_for('equipment.delete_maintenance', id=equipment.id, record_id=record.id) }}" 
+                              style="display: inline;" 
+                              onsubmit="return confirm('Delete this maintenance record?');">
+                            <button type="submit" class="action-btn delete-btn" title="Delete">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Service Details Grid -->
+                <div class="service-details">
+                    {% if record.mileage_at_service %}
+                    <div class="detail-item">
+                        <span class="detail-icon">📏</span>
+                        <div class="detail-content">
+                            <span class="detail-label">Mileage</span>
+                            <span class="detail-value">{{ "{:,}".format(record.mileage_at_service) }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if record.cost %}
+                    <div class="detail-item highlight">
+                        <span class="detail-icon">💰</span>
+                        <div class="detail-content">
+                            <span class="detail-label">Cost</span>
+                            <span class="detail-value">${{ "%.2f"|format(record.cost) }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if record.performed_by %}
+                    <div class="detail-item">
+                        <span class="detail-icon">👤</span>
+                        <div class="detail-content">
+                            <span class="detail-label">Performed by</span>
+                            <span class="detail-value">{{ record.performed_by }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if record.parts_used %}
+                    <div class="detail-item full-width">
+                        <span class="detail-icon">🔩</span>
+                        <div class="detail-content">
+                            <span class="detail-label">Parts Used</span>
+                            <span class="detail-value">{{ record.parts_used }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Notes Section -->
+                {% if record.notes %}
+                <div class="notes-section">
+                    <p class="notes-text">{{ record.notes }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Photos Section -->
+                {% if record.photos %}
+                <div class="service-photos">
+                    {% for photo in record.photos %}
+                    <div class="photo-thumb" onclick="openModal('{{ url_for('static', filename='equipment_photos/maintenance_photos/' + photo.filename) }}')">
+                        <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' + photo.filename) }}" 
+                             alt="{{ photo.caption or photo.photo_type }}">
+                        <span class="photo-type">{{ photo.photo_type|title }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🔧</div>
+        <h4>No Maintenance Records Yet</h4>
+        <p>Keep track of all your maintenance to ensure your equipment stays in top condition.</p>
+        <a href="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" class="btn btn-primary">
+            Add First Record
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ==================== PHOTO MODAL ==================== -->
+<div id="photoModal" class="modal" onclick="closeModal()">
+    <img class="modal-content" id="modalImg">
+</div>
+
+<!-- ==================== DELETE CONFIRMATION MODAL ==================== -->
+<div id="deleteModal" class="delete-modal">
+    <div class="delete-modal-content">
+        <h3>Delete Photo?</h3>
+        <p>Are you sure you want to delete this photo? This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button onclick="closeDeleteModal()" class="btn-cancel">Cancel</button>
+            <form id="deletePhotoForm" method="POST" style="display: inline;">
+                <button type="submit" class="btn-delete-confirm">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== STYLES ==================== -->
+<style>
+/* ===== Main Container ===== */
+.equipment-detail {
+    padding: 20px;
+}
+
+/* Status badge colors */
+.status-active { background: #2ecc71; color: white; }
+.status-storage { background: #95a5a6; color: white; }
+.status-maintenance { background: #f39c12; color: white; }
+.status-needs_repair { background: #e67e22; color: white; }
+.status-retired { background: #34495e; color: white; }
+.status-sold { background: #e74c3c; color: white; }
+
+/* ===== Info Section (Top Card) ===== */
+.info-section {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.main-photo {
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.no-photo-large {
+    width: 100%;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ecf0f1;
+    border-radius: 8px;
+    font-size: 4rem;
+}
+
+/* ===== Photo Upload Form ===== */
+.photo-upload {
+    margin-top: 15px;
+}
+
+.photo-upload .form-group {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.file-label {
+    display: inline-block;
+    padding: 8px 15px;
+    background: #3498db;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+    width: 100%;
+}
+
+.file-label:hover {
+    background: #2980b9;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-name {
+    display: block;
+    margin-top: 8px;
+    color: #7f8c8d;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.caption-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.upload-btn {
+    width: 100%;
+    padding: 10px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.upload-btn:hover {
+    background: #2980b9;
+}
+
+/* ===== Details Grid ===== */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.detail-item label {
+    font-weight: bold;
+    color: #7f8c8d;
+    display: block;
+    font-size: 0.9rem;
+}
+
+.detail-item span {
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+/* ===== Status Badges ===== */
+.status-badge {
+    padding: 2px 6px !important;
+    font-size: 0.8rem !important;
+    display: inline-block;
+    border-radius: 4px;
+}
+
+/* ===== Action Buttons ===== */
+.action-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.btn-primary { background: #3498db; color: white; }
+.btn-secondary { background: #95a5a6; color: white; }
+.btn-info { background: #17a2b8; color: white; }
+.btn-warning { background: #ffc107; color: #212529; }
+.btn-success { background: #28a745; color: white; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn:hover { opacity: 0.9; }
+
+/* ===== Small Buttons (Edit in History) ===== */
+.btn-small {
+    padding: 5px 10px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    display: inline-block;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.record-actions {
+    margin-top: 10px;
+}
+
+/* ===== Next Due Section ===== */
+.next-due-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 4px solid;
+}
+
+.next-due-section.overdue {
+    border-color: #e74c3c;
+    background: #ffe6e6;
+}
+
+.next-due-section.upcoming {
+    border-color: #f39c12;
+    background: #fff3cd;
+}
+
+.next-due-section.good {
+    border-color: #2ecc71;
+    background: #e8f8f5;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.badge.danger { background: #e74c3c; color: white; }
+.badge.warning { background: #f39c12; color: white; }
+.badge.success { background: #2ecc71; color: white; }
+
+/* ===== Photo Gallery ===== */
+.photo-gallery {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.photo-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.gallery-item img {
+    width: 100%;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.gallery-item p {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+/* Delete button for photos */
+.delete-photo-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(231, 76, 60, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.delete-photo-btn:hover {
+    background: rgba(192, 57, 43, 1);
+    transform: scale(1.1);
+}
+
+.gallery-item:hover .delete-photo-btn {
+    display: flex;
+}
+
+/* ===== Delete Confirmation Modal ===== */
+.delete-modal {
+    display: none;
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.delete-modal-content {
+    background: white;
+    margin: 15% auto;
+    padding: 30px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.delete-modal-content h3 {
+    color: #e74c3c;
+    margin-bottom: 15px;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn-cancel, .btn-delete-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-delete-confirm {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-cancel:hover { background: #7f8c8d; }
+.btn-delete-confirm:hover { background: #c0392b; }
+
+/* ===== Maintenance History ===== */
+.maintenance-history {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.history-timeline {
+    margin-top: 20px;
+}
+
+.history-item {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.history-date {
+    text-align: right;
+    color: #7f8c8d;
+}
+
+.history-details h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.service-info p {
+    margin: 5px 0;
+    color: #555;
+}
+
+.maintenance-photos {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.thumbnail {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ===== Modal Styles ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    cursor: pointer;
+}
+
+.modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 90%;
+    margin-top: 50px;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 768px) {
+    .info-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+
+<style>
+/* Maintenance History Section */
+.maintenance-history {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 12px;
+    margin-top: 30px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.section-header h3 {
+    color: #2c3e50;
+    font-size: 24px;
+    margin: 0;
+}
+
+.record-count {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Maintenance Card */
+.maintenance-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    display: flex;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.maintenance-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Date Badge */
+.date-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+}
+
+.date-badge .month {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.9;
+    letter-spacing: 1px;
+}
+
+.date-badge .day {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+    margin: 5px 0;
+}
+
+.date-badge .year {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+/* Card Content */
+.card-content {
+    flex: 1;
+    padding: 20px 25px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.service-type {
+    color: #2c3e50;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Action Buttons */
+.card-actions {
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.maintenance-card:hover .card-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.edit-btn {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.edit-btn:hover {
+    background: #1976d2;
+    color: white;
+}
+
+.delete-btn {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.delete-btn:hover {
+    background: #d32f2f;
+    color: white;
+}
+
+/* Service Details Grid */
+.service-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-item.highlight .detail-value {
+    color: #16a34a;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.detail-icon {
+    font-size: 20px;
+    margin-top: 2px;
+}
+
+.detail-content {
+    flex: 1;
+}
+
+.detail-label {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.detail-value {
+    display: block;
+    font-size: 15px;
+    color: #334155;
+    font-weight: 500;
+}
+
+/* Notes Section */
+.notes-section {
+    background: #f1f5f9;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.notes-text {
+    margin: 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* Service Photos */
+.service-photos {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.photo-thumb {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.photo-thumb:hover {
+    transform: scale(1.05);
+}
+
+.photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-type {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    padding: 2px;
+    text-align: center;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.empty-state h4 {
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+}
+
+.empty-state p {
+    color: #64748b;
+    margin: 0 0 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .maintenance-card {
+        flex-direction: column;
+    }
+    
+    .date-badge {
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .service-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-actions {
+        opacity: 1;
+    }
+}
+</style>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// Photo modal functions
+function openModal(src) {
+    document.getElementById('photoModal').style.display = 'block';
+    document.getElementById('modalImg').src = src;
+}
+
+function closeModal() {
+    document.getElementById('photoModal').style.display = 'none';
+}
+
+// Photo deletion functions
+function confirmDeletePhoto(photoId, filename) {
+    // Set the form action to the delete route
+    const form = document.getElementById('deletePhotoForm');
+    form.action = "{{ url_for('equipment.delete_photo', equipment_id=equipment.id, photo_id=999) }}".replace('999', photoId);
+    
+    // Show the modal
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const photoModal = document.getElementById('photoModal');
+    const deleteModal = document.getElementById('deleteModal');
+    
+    if (event.target == photoModal) {
+        closeModal();
+    }
+    if (event.target == deleteModal) {
+        closeDeleteModal();
+    }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeModal();
+        closeDeleteModal();
+    }
+});
+
+// File selection feedback
+document.getElementById('photo').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'No file selected';
+    document.querySelector('.file-name').textContent = fileName;
+});
+</script>
+{% endblock %}

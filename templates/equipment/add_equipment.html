@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Add Equipment{% endblock %}
+{% block header %}Add New Equipment{% endblock %}
+
+{% block content %}
+<div class="add-equipment-container">
+    <form method="POST" action="{{ url_for('equipment.add') }}" enctype="multipart/form-data" class="equipment-form">
+        <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+                <label for="name">Equipment Name *</label>
+                <input type="text" id="name" name="name" placeholder="e.g., John Deere Mower" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" name="category" required>
+                    <option value="">Select Category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="make">Make</label>
+                    <input type="text" id="make" name="make" placeholder="e.g., John Deere">
+                </div>
+                
+                <div class="form-group">
+                    <label for="model">Model</label>
+                    <input type="text" id="model" name="model" placeholder="e.g., X350">
+                </div>
+                
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <input type="number" id="year" name="year" placeholder="e.g., 2020" min="1900" max="2030">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Additional Details</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="serial_number">Serial Number</label>
+                    <input type="text" id="serial_number" name="serial_number" placeholder="e.g., 1GX350A123456">
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Storage Location</label>
+                    <input type="text" id="location" name="location" placeholder="e.g., Garage, Shed, Barn">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="purchase_date">Purchase Date</label>
+                    <input type="date" id="purchase_date" name="purchase_date">
+                </div>
+                
+                <div class="form-group">
+                    <label for="purchase_price">Purchase Price</label>
+                    <input type="number" id="purchase_price" name="purchase_price" step="0.01" placeholder="e.g., 3500.00">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="profile_photo">Equipment Photo</label>
+                <input type="file" id="profile_photo" name="profile_photo" accept="image/*">
+                <small>Upload a photo of your equipment (optional)</small>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add Equipment</button>
+            <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.add-equipment-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.equipment-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+{% endblock %}
