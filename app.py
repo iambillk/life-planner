@@ -44,6 +44,7 @@ def register_blueprints(app):
     from modules.health import health_bp
     from modules.weekly import weekly_bp
     from modules.goals import goals_bp
+    from modules.todo import todo_bp
     
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
@@ -51,7 +52,8 @@ def register_blueprints(app):
     app.register_blueprint(health_bp, url_prefix='/health')
     app.register_blueprint(weekly_bp, url_prefix='/weekly')
     app.register_blueprint(goals_bp, url_prefix='/goals')
-
+    app.register_blueprint(todo_bp, url_prefix='/todo')
+    
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True, host='0.0.0.0', port=5000)

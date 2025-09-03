@@ -1,0 +1,1093 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} - TCH Project{% endblock %}
+{% block header %}{{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="project-detail-container">
+    <!-- Project Header -->
+    <div class="project-header-section">
+        <div class="header-info">
+            <div class="status-priority">
+                <span class="status-badge status-{{ project.status }}">
+                    {{ project.status|replace('_', ' ')|title }}
+                </span>
+                <span class="priority-badge priority-{{ project.priority }}">
+                    {{ project.priority|upper }} PRIORITY
+                </span>
+            </div>
+            <div class="dates">
+                <span>📅 Start: {{ project.start_date.strftime('%b %d, %Y') if project.start_date else 'Not set' }}</span>
+                <span>🎯 Deadline: {{ project.deadline.strftime('%b %d, %Y') if project.deadline else 'Not set' }}</span>
+                {% if project.completed_date %}
+                <span>✅ Completed: {{ project.completed_date.strftime('%b %d, %Y') }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-secondary">Edit Project</a>
+            <a href="{{ url_for('projects.tch_index') }}" class="btn btn-outline">Back to List</a>
+        </div>
+    </div>
+
+    <!-- Progress Overview -->
+    <div class="progress-overview">
+        <h3>Overall Progress</h3>
+        <div class="progress-bar-large">
+            <div class="progress-fill" style="width: {{ project.progress }}%">
+                <span class="progress-label">{{ project.progress }}%</span>
+            </div>
+        </div>
+        <div class="progress-stats">
+            <span>✓ {{ project.tasks|selectattr('completed')|list|length }} completed</span>
+            <span>○ {{ project.tasks|rejectattr('completed')|list|length }} remaining</span>
+            <span>Total: {{ project.tasks|length }} tasks</span>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+		<button class="tab-btn active" onclick="showTab('overview')" style="color: #2c3e50;">Overview</button>
+		<button class="tab-btn" onclick="showTab('tasks')" style="color: #2c3e50;">To Do List ({{ project.tasks|length }})</button>
+		<button class="tab-btn" onclick="showTab('action-plan')" style="color: #2c3e50;">Action Plan</button>
+		<button class="tab-btn" onclick="showTab('todolists')" style="color: #2c3e50;">📝 Todo Lists ({{ project_todos|length if project_todos else 0 }})</button>
+		<button class="tab-btn" onclick="showTab('ideas')" style="color: #2c3e50;">Ideas ({{ project.ideas|length }})</button>
+		<button class="tab-btn" onclick="showTab('notes')" style="color: #2c3e50;">Notes ({{ project.notes|length }})</button>
+		{% if project.status == 'completed' or project.what_worked or project.what_was_hard %}
+		<button class="tab-btn" onclick="showTab('retrospective')" style="color: #2c3e50;">Retrospective</button>
+		{% endif %}
+	</div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-pane active">
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <h4>📎 Project Goal</h4>
+                    <p>{{ project.goal or 'No goal defined' }}</p>
+                </div>
+                
+                <div class="overview-card">
+                    <h4>💡 Motivation</h4>
+                    <p>{{ project.motivation or 'No motivation defined' }}</p>
+                </div>
+                
+                <div class="overview-card">
+                    <h4>🎯 Strategy</h4>
+                    <p>{{ project.strategy or 'No strategy defined' }}</p>
+                </div>
+                
+                {% if project.description %}
+                <div class="overview-card full-width">
+                    <h4>📝 Description</h4>
+                    <p>{{ project.description }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Milestones -->
+                {% if project.milestones %}
+                <div class="overview-card full-width">
+                    <h4>🏆 Milestones</h4>
+                    <div class="milestones-list">
+                        {% for milestone in project.milestones %}
+                        <div class="milestone-item {{ 'completed' if milestone.completed }}">
+                            <span class="milestone-check">
+                                {% if milestone.completed %}✅{% else %}⭕{% endif %}
+                            </span>
+                            <div class="milestone-content">
+                                <strong>{{ milestone.title }}</strong>
+                                {% if milestone.target_date %}
+                                <span class="milestone-date">Target: {{ milestone.target_date.strftime('%b %d') }}</span>
+                                {% endif %}
+                                {% if milestone.description %}
+                                <p>{{ milestone.description }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-pane">
+            <div class="tasks-section">
+                <!-- Add Task Form -->
+                <div class="add-task-form">
+                    <h4>Add New Task</h4>
+                    <form method="POST" action="{{ url_for('projects.add_tch_task', project_id=project.id) }}">
+                        <div class="form-row">
+                            <input type="text" name="title" placeholder="Task title" required>
+                            <select name="category">
+                                <option value="">Category</option>
+                                <option value="Development">Development</option>
+                                <option value="Testing">Testing</option>
+                                <option value="Documentation">Documentation</option>
+                                <option value="Review">Review</option>
+                                <option value="Deployment">Deployment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <select name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Task</button>
+                        </div>
+                        <div class="form-row">
+                            <textarea name="description" placeholder="Task description (optional)"></textarea>
+                            <input type="date" name="due_date" placeholder="Due date">
+                            <input type="text" name="assigned_to" placeholder="Assigned to">
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tasks List by Category -->
+                {% for category, tasks in tasks_by_category.items() %}
+                <div class="task-category">
+                    <h4>{{ category }}</h4>
+                    <div class="tasks-list">
+                        {% for task in tasks %}
+                        <div class="task-item {{ 'completed' if task.completed }}">
+                            <input type="checkbox" 
+                                   id="task-{{ task.id }}"
+                                   {{ 'checked' if task.completed }}
+                                   onchange="toggleTask({{ task.id }})">
+                            <label for="task-{{ task.id }}">
+                                <span class="task-title">{{ task.title }}</span>
+                                {% if task.priority == 'high' %}
+                                <span class="priority-tag high">HIGH</span>
+                                {% elif task.priority == 'low' %}
+                                <span class="priority-tag low">LOW</span>
+                                {% endif %}
+                                {% if task.due_date %}
+                                <span class="due-date">Due: {{ task.due_date.strftime('%b %d') }}</span>
+                                {% endif %}
+                            </label>
+                            <button onclick="deleteTask({{ task.id }})" class="delete-btn">×</button>
+                        </div>
+                        {% if task.description %}
+                        <div class="task-description">{{ task.description }}</div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Action Plan Tab -->
+        <div id="action-plan-tab" class="tab-pane">
+            <div class="action-plan-section">
+                <!-- Add Milestone Form -->
+                <div class="add-milestone-form">
+                    <h4>Add Action Step / Milestone</h4>
+                    <form method="POST" action="{{ url_for('projects.add_tch_milestone', project_id=project.id) }}">
+                        <input type="text" name="title" placeholder="Milestone title" required>
+                        <input type="date" name="target_date" placeholder="Target date">
+                        <textarea name="description" placeholder="Description"></textarea>
+                        <button type="submit" class="btn btn-primary">Add Milestone</button>
+                    </form>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline">
+                    <h4>Project Timeline</h4>
+                    {% for milestone in project.milestones %}
+                    <div class="timeline-item {{ 'completed' if milestone.completed }}">
+                        <div class="timeline-marker">
+                            {% if milestone.completed %}✅{% else %}○{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h5>{{ milestone.title }}</h5>
+                            {% if milestone.target_date %}
+                            <span class="date">{{ milestone.target_date.strftime('%B %d, %Y') }}</span>
+                            {% endif %}
+                            {% if milestone.description %}
+                            <p>{{ milestone.description }}</p>
+                            {% endif %}
+                            {% if not milestone.completed %}
+                            <form method="POST" action="{{ url_for('projects.complete_milestone', milestone_id=milestone.id) }}" style="display: inline;">
+                                <button type="submit" class="btn-small">Mark Complete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Todo Lists Tab -->
+        <div id="todolists-tab" class="tab-pane">
+            <div class="todolists-section">
+                <div class="section-header">
+                    <h4>Quick Todo Lists</h4>
+                    <button onclick="showQuickTodoForm()" class="btn btn-primary btn-small">+ New List</button>
+                </div>
+                
+                <!-- Quick Create Form -->
+                <div id="quick-todo-form" class="quick-todo-form" style="display: none;">
+                    <form method="POST" action="{{ url_for('todo.quick_create') }}">
+                        <input type="hidden" name="module" value="tch_project">
+                        <input type="hidden" name="module_id" value="{{ project.id }}">
+                        
+                        <div class="form-row">
+                            <input type="text" name="title" placeholder="List title (e.g., Meeting Action Items)" required>
+                            <select name="color">
+                                <option value="yellow">🟨 Yellow</option>
+                                <option value="blue">🟦 Blue</option>
+                                <option value="green">🟩 Green</option>
+                                <option value="pink">🟪 Pink</option>
+                                <option value="orange">🟧 Orange</option>
+                            </select>
+                        </div>
+                        
+                        <textarea name="items" placeholder="Enter items (one per line)&#10;e.g.,&#10;Call client&#10;Update documentation&#10;Review proposal" rows="5"></textarea>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-small btn-primary">Create List</button>
+                            <button type="button" onclick="hideQuickTodoForm()" class="btn btn-small btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Todo Lists Grid -->
+                <div class="todo-lists-grid">
+                    {% if project_todos %}
+                        {% for todo_list in project_todos %}
+                        <div class="todo-card color-{{ todo_list.color }}">
+                            <div class="todo-card-header">
+                                <h5>{{ todo_list.title }}</h5>
+                                <div class="todo-stats">
+                                    {{ todo_list.completed_count }}/{{ todo_list.total_count }}
+                                </div>
+                            </div>
+                            
+                            <!-- Progress -->
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill" style="width: {{ todo_list.completion_percentage }}%"></div>
+                            </div>
+                            
+                            <!-- Items -->
+                            <div class="todo-items-list">
+                                {% for item in todo_list.items[:5] %}
+                                <div class="todo-item-row {{ 'completed' if item.completed }}">
+                                    <input type="checkbox" 
+                                           id="todo-item-{{ item.id }}"
+                                           {{ 'checked' if item.completed }}
+                                           onchange="toggleTodoItem({{ item.id }}, this)">
+                                    <label for="todo-item-{{ item.id }}">{{ item.content }}</label>
+                                </div>
+                                {% endfor %}
+                                
+                                {% if todo_list.items|length > 5 %}
+                                <a href="{{ url_for('todo.view', id=todo_list.id) }}" class="see-more">
+                                    +{{ todo_list.items|length - 5 }} more items
+                                </a>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Quick Add -->
+                            <form method="POST" action="{{ url_for('todo.add_item', id=todo_list.id) }}" class="quick-add-form">
+                                <input type="text" name="content" placeholder="Add item..." required>
+                                <button type="submit">+</button>
+                            </form>
+                            
+                            <!-- Actions -->
+                            <div class="todo-card-footer">
+                                <a href="{{ url_for('todo.view', id=todo_list.id) }}">Open Full List</a>
+                                {% if todo_list.completion_percentage == 100 %}
+                                <span class="complete-badge">✅ Complete!</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-todos">
+                            <p>No todo lists attached yet</p>
+                            <p class="hint">Create quick checklists for meetings, reminders, or sub-tasks</p>
+                            <button onclick="showQuickTodoForm()" class="btn btn-primary">Create First List</button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ideas Tab -->
+        <div id="ideas-tab" class="tab-pane">
+            <div class="ideas-section">
+                <!-- Add Idea Form -->
+                <div class="add-idea-form">
+                    <h4>Capture New Idea</h4>
+                    <form method="POST" action="{{ url_for('projects.add_tch_idea', project_id=project.id) }}">
+                        <textarea name="content" placeholder="Enter your idea..." required></textarea>
+                        <button type="submit" class="btn btn-primary">Add Idea</button>
+                    </form>
+                </div>
+
+                <!-- Ideas List -->
+                <div class="ideas-list">
+                    {% for idea in project.ideas %}
+                    <div class="idea-card status-{{ idea.status }}">
+                        <div class="idea-content">
+                            {{ idea.content }}
+                        </div>
+                        <div class="idea-footer">
+                            <span class="idea-date">{{ idea.created_at.strftime('%b %d, %Y') }}</span>
+                            <form method="POST" action="{{ url_for('projects.update_idea_status', idea_id=idea.id) }}" class="idea-status-form">
+                                <select name="status" onchange="this.form.submit()">
+                                    <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
+                                    <option value="considered" {% if idea.status == 'considered' %}selected{% endif %}>Considered</option>
+                                    <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
+                                    <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes Tab -->
+        <div id="notes-tab" class="tab-pane">
+            <div class="notes-section">
+                <!-- Add Note Form -->
+                <div class="add-note-form">
+                    <h4>Add Note</h4>
+                    <form method="POST" action="{{ url_for('projects.add_tch_note', project_id=project.id) }}">
+                        <select name="category">
+                            <option value="general">General</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="technical">Technical</option>
+                            <option value="decision">Decision</option>
+                            <option value="issue">Issue</option>
+                        </select>
+                        <textarea name="content" placeholder="Enter note..." required></textarea>
+                        <button type="submit" class="btn btn-primary">Add Note</button>
+                    </form>
+                </div>
+
+                <!-- Notes List -->
+                <div class="notes-list">
+                    {% for note in project.notes %}
+                    <div class="note-card">
+                        <div class="note-header">
+                            <span class="note-category">{{ note.category|title }}</span>
+                            <span class="note-date">{{ note.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                        </div>
+                        <div class="note-content">
+                            {{ note.content }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Retrospective Tab -->
+        {% if project.status == 'completed' or project.what_worked or project.what_was_hard %}
+        <div id="retrospective-tab" class="tab-pane">
+            <div class="retrospective-section">
+                <div class="retro-grid">
+                    <div class="retro-card success">
+                        <h4>✅ What Worked Well</h4>
+                        <p>{{ project.what_worked or 'Not documented yet' }}</p>
+                    </div>
+                    
+                    <div class="retro-card challenge">
+                        <h4>🔥 What Was Challenging</h4>
+                        <p>{{ project.what_was_hard or 'Not documented yet' }}</p>
+                    </div>
+                    
+                    <div class="retro-card lessons full-width">
+                        <h4>📚 Lessons Learned</h4>
+                        <p>{{ project.lessons_learned or 'Not documented yet' }}</p>
+                    </div>
+                </div>
+                
+                {% if project.status != 'completed' %}
+                <div class="edit-retro">
+                    <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-secondary">
+                        Edit Retrospective
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.project-detail-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header Section */
+.project-header-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-priority {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.dates {
+    display: flex;
+    gap: 20px;
+    color: #5d6d7e;
+    font-size: 14px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Progress Overview */
+.progress-overview {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.progress-bar-large {
+    background: #ecf0f1;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.5s;
+}
+
+.progress-label {
+    color: white;
+    font-weight: bold;
+}
+
+.progress-stats {
+    display: flex;
+    gap: 30px;
+    font-size: 14px;
+    color: #5d6d7e;
+}
+
+/* Tabs */
+.tab-navigation {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 5px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    background: #ecf0f1;
+}
+
+.tab-btn.active {
+    background: #3498db;
+    color: white;
+}
+
+.tab-pane {
+    display: none;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Overview Grid */
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.overview-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.overview-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.overview-card h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+/* Tasks Section */
+.add-task-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.task-category {
+    margin-bottom: 30px;
+}
+
+.task-category h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+.task-item.completed {
+    opacity: 0.6;
+}
+
+.task-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.task-item label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.task-item.completed .task-title {
+    text-decoration: line-through;
+}
+
+.priority-tag {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.priority-tag.high {
+    background: #e74c3c;
+    color: white;
+}
+
+.priority-tag.low {
+    background: #95a5a6;
+    color: white;
+}
+
+.delete-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+/* Todo Lists Section */
+.todolists-section {
+    padding: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Quick Todo Form */
+.quick-todo-form {
+    background: #f0f4f8;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 2px dashed #3498db;
+}
+
+/* Todo Lists Grid */
+.todo-lists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Todo Card Styles */
+.todo-card {
+    padding: 15px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+}
+
+.todo-card.color-yellow {
+    background: linear-gradient(135deg, #fffbf0, #fff9e6);
+    border-left: 4px solid #ffc107;
+}
+
+.todo-card.color-blue {
+    background: linear-gradient(135deg, #f0f7ff, #e6f2ff);
+    border-left: 4px solid #2196f3;
+}
+
+.todo-card.color-green {
+    background: linear-gradient(135deg, #f0fff4, #e6ffe6);
+    border-left: 4px solid #4caf50;
+}
+
+.todo-card.color-pink {
+    background: linear-gradient(135deg, #fff0f6, #ffe6f2);
+    border-left: 4px solid #e91e63;
+}
+
+.todo-card.color-orange {
+    background: linear-gradient(135deg, #fff5f0, #ffebe6);
+    border-left: 4px solid #ff9800;
+}
+
+.todo-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.todo-card-header h5 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.todo-stats {
+    background: rgba(0,0,0,0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Mini Progress Bar */
+.progress-bar-mini {
+    height: 4px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progress-bar-mini .progress-fill {
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+}
+
+/* Todo Items */
+.todo-items-list {
+    margin-bottom: 15px;
+}
+
+.todo-item-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+}
+
+.todo-item-row input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.todo-item-row.completed label {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.see-more {
+    display: block;
+    margin-top: 8px;
+    color: #3498db;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+/* Quick Add Form */
+.quick-add-form {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.quick-add-form input {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 4px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.7);
+}
+
+.quick-add-form button {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: none;
+    background: rgba(0,0,0,0.1);
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.quick-add-form button:hover {
+    background: rgba(0,0,0,0.2);
+}
+
+/* Card Footer */
+.todo-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    font-size: 13px;
+}
+
+.todo-card-footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.complete-badge {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+/* Empty State */
+.no-todos {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.no-todos p {
+    color: #7f8c8d;
+    margin-bottom: 10px;
+}
+
+.no-todos .hint {
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* Ideas */
+.idea-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.idea-card.status-implemented {
+    border-color: #27ae60;
+}
+
+.idea-card.status-rejected {
+    border-color: #e74c3c;
+    opacity: 0.7;
+}
+
+.idea-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Notes */
+.note-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.note-category {
+    background: #3498db;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+/* Retrospective */
+.retro-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.retro-card {
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.retro-card.success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.retro-card.challenge {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.retro-card.lessons {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+}
+
+.retro-card.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-outline {
+    background: white;
+    color: #3498db;
+    border: 1px solid #3498db;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Status and Priority Badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.priority-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.priority-low { background: #95a5a6; color: white; }
+.priority-medium { background: #3498db; color: white; }
+.priority-high { background: #f39c12; color: white; }
+.priority-critical { background: #e74c3c; color: white; }
+
+.status-planning { background: #95a5a6; color: white; }
+.status-active { background: #3498db; color: white; }
+.status-on_hold { background: #f39c12; color: white; }
+.status-completed { background: #27ae60; color: white; }
+</style>
+
+<script>
+// Tab functionality
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    
+    // Remove active from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+    
+    // Mark button as active
+    event.target.classList.add('active');
+}
+
+// Task toggle
+function toggleTask(taskId) {
+    fetch(`/projects/tch/task/${taskId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => response.json())
+    .then(data => {
+        // Update UI based on response
+        location.reload(); // Simple reload for now
+    });
+}
+
+// Delete task
+function deleteTask(taskId) {
+    if (confirm('Delete this task?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/projects/tch/task/${taskId}/delete`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Todo List Functions
+function showQuickTodoForm() {
+    document.getElementById('quick-todo-form').style.display = 'block';
+}
+
+function hideQuickTodoForm() {
+    document.getElementById('quick-todo-form').style.display = 'none';
+    document.querySelector('#quick-todo-form form').reset();
+}
+
+function toggleTodoItem(itemId, checkbox) {
+    fetch(`/todo/item/${itemId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the visual state
+        const row = checkbox.closest('.todo-item-row');
+        if (data.completed) {
+            row.classList.add('completed');
+        } else {
+            row.classList.remove('completed');
+        }
+        
+        // Update progress bar
+        const card = checkbox.closest('.todo-card');
+        const progressBar = card.querySelector('.progress-fill');
+        if (progressBar) {
+            progressBar.style.width = data.completion_percentage + '%';
+        }
+        
+        // Update stats
+        // You could update the count here as well
+    });
+}
+</script>
+{% endblock %}

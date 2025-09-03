@@ -1,0 +1,131 @@
+<!-- templates/todo/index.html -->
+{% extends "base.html" %}
+{% block title %}Todo Lists{% endblock %}
+{% block header %}Todo Lists{% endblock %}
+
+{% block content %}
+<div class="todo-dashboard">
+    <div class="dashboard-header">
+        <h2>All Todo Lists</h2>
+        <a href="{{ url_for('todo.create') }}" class="btn btn-primary">+ Create New List</a>
+    </div>
+    
+    <!-- Pinned Lists -->
+    {% set pinned_lists = lists|selectattr('is_pinned', 'equalto', True)|list %}
+    {% if pinned_lists %}
+    <div class="section pinned-section">
+        <h3>📌 Pinned</h3>
+        <div class="todo-grid">
+            {% for list in pinned_lists %}
+            {% include 'todo/_list_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Regular Lists -->
+    {% set regular_lists = lists|rejectattr('is_pinned')|list %}
+    {% if regular_lists %}
+    <div class="section">
+        <h3>📝 Active Lists</h3>
+        <div class="todo-grid">
+            {% for list in regular_lists %}
+            {% include 'todo/_list_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Empty State -->
+    {% if not lists %}
+    <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>No Todo Lists Yet</h3>
+        <p>Create your first todo list to start organizing your tasks</p>
+        <a href="{{ url_for('todo.create') }}" class="btn btn-primary">Create First List</a>
+    </div>
+    {% endif %}
+    
+    <!-- Archived Lists -->
+    {% if archived_lists %}
+    <div class="section archived-section">
+        <h3>🗄️ Archived ({{ archived_lists|length }})</h3>
+        <div class="todo-grid">
+            {% for list in archived_lists %}
+            {% include 'todo/_list_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.todo-dashboard {
+    padding: 20px;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.section {
+    margin-bottom: 40px;
+}
+
+.section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.todo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 8px;
+    margin: 40px auto;
+    max-width: 500px;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.archived-section {
+    opacity: 0.7;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+</style>
+{% endblock %}

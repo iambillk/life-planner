@@ -1,0 +1,172 @@
+<!-- templates/tch_add_project.html -->
+{% extends "base.html" %}
+{% block title %}New TCH Project{% endblock %}
+{% block header %}Create New TCH Project{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <form method="POST" action="{{ url_for('projects.add_tch') }}" class="project-form">
+        <!-- Basic Information -->
+        <div class="form-section">
+            <h3>Project Information</h3>
+            
+            <div class="form-group">
+                <label for="name">Project Name *</label>
+                <input type="text" id="name" name="name" required 
+                       placeholder="Enter project name">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="status">Initial Status</label>
+                    <select id="status" name="status">
+                        <option value="planning" selected>Planning</option>
+                        <option value="active">Active</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" 
+                           value="{{ datetime.now().strftime('%Y-%m-%d') }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="deadline">Deadline</label>
+                    <input type="date" id="deadline" name="deadline">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="3"
+                          placeholder="Brief project description"></textarea>
+            </div>
+        </div>
+        
+        <!-- Action Plan -->
+        <div class="form-section">
+            <h3>Action Plan</h3>
+            
+            <div class="form-group">
+                <label for="goal">Project Goal</label>
+                <textarea id="goal" name="goal" rows="2"
+                          placeholder="What is the main goal or objective?"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="motivation">Motivation</label>
+                <textarea id="motivation" name="motivation" rows="2"
+                          placeholder="Why does this project matter?"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="strategy">Strategy / How to Achieve</label>
+                <textarea id="strategy" name="strategy" rows="3"
+                          placeholder="How will you achieve this goal?"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Project</button>
+            <a href="{{ url_for('projects.tch_index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.project-form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+{% endblock %}
