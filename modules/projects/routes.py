@@ -1,20 +1,31 @@
-# modules/projects/routes.py - Enhanced version
+# modules/projects/routes.py - Complete version with categories and task edit functionality
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime
 from . import projects_bp
+from .constants import PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
 from models import db, TCHProject, TCHTask, TCHIdea, TCHMilestone, TCHProjectNote, PersonalProject
 
 # ==================== TCH PROJECTS ====================
 
 @projects_bp.route('/tch')
 def tch_index():
-    """TCH Projects dashboard"""
+    """TCH Projects dashboard with category and status filters"""
     status_filter = request.args.get('status', 'active')
+    category_filter = request.args.get('category', 'all')
     
-    if status_filter == 'all':
-        projects = TCHProject.query.order_by(TCHProject.priority.desc(), TCHProject.deadline).all()
-    else:
-        projects = TCHProject.query.filter_by(status=status_filter).order_by(TCHProject.priority.desc(), TCHProject.deadline).all()
+    # Build query
+    query = TCHProject.query
+    
+    # Apply status filter
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+    
+    # Apply category filter
+    if category_filter != 'all':
+        query = query.filter_by(category=category_filter)
+    
+    # Get filtered projects
+    projects = query.order_by(TCHProject.priority.desc(), TCHProject.deadline).all()
     
     # Calculate actual progress based on tasks
     for project in projects:
@@ -32,19 +43,28 @@ def tch_index():
         'completed': TCHProject.query.filter_by(status='completed').count()
     }
     
+    # Get counts for category badges
+    category_counts = {}
+    for cat in PROJECT_CATEGORIES:
+        category_counts[cat] = TCHProject.query.filter_by(category=cat).count()
+    
     return render_template('tch_projects.html', 
                          projects=projects, 
                          status_filter=status_filter,
+                         category_filter=category_filter,
                          status_counts=status_counts,
+                         category_counts=category_counts,
+                         categories=PROJECT_CATEGORIES,
                          active='tch')
 
 @projects_bp.route('/tch/add', methods=['GET', 'POST'])
 def add_tch():
-    """Add new TCH project"""
+    """Add new TCH project with category"""
     if request.method == 'POST':
         project = TCHProject(
             name=request.form.get('name'),
             description=request.form.get('description'),
+            category=request.form.get('category', 'General'),
             goal=request.form.get('goal'),
             motivation=request.form.get('motivation'),
             strategy=request.form.get('strategy'),
@@ -59,7 +79,11 @@ def add_tch():
         flash(f'Project "{project.name}" created!', 'success')
         return redirect(url_for('projects.tch_detail', id=project.id))
     
-    return render_template('tch_add_project.html', active='tch')
+    return render_template('tch_add_project.html', 
+                         categories=PROJECT_CATEGORIES,
+                         statuses=PROJECT_STATUSES,
+                         priorities=PRIORITY_LEVELS,
+                         active='tch')
 
 @projects_bp.route('/tch/<int:id>')
 def tch_detail(id):
@@ -81,7 +105,7 @@ def tch_detail(id):
             tasks_by_category[category] = []
         tasks_by_category[category].append(task)
     
-    # Get attached todo lists - THIS IS THE NEW PART
+    # Get attached todo lists
     from models import TodoList
     project_todos = TodoList.query.filter_by(
         module='tch_project',
@@ -92,18 +116,19 @@ def tch_detail(id):
     return render_template('tch_project_detail.html', 
                          project=project,
                          tasks_by_category=tasks_by_category,
-                         project_todos=project_todos,  # MAKE SURE THIS IS HERE
+                         project_todos=project_todos,
                          module_type='tch_project',
                          active='tch')
 
 @projects_bp.route('/tch/<int:id>/edit', methods=['GET', 'POST'])
 def edit_tch(id):
-    """Edit TCH project"""
+    """Edit TCH project with category"""
     project = TCHProject.query.get_or_404(id)
     
     if request.method == 'POST':
         project.name = request.form.get('name')
         project.description = request.form.get('description')
+        project.category = request.form.get('category', 'General')
         project.goal = request.form.get('goal')
         project.motivation = request.form.get('motivation')
         project.strategy = request.form.get('strategy')
@@ -130,7 +155,12 @@ def edit_tch(id):
         flash('Project updated successfully!', 'success')
         return redirect(url_for('projects.tch_detail', id=id))
     
-    return render_template('tch_edit_project.html', project=project, active='tch')
+    return render_template('tch_edit_project.html', 
+                         project=project,
+                         categories=PROJECT_CATEGORIES,
+                         statuses=PROJECT_STATUSES,
+                         priorities=PRIORITY_LEVELS,
+                         active='tch')
 
 @projects_bp.route('/tch/<int:id>/delete', methods=['POST'])
 def delete_tch(id):
@@ -187,6 +217,41 @@ def toggle_tch_task(task_id):
         return jsonify({'completed': task.completed})
     
     return redirect(url_for('projects.tch_detail', id=task.project_id))
+
+@projects_bp.route('/tch/task/<int:task_id>/edit', methods=['GET', 'POST'])
+def edit_tch_task(task_id):
+    """Edit task details"""
+    task = TCHTask.query.get_or_404(task_id)
+    project = task.project
+    
+    if request.method == 'POST':
+        task.title = request.form.get('title')
+        task.description = request.form.get('description')
+        task.category = request.form.get('category')
+        task.priority = request.form.get('priority', 'medium')
+        task.assigned_to = request.form.get('assigned_to')
+        
+        # Handle due date
+        if request.form.get('due_date'):
+            task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date()
+        else:
+            task.due_date = None
+        
+        db.session.commit()
+        flash('Task updated successfully!', 'success')
+        return redirect(url_for('projects.tch_detail', id=task.project_id))
+    
+    # Task categories for the dropdown
+    task_categories = ['Development', 'Design', 'Testing', 'Documentation', 
+                       'Research', 'Meeting', 'Review', 'Deployment', 
+                       'Communication', 'Other']
+    
+    return render_template('tch_edit_task.html', 
+                         task=task,
+                         project=project,
+                         task_categories=task_categories,
+                         priorities=['low', 'medium', 'high'],
+                         active='tch')
 
 @projects_bp.route('/tch/task/<int:task_id>/delete', methods=['POST'])
 def delete_tch_task(task_id):
@@ -262,12 +327,12 @@ def add_tch_note(project_id):
     flash('Note added!', 'success')
     return redirect(url_for('projects.tch_detail', id=project_id))
 
-# ==================== PERSONAL PROJECTS (unchanged) ====================
+# ==================== PERSONAL PROJECTS ====================
 
 @projects_bp.route('/personal')
 def personal_index():
-    """Personal Projects list"""
-    projects = PersonalProject.query.all()
+    """Personal projects list"""
+    projects = PersonalProject.query.filter_by(status='active').all()
     return render_template('personal_projects.html', projects=projects, active='personal')
 
 @projects_bp.route('/personal/add', methods=['POST'])
@@ -276,17 +341,22 @@ def add_personal():
     project = PersonalProject(
         name=request.form.get('name'),
         description=request.form.get('description'),
+        status='active',
         deadline=datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date() if request.form.get('deadline') else None
     )
     db.session.add(project)
     db.session.commit()
-    flash(f'Personal Project "{project.name}" added!', 'success')
+    flash('Personal project added!', 'success')
     return redirect(url_for('projects.personal_index'))
 
-@projects_bp.route('/personal/<int:id>/update-progress', methods=['POST'])
-def update_personal_progress(id):
+@projects_bp.route('/personal/<int:id>/update', methods=['POST'])
+def update_personal(id):
     """Update personal project progress"""
     project = PersonalProject.query.get_or_404(id)
     project.progress = int(request.form.get('progress', 0))
+    
+    if project.progress >= 100:
+        project.status = 'completed'
+    
     db.session.commit()
     return redirect(url_for('projects.personal_index'))

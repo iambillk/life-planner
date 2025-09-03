@@ -1,4 +1,4 @@
-# models/projects.py - Enhanced version
+# models/projects.py - Enhanced version with categories
 from datetime import datetime
 from .base import db
 
@@ -11,6 +11,9 @@ class TCHProject(db.Model):
     goal = db.Column(db.Text)  # Main goal/objective
     motivation = db.Column(db.Text)  # Why this project matters
     strategy = db.Column(db.Text)  # How to achieve the goal
+    
+    # Category field - NEW
+    category = db.Column(db.String(50), default='General')
     
     # Dates
     start_date = db.Column(db.Date, default=datetime.utcnow)
@@ -110,3 +113,5 @@ class PersonalProject(db.Model):
     status = db.Column(db.String(20), default='active')
     deadline = db.Column(db.Date)
     progress = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
