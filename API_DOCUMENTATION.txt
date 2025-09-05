@@ -1,0 +1,654 @@
+================================================================================
+                    LIFE MANAGEMENT SYSTEM API GUIDE
+================================================================================
+
+OVERVIEW
+--------
+The Life Management System is a comprehensive Flask-based REST API for personal 
+life management. It provides endpoints for tracking equipment maintenance, 
+managing projects, monitoring health metrics, organizing daily tasks, setting 
+goals, and managing todo lists.
+
+Base URL: http://localhost:5000
+Framework: Flask 2.x
+Database: SQLAlchemy with SQLite
+Authentication: None (personal use application)
+
+
+TABLE OF CONTENTS
+-----------------
+1. Equipment Management
+2. Project Management
+3. Health Tracking
+4. Daily Tasks
+5. Goals
+6. Todo Lists
+7. Data Models
+8. Response Formats
+
+
+================================================================================
+1. EQUIPMENT MANAGEMENT
+================================================================================
+
+Base Path: /equipment
+
+LIST ALL EQUIPMENT
+------------------
+GET /equipment/
+Returns dashboard view with all equipment items categorized by type.
+
+ADD EQUIPMENT
+-------------
+POST /equipment/add
+
+Form Data:
+- name (string, required): Equipment name
+- category (string, required): Category type (Auto, ATV, Marine, Tools, etc.)
+- make (string): Manufacturer
+- model (string): Model number/name
+- year (integer): Year manufactured
+- serial_number (string): Serial number
+- purchase_date (date): Purchase date (YYYY-MM-DD)
+- purchase_price (float): Purchase price
+- mileage (integer): Current mileage
+- hours (float): Current hours
+- location (string): Storage location
+- notes (text): Additional notes
+- profile_photo (file): Equipment photo
+
+VIEW EQUIPMENT DETAILS
+----------------------
+GET /equipment/<id>
+Returns detailed view of specific equipment with maintenance history.
+
+EDIT EQUIPMENT
+--------------
+POST /equipment/<id>/edit
+Updates equipment information with same fields as Add Equipment.
+
+DELETE EQUIPMENT
+----------------
+POST /equipment/<id>/delete
+Permanently removes equipment and all associated records.
+
+
+MAINTENANCE RECORDS
+-------------------
+
+Add Maintenance Record:
+POST /equipment/<id>/maintenance/add
+
+Form Data:
+- service_type (string, required): Type of service
+- service_date (date): Service date
+- mileage_at_service (integer): Mileage at service
+- hours_at_service (float): Hours at service
+- cost (float): Service cost
+- parts_used (text): Parts used
+- performed_by (string): Who performed service
+- notes (text): Service notes
+- next_service_date (date): Next service date
+- next_service_mileage (integer): Next service mileage
+- photos[] (files): Multiple service photos
+
+Edit Maintenance Record:
+POST /equipment/maintenance/<id>/edit
+Updates maintenance record with same fields as Add Maintenance.
+
+
+FUEL TRACKING (Auto/ATV/Marine only)
+-------------------------------------
+
+Add Fuel Record:
+POST /equipment/<id>/fuel/add
+
+Form Data:
+- date (datetime): Purchase date
+- station_name (string): Gas station name
+- station_location (string): Station location
+- gallons (float, required): Gallons purchased
+- price_per_gallon (float, required): Price per gallon
+- total_cost (float, required): Total cost
+- fuel_type (string): Fuel type (Regular, Premium, Diesel)
+- odometer (integer): Current odometer reading
+- trip_purpose (string): Purpose (Personal, Business, Mixed)
+- notes (text): Additional notes
+- receipt (file): Receipt photo
+
+View Fuel History:
+GET /equipment/<id>/fuel
+Returns fuel purchase history with MPG calculations.
+
+
+CONSUMABLES & SUPPLIES
+----------------------
+
+Add Consumable:
+POST /equipment/<id>/consumables/add
+
+Form Data:
+- item_type (string, required): Type of item
+- brand (string): Brand name
+- quantity (float): Quantity
+- unit (string): Unit of measure
+- cost (float): Total cost
+- vendor (string): Vendor/store
+- date (date, required): Purchase date
+- odometer (integer): Odometer at purchase
+- notes (text): Notes
+- receipt (file): Receipt photo
+
+
+================================================================================
+2. PROJECT MANAGEMENT
+================================================================================
+
+Base Path: /projects
+
+TCH (WORK) PROJECTS
+-------------------
+
+List Projects:
+GET /projects/tch
+Returns list of all TCH projects.
+
+Create Project:
+POST /projects/tch/add
+
+Form Data:
+- name (string, required): Project name
+- category (string, required): Category
+- status (string): Status (planning, active, on_hold, completed)
+- priority (string): Priority (low, medium, high, urgent)
+- description (text): Description
+- goal (text): Project goal
+- motivation (text): Motivation
+- strategy (text): Strategy
+- start_date (date): Start date
+- target_date (date): Target completion date
+- attachments[] (files): Project files
+
+View Project Details:
+GET /projects/tch/<id>
+Returns detailed project view with tasks, milestones, and notes.
+
+Edit Project:
+POST /projects/tch/<id>/edit
+Updates project with same fields as Create Project.
+
+
+PROJECT TASKS
+-------------
+
+Add Task:
+POST /projects/tch/<project_id>/task/add
+
+Form Data:
+- title (string, required): Task title
+- description (text): Task description
+- category (string): Task category
+- priority (integer): Priority (1-5)
+- due_date (date): Due date
+
+Toggle Task Completion:
+POST /projects/tch/task/<task_id>/toggle
+
+Returns JSON:
+{
+    "success": true,
+    "completed": true
+}
+
+
+PROJECT IDEAS
+-------------
+
+Add Idea:
+POST /projects/tch/<project_id>/idea/add
+
+Form Data:
+- content (text, required): Idea content
+
+Update Idea Status:
+POST /projects/tch/idea/<idea_id>/status
+
+Form Data:
+- status (string): Status (new, considering, implementing, completed, rejected)
+
+
+PROJECT MILESTONES
+------------------
+
+Add Milestone:
+POST /projects/tch/<project_id>/milestone/add
+
+Form Data:
+- title (string, required): Milestone title
+- description (text): Description
+- target_date (date): Target date
+
+Complete Milestone:
+POST /projects/tch/milestone/<milestone_id>/complete
+
+
+================================================================================
+3. HEALTH TRACKING
+================================================================================
+
+Base Path: /health
+
+WEIGHT TRACKING
+---------------
+
+View Weight History:
+GET /health/weight
+Returns weight tracking dashboard with statistics.
+
+Add Weight Entry:
+POST /health/weight/add
+
+Form Data:
+- weight (float, required): Weight value
+- date (date): Entry date (defaults to today)
+- notes (text): Notes
+
+Get Chart Data:
+GET /health/weight/chart-data
+
+Query Parameters:
+- days (integer): Number of days to retrieve (default: 30)
+
+Returns JSON:
+{
+    "labels": ["01/15", "01/16", "01/17"],
+    "weights": [185.5, 184.8, 184.2]
+}
+
+Delete Weight Entry:
+POST /health/weight/<id>/delete
+
+
+================================================================================
+4. DAILY TASKS
+================================================================================
+
+Base Path: /daily
+
+View Daily Tasks:
+GET /daily/
+Returns today's task list.
+
+Add Daily Task:
+POST /daily/add
+
+Form Data:
+- task (string, required): Task description
+- priority (string): Priority level (low, medium, high)
+
+Toggle Task Completion:
+GET /daily/toggle/<id>
+Toggles completion status and redirects to daily view.
+
+
+================================================================================
+5. GOALS
+================================================================================
+
+Base Path: /goals
+
+View Goals:
+GET /goals/
+Returns all goals categorized by type.
+
+Add Goal:
+POST /goals/add
+
+Form Data:
+- title (string, required): Goal title
+- description (text): Goal description
+- category (string): Category (career, health, financial, personal, education)
+- target_date (date): Target completion date
+
+Update Goal Progress:
+POST /goals/<id>/update-progress
+
+Form Data:
+- progress (integer): Progress percentage (0-100)
+
+Delete Goal:
+POST /goals/<id>/delete
+
+
+================================================================================
+6. TODO LISTS
+================================================================================
+
+Base Path: /todo
+
+View All Todo Lists:
+GET /todo/
+Returns all todo lists, organized by pinned and regular.
+
+Create Todo List:
+POST /todo/create
+
+Form Data:
+- title (string, required): List title
+- description (text): Description
+- color (string): Color theme
+- module (string): Attached module type
+- module_id (integer): Attached module ID
+
+View Todo List:
+GET /todo/list/<id>
+Returns specific todo list with items.
+
+Add Todo Item:
+POST /todo/list/<id>/add-item
+
+Form Data:
+- content (string, required): Item content
+- priority (boolean): High priority flag
+- due_date (date): Due date
+
+AJAX Response:
+{
+    "success": true,
+    "id": 123
+}
+
+Toggle Item Completion:
+POST /todo/item/<item_id>/toggle
+
+AJAX Response:
+{
+    "completed": true
+}
+
+Delete Todo Item:
+POST /todo/item/<item_id>/delete
+
+Pin/Unpin Todo List:
+POST /todo/list/<id>/pin
+
+AJAX Response:
+{
+    "pinned": true
+}
+
+Archive Todo List:
+POST /todo/list/<id>/archive
+
+Delete Todo List:
+POST /todo/list/<id>/delete
+
+
+================================================================================
+7. DATA MODELS
+================================================================================
+
+EQUIPMENT MODEL
+---------------
+{
+    "id": Integer,
+    "name": String(100),
+    "category": String(50),
+    "make": String(50),
+    "model": String(50),
+    "year": Integer,
+    "serial_number": String(100),
+    "purchase_date": Date,
+    "purchase_price": Float,
+    "hours": Float,
+    "mileage": Integer,
+    "status": String(50),
+    "location": String(100),
+    "profile_photo": String(200),
+    "notes": Text,
+    "created_at": DateTime,
+    "updated_at": DateTime
+}
+
+MAINTENANCE RECORD MODEL
+------------------------
+{
+    "id": Integer,
+    "equipment_id": Integer,
+    "service_type": String(100),
+    "service_date": Date,
+    "hours_at_service": Float,
+    "mileage_at_service": Integer,
+    "cost": Float,
+    "parts_used": Text,
+    "notes": Text,
+    "performed_by": String(100),
+    "next_service_date": Date,
+    "next_service_hours": Float,
+    "next_service_mileage": Integer,
+    "created_at": DateTime
+}
+
+TCH PROJECT MODEL
+-----------------
+{
+    "id": Integer,
+    "name": String(200),
+    "category": String(50),
+    "status": String(30),
+    "priority": String(20),
+    "description": Text,
+    "goal": Text,
+    "motivation": Text,
+    "strategy": Text,
+    "start_date": Date,
+    "target_date": Date,
+    "completed_date": Date,
+    "progress": Integer,
+    "created_at": DateTime,
+    "updated_at": DateTime
+}
+
+FUEL LOG MODEL
+--------------
+{
+    "id": Integer,
+    "equipment_id": Integer,
+    "date": DateTime,
+    "station_name": String(100),
+    "station_location": String(200),
+    "gallons": Float,
+    "price_per_gallon": Float,
+    "total_cost": Float,
+    "fuel_type": String(20),
+    "odometer": Integer,
+    "trip_miles": Float,
+    "mpg": Float,
+    "trip_purpose": String(50),
+    "notes": Text,
+    "receipt_photo": String(200),
+    "created_at": DateTime
+}
+
+WEIGHT ENTRY MODEL
+------------------
+{
+    "id": Integer,
+    "weight": Float,
+    "date": Date,
+    "notes": Text,
+    "created_at": DateTime
+}
+
+DAILY TASK MODEL
+----------------
+{
+    "id": Integer,
+    "task": String(200),
+    "priority": String(20),
+    "completed": Boolean,
+    "date": Date,
+    "created_at": DateTime
+}
+
+GOAL MODEL
+----------
+{
+    "id": Integer,
+    "title": String(200),
+    "description": Text,
+    "category": String(50),
+    "progress": Integer,
+    "target_date": Date,
+    "completed": Boolean,
+    "completed_date": Date,
+    "created_at": DateTime
+}
+
+TODO LIST MODEL
+---------------
+{
+    "id": Integer,
+    "title": String(200),
+    "description": Text,
+    "color": String(20),
+    "is_pinned": Boolean,
+    "is_archived": Boolean,
+    "module": String(50),
+    "module_id": Integer,
+    "created_at": DateTime,
+    "updated_at": DateTime
+}
+
+TODO ITEM MODEL
+---------------
+{
+    "id": Integer,
+    "list_id": Integer,
+    "content": String(500),
+    "completed": Boolean,
+    "completed_at": DateTime,
+    "priority": Boolean,
+    "due_date": Date,
+    "order_num": Integer,
+    "created_at": DateTime
+}
+
+
+================================================================================
+8. RESPONSE FORMATS
+================================================================================
+
+SUCCESS RESPONSE (HTML)
+------------------------
+Most endpoints return HTML views with Flask flash messages for success/error 
+notifications.
+
+AJAX/JSON RESPONSES
+-------------------
+Endpoints that support AJAX requests (identified by X-Requested-With: 
+XMLHttpRequest header) return JSON:
+
+{
+    "success": true,
+    "data": {...}
+}
+
+ERROR HANDLING
+--------------
+- 404 Not Found: Returns 404 page for missing resources
+- 400 Bad Request: Flash message with error description
+- 500 Internal Server Error: Application error page
+
+
+================================================================================
+FILE UPLOAD GUIDELINES
+================================================================================
+
+ACCEPTED FILE TYPES
+-------------------
+- Images: .jpg, .jpeg, .png, .gif
+- Documents: .pdf (for receipts)
+
+UPLOAD LOCATIONS
+----------------
+- Equipment profiles: /static/uploads/equipment_profiles/
+- Maintenance photos: /static/uploads/maintenance_photos/
+- Receipts: /static/uploads/receipts/
+- Project files: /static/project_files/
+
+SIZE LIMITS
+-----------
+- Maximum file size: 16 MB (configurable in config.py)
+- Recommended image resolution: 1920x1080 or smaller
+
+
+================================================================================
+DEVELOPMENT NOTES
+================================================================================
+
+RUNNING THE APPLICATION
+-----------------------
+# Activate virtual environment
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate      # Windows
+
+# Run the application
+python app.py
+
+DATABASE INITIALIZATION
+-----------------------
+from app import create_app
+from models.base import db
+
+app = create_app()
+with app.app_context():
+    db.create_all()
+
+TESTING ENDPOINTS
+-----------------
+Use tools like cURL, Postman, or HTTPie for testing:
+
+# Example: Add a weight entry
+curl -X POST http://localhost:5000/health/weight/add \
+  -F "weight=185.5" \
+  -F "date=2025-09-05" \
+  -F "notes=Morning weight"
+
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+1. No Authentication: This is a personal-use application without authentication. 
+   Add authentication before deploying publicly.
+2. File Upload Validation: Files are validated for type and sanitized for 
+   secure storage.
+3. SQL Injection Protection: SQLAlchemy ORM prevents SQL injection.
+4. XSS Prevention: Jinja2 templates auto-escape user input.
+
+
+================================================================================
+FUTURE ENHANCEMENTS
+================================================================================
+
+- RESTful JSON API for mobile app integration
+- User authentication and multi-user support
+- Data export (CSV/Excel)
+- Backup and restore functionality
+- Integration with IoT devices
+- Advanced analytics and reporting
+- API rate limiting
+- WebSocket support for real-time updates
+
+
+================================================================================
+SUPPORT
+================================================================================
+
+Repository: https://github.com/yourusername/life-management-system
+Author: IamBiLkY
+Version: 1.2.0
+Last Updated: September 2025
+
+================================================================================

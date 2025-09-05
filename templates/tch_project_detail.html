@@ -1,14 +1,13 @@
 {# =============================================================================
   FILE: templates/projects_tch_detail.html
   PURPOSE: TCH Project — Detail view (tasks, ideas, milestones, notes, files)
-  TEMPLATE VERSION: v1.1.0
-  LAST UPDATED: 2025-09-04
+  TEMPLATE VERSION: v1.1.3
+  LAST UPDATED: 2025-09-05
 
-  v1.1.0 (this refactor)
-  - Moved Files section to the bottom (anchor preserved)
-  - Collapsed per-section add UI into a compact "Add ⌄" dropdown
-  - Added Quick Add mini-forms; Full Forms reveal on demand
-  - Made each section's list area scrollable to keep page length sane
+  v1.1.3
+  - Force inner scrolling by giving .section-scroll a fixed viewport height (height: 60vh)
+  - Keep min-height:0 on ancestors so flex children can shrink
+  - Cards contain their scroller (overflow:hidden on the card; .section-scroll does the scrolling)
 ============================================================================= #}
 
 {% extends "base.html" %}
@@ -31,12 +30,13 @@
     --pd-warn: var(--warning, #f59e0b);
     --pd-danger: var(--danger, #ef4444);
     --pd-radius: var(--radius, 14px);
-    --pd-radius-sm: var(--radius-sm, 10px);
+    --pd-radius-sm: var(--pd-radius-sm, 10px);
     --pd-shadow: 0 6px 18px rgba(0,0,0,.35);
   }
 
   .project-detail-container{
     padding:16px; max-width:1200px; margin:0 auto; display:grid; gap:16px;
+    min-height: 0;
   }
 
   /* Sticky summary header */
@@ -111,20 +111,27 @@
   .progress-text{ color:#0a0f1a; font-weight:800; font-size:.85rem; }
   .timeline-info{ display:flex; gap:16px; flex-wrap:wrap; color:var(--pd-muted); }
   .timeline-item{ display:inline-flex; align-items:center; gap:8px; }
+
   .overdue-label{ background:var(--pd-danger); color:#0a0f1a; font-weight:800; font-size:.72rem; padding:2px 8px; border-radius:8px; margin-left:6px; }
 
   /* Main content grid */
-  .content-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:14px; }
+  .content-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:14px;
+    min-height: 0; align-items:start;
+  }
 
-  /* Content sections with scrollable bodies */
+  /* Content sections with internal scrollers */
   .content-section{
     display:flex; flex-direction:column; gap:10px;
     background:var(--pd-card); border:1px solid var(--pd-line);
     border-radius:var(--pd-radius); padding:12px; box-shadow:var(--pd-shadow);
+    min-height: 0;
+    overflow: hidden; /* contain the inner scroller */
   }
   .section-header{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     border-bottom:1px dashed var(--pd-line); padding-bottom:6px;
+    min-height: 0;
   }
   .section-header h2{ margin:0; font-size:1.05rem; }
 
@@ -143,8 +150,7 @@
   .menu a:hover{ background:rgba(255,255,255,.05); }
 
   .add-panel{
-    display:none; /* revealed by JS */
-    background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:10px;
+    display:none; background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:10px;
   }
   .add-panel.open{ display:block; }
 
@@ -154,9 +160,13 @@
     border:1px solid var(--pd-line); border-radius:8px; padding:8px; font-size:.95rem; margin-bottom:8px;
   }
 
-  /* Scroll container for lists */
+  /* *** The actual scroller *** */
   .section-scroll{
-    max-height:60vh; overflow:auto; padding-right:4px;
+    height: 40vh;            /* FORCE an inner scroll area */
+    min-height: 0;
+    overflow: auto;
+    padding-right:4px;
+    overscroll-behavior: contain;
   }
 
   /* Tasks */
@@ -186,7 +196,7 @@
   .milestone-item{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .milestone-item.completed{ border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.08); }
   .milestone-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
-  .completed-badge{ background:var(--pd-success); color:#0a0f1a; padding:2px 8px; border-radius:999px; font-weight:800; font-size:.72rem; }
+  .completed-badge{ background:var(--pd-success); color:#0a0f1a; padding:2px 8px; border-radius:999px; font-weight:800; }
   .milestone-date{ color:var(--pd-muted); font-size:.85rem; }
 
   /* Notes */
@@ -217,20 +227,19 @@
   .btn-icon:hover{ border-color:var(--pd-primary); }
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
 
-  /* Page footer */
+  /* Anchors + footer */
   .page-foot{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:8px; }
   .page-foot details{ border:1px dashed var(--pd-line); border-radius:10px; padding:6px 8px; }
   .page-foot summary{ cursor:pointer; font-weight:700; }
   .page-foot code{ display:block; white-space:pre-wrap; margin-top:6px; font-size:.85rem; }
 
-  /* Anchors */
   .anchor-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   .anchor{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:.85rem; background:#0c1322; color:var(--pd-muted); border:1px solid var(--pd-line); text-decoration:none; }
   .anchor:hover{ border-color:var(--pd-primary); color:var(--pd-text); }
 
   @media (max-width: 820px){
     .header-top{ grid-template-columns:1fr; }
-    .section-scroll{ max-height:50vh; }
+    .section-scroll{ height: 50vh; }
   }
 </style>
 {% endblock %}
@@ -343,7 +352,6 @@
       <div class="section-header">
         <h2 id="tasks-title">✅ Tasks</h2>
 
-        <!-- Split Add -->
         <div class="split-actions" data-section="tasks">
           <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
           <button type="button" class="btn btn-primary btn-sm caret-btn" aria-label="More add options" data-toggle="menu">⌄</button>
@@ -354,7 +362,6 @@
         </div>
       </div>
 
-      <!-- Add panels -->
       <div class="add-panel" data-panel="tasks-quick">
         <form method="POST" action="{{ url_for('projects.add_tch_task', project_id=project.id) }}">
           <input type="text" name="title" placeholder="Task title" required>
@@ -381,7 +388,6 @@
         </form>
       </div>
 
-      <!-- Scrollable list -->
       <div class="section-scroll">
         {% for category, tasks in tasks_by_category.items() %}
           <div class="task-category">
@@ -597,7 +603,6 @@
   </div>
   {% endif %}
 
-  <!-- Files moved to bottom -->
   {% if files %}
   <div class="files-section" id="files">
     <h2>📎 Project Files</h2>
@@ -630,7 +635,7 @@
   <div class="page-foot">
     <details>
       <summary>Page Info & Changelog</summary>
-      <code>v1.1.0 — Files moved to bottom; per-section Add dropdowns with Quick/Full; scrollable cards.</code>
+      <code>v1.1.3 — Force inner scroll with height:60vh on list areas. Prior fixes kept.</code>
     </details>
   </div>
 
@@ -639,16 +644,7 @@
 
 {% block extra_js %}
 <script>
-/* ============================================================================
-   Section Add dropdowns + panels
-   - Each .split-actions has data-section="tasks|ideas|milestones|notes"
-   - Menu offers Quick / Full; clicking toggles the associated .add-panel
-   - Only one panel open per section; menus close on outside click/ESC
-============================================================================ */
 (function(){
-  const sections = ['tasks','ideas','milestones','notes'];
-
-  // Helpers
   function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
   }
@@ -656,28 +652,17 @@
     const quick = document.querySelector(`.add-panel[data-panel="${section}-quick"]`);
     const full  = document.querySelector(`.add-panel[data-panel="${section}-full"]`);
     if (!quick || !full) return;
-    // Close both then open requested
     [quick, full].forEach(p => p.classList.remove('open'));
     if (kind === 'quick') quick.classList.add('open');
     if (kind === 'full')  full.classList.add('open');
   }
-
-  // Wire menus and buttons
   document.querySelectorAll('.split-actions').forEach(group => {
     const section = group.getAttribute('data-section');
     const menu = group.querySelector('.menu');
     if (!section || !menu) return;
-
-    // Main "Add" button defaults to Quick
     group.querySelectorAll('.add-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.preventDefault();
-        togglePanel(section, btn.dataset.action || 'quick');
-        closeAllMenus();
-      });
+      btn.addEventListener('click', e => { e.preventDefault(); togglePanel(section, btn.dataset.action || 'quick'); closeAllMenus(); });
     });
-
-    // Caret toggles menu
     const caret = group.querySelector('[data-toggle="menu"]');
     caret?.addEventListener('click', e => {
       e.preventDefault();
@@ -685,38 +670,21 @@
       closeAllMenus();
       if (!isOpen) menu.classList.add('open');
     });
-
-    // Menu items
     menu.querySelectorAll('a[data-action]').forEach(item => {
-      item.addEventListener('click', e => {
-        e.preventDefault();
-        togglePanel(section, item.dataset.action);
-        menu.classList.remove('open');
-      });
+      item.addEventListener('click', e => { e.preventDefault(); togglePanel(section, item.dataset.action); menu.classList.remove('open'); });
     });
   });
-
-  // Close menus on outside click / ESC
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.split-actions')) closeAllMenus();
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeAllMenus();
-  });
+  document.addEventListener('click', e => { if (!e.target.closest('.split-actions')) closeAllMenus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllMenus(); });
 })();
 
-/* ============================================================================
-   Task checkbox toggle (unchanged logic; endpoint provided via data-endpoint)
-============================================================================ */
 (function(){
   const boxes = document.querySelectorAll('.task-checkbox');
   if (!boxes.length) return;
-
   boxes.forEach(cb => {
     cb.addEventListener('change', async function () {
       const endpoint = this.getAttribute('data-endpoint');
       if (!endpoint) return;
-
       try {
         const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
         const data = await res.json();
@@ -724,10 +692,10 @@
           const wrap = this.closest('.task-item');
           if (wrap) wrap.classList.toggle('completed', !!data.completed);
         } else {
-          this.checked = !this.checked; // revert
+          this.checked = !this.checked;
         }
       } catch (e) {
-        this.checked = !this.checked; // revert on error
+        this.checked = !this.checked;
       }
     });
   });
