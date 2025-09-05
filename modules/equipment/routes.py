@@ -645,13 +645,13 @@ def edit_maintenance(id, record_id):
     equipment = Equipment.query.get_or_404(id)
     record = MaintenanceRecord.query.get_or_404(record_id)
     
-    # Verify this record belongs to this equipment
-    if record.equipment_id != id:
-       flash('Invalid maintenance record', 'error')
-       return redirect(url_for('equipment.detail', id=id))
+    # Verify this record belongs to this equipment - FIX: ensure both are integers
+    if int(record.equipment_id) != int(id):
+        flash('Invalid maintenance record', 'error')
+        return redirect(url_for('equipment.detail', id=id))
     
     if request.method == 'POST':
-         # Update the record fields
+        # Update the record fields
         record.service_type = request.form.get('service_type')
         record.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
         record.mileage_at_service = int(request.form.get('mileage_at_service')) if request.form.get('mileage_at_service') else None
@@ -661,23 +661,18 @@ def edit_maintenance(id, record_id):
         record.notes = request.form.get('notes')
         record.performed_by = request.form.get('performed_by', 'Self')
         
-        # Update next service date
-    if request.form.get('next_service_months'):
-        from dateutil.relativedelta import relativedelta
-        months = int(request.form.get('next_service_months'))
-        record.next_service_date = record.service_date + relativedelta(months=months)
-    else:
-        record.next_service_date = None
+        # Update next service date - only if a new value is provided
+        if request.form.get('next_service_months'):
+            from dateutil.relativedelta import relativedelta
+            months = int(request.form.get('next_service_months'))
+            record.next_service_date = record.service_date + relativedelta(months=months)
+        # Don't set to None if no value provided - preserve existing
 
-        # ADD THIS - Update next service mileage
-    if request.form.get('next_service_mileage'):
-        record.next_service_mileage = int(request.form.get('next_service_mileage'))
-    else:
-        record.next_service_mileage = None
+        # Update next service mileage - only if a new value is provided
+        if request.form.get('next_service_mileage'):
+            record.next_service_mileage = int(request.form.get('next_service_mileage'))
+        # Don't set to None if no value provided - preserve existing
 
-# Handle photo deletions
-        photos_to_delete = request.form.get('photos_to_delete')
-        
         # Handle photo deletions
         photos_to_delete = request.form.get('photos_to_delete')
         if photos_to_delete:
@@ -726,7 +721,7 @@ def edit_maintenance(id, record_id):
             equipment_id=id
         ).order_by(MaintenanceRecord.service_date.desc()).first()
         
-        if latest_record.id == record.id:
+        if latest_record and latest_record.id == record.id:
             if record.mileage_at_service:
                 equipment.mileage = record.mileage_at_service
             if record.hours_at_service:
@@ -736,6 +731,7 @@ def edit_maintenance(id, record_id):
         flash('Maintenance record updated successfully!', 'success')
         return redirect(url_for('equipment.detail', id=id))
     
+    # GET request - show the edit form
     return render_template('equipment/edit_maintenance.html',
                          equipment=equipment,
                          record=record,

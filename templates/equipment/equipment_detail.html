@@ -238,11 +238,11 @@
       {% endif %}
 
       <form action="{{ url_for('equipment.upload_photo', id=equipment.id) }}" method="POST" enctype="multipart/form-data" class="photo-upload">
-        <label for="photo" class="file-label">Choose Photo</label>
+        <label for="photo" class="file-label">Choose Gallery Photos</label>
         <input type="file" id="photo" name="photo" accept="image/*" required class="file-input">
         <span class="file-name">No file selected</span>
         <input type="text" name="caption" placeholder="Photo caption (optional)" class="caption-input">
-        <button type="submit" class="upload-btn">Upload Photo</button>
+        <button type="submit" class="upload-btn">Upload Gallery Photo</button>
       </form>
     </div>
 
