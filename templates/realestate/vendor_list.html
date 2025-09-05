@@ -1,0 +1,165 @@
+{# ===================================================================
+   templates/realestate/vendor_list.html
+   Vendor List - Placeholder Template
+   Version: 0.1.0 (Stub)
+   Created: 2025-01-03
+   
+   PLACEHOLDER: This template is a stub for future implementation
+=================================================================== #}
+
+{% extends "base.html" %}
+{% block title %}Vendors - {{ property.name }}{% endblock %}
+{% block header %}Vendors & Contractors{% endblock %}
+
+{% block extra_css %}
+<style>
+  .placeholder-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .placeholder-box {
+    background: var(--panel, #121a2a);
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  
+  .placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+  
+  .placeholder-title {
+    color: var(--text, #e6eaf2);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .placeholder-message {
+    color: var(--text-muted, #9fb0c8);
+    margin-bottom: 2rem;
+  }
+  
+  .feature-preview {
+    background: var(--card, #0f1625);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    text-align: left;
+  }
+  
+  .feature-preview h3 {
+    color: var(--text, #e6eaf2);
+    margin-bottom: 1rem;
+  }
+  
+  .feature-preview ul {
+    color: var(--text-muted, #9fb0c8);
+    list-style: none;
+    padding: 0;
+  }
+  
+  .feature-preview li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+  
+  .feature-preview li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success, #22c55e);
+  }
+  
+  .btn-back {
+    background: var(--primary, #6ea8ff);
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+  }
+  
+  .btn-back:hover {
+    background: var(--primary-700, #3f7fe6);
+    transform: translateY(-1px);
+  }
+  
+  .sample-vendors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  
+  .sample-vendor {
+    background: var(--card, #0f1625);
+    padding: 1rem;
+    border-radius: 8px;
+    opacity: 0.5;
+  }
+  
+  .vendor-type {
+    color: var(--primary, #6ea8ff);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .vendor-name {
+    color: var(--text, #e6eaf2);
+    font-weight: 500;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="placeholder-container">
+  <div class="placeholder-box">
+    <div class="placeholder-icon">📞</div>
+    <h2 class="placeholder-title">Vendor Management</h2>
+    <p class="placeholder-message">
+      Coming soon! Keep track of all your contractors and service providers for {{ property.name }}.
+    </p>
+    
+    <div class="sample-vendors">
+      <div class="sample-vendor">
+        <div class="vendor-type">Plumber</div>
+        <div class="vendor-name">Example Plumbing</div>
+      </div>
+      <div class="sample-vendor">
+        <div class="vendor-type">Electrician</div>
+        <div class="vendor-name">Example Electric</div>
+      </div>
+      <div class="sample-vendor">
+        <div class="vendor-type">Lawn Care</div>
+        <div class="vendor-name">Example Lawn Service</div>
+      </div>
+    </div>
+    
+    <div class="feature-preview">
+      <h3>Planned Features:</h3>
+      <ul>
+        <li>Store all contractor contacts</li>
+        <li>Quick dial from the app</li>
+        <li>Track service history per vendor</li>
+        <li>Rate and review vendors</li>
+        <li>Mark preferred vendors</li>
+        <li>Emergency contact flags</li>
+        <li>Account numbers and notes</li>
+        <li>Service area mapping</li>
+      </ul>
+    </div>
+    
+    <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="btn-back">
+      ← Back to Property
+    </a>
+  </div>
+</div>
+{% endblock %}

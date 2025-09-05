@@ -1,0 +1,684 @@
+{# ===================================================================
+   templates/realestate/property_detail.html
+   Property Detail View with Maintenance Overview
+   Version: 1.0.1
+   Created: 2025-01-03
+   
+   FEATURES:
+   - Property info display
+   - Recent maintenance list
+   - Vendor quick contacts
+   - Statistics overview
+   - Quick action buttons
+   
+   CHANGELOG:
+   v1.0.1 (2025-01-03)
+   - Fixed incorrect route references
+   v1.0.0 (2025-01-03)
+   - Initial creation
+   - Mobile-responsive layout
+   - Quick access to common actions
+=================================================================== #}
+
+{% extends "base.html" %}
+{% block title %}{{ property.name }}{% endblock %}
+{% block header %}{{ property.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ==================== Property Detail Styles ==================== */
+  :root {
+    --pd-bg: var(--bg, #0b0f1a);
+    --pd-panel: var(--panel, #121a2a);
+    --pd-card: var(--card, #0f1625);
+    --pd-hover: #1a2235;
+    --pd-line: var(--line, #1f2a3d);
+    --pd-text: var(--text, #e6eaf2);
+    --pd-muted: var(--text-muted, #9fb0c8);
+    --pd-primary: var(--primary, #6ea8ff);
+    --pd-success: var(--success, #22c55e);
+    --pd-warning: var(--warning, #f59e0b);
+    --pd-danger: var(--danger, #ef4444);
+    --pd-radius: 12px;
+    --pd-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .property-detail {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  /* ========== Back Navigation ========== */
+  .back-nav {
+    margin-bottom: 1.5rem;
+  }
+
+  .back-nav a {
+    color: var(--pd-primary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .back-nav a:hover {
+    transform: translateX(-3px);
+  }
+
+  /* ========== Property Header ========== */
+  .property-header {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--pd-shadow);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .property-photo {
+    width: 120px;
+    height: 90px;
+    background: var(--pd-card);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .property-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .property-photo .no-photo {
+    font-size: 2rem;
+    opacity: 0.3;
+  }
+
+  .property-info h2 {
+    color: var(--pd-text);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+  }
+
+  .property-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: var(--pd-muted);
+    font-size: 0.9rem;
+  }
+
+  .property-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .property-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* ========== Stats Cards ========== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.25rem;
+    box-shadow: var(--pd-shadow);
+    text-align: center;
+  }
+
+  .stat-card .value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--pd-text);
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-card .label {
+    color: var(--pd-muted);
+    font-size: 0.9rem;
+  }
+
+  .stat-card.danger .value {
+    color: var(--pd-danger);
+  }
+
+  .stat-card.warning .value {
+    color: var(--pd-warning);
+  }
+
+  .stat-card.success .value {
+    color: var(--pd-success);
+  }
+
+  /* ========== Quick Actions ========== */
+  .quick-actions {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--pd-shadow);
+  }
+
+  .quick-actions h3 {
+    color: var(--pd-text);
+    margin-bottom: 1rem;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .action-btn {
+    background: var(--pd-card);
+    border: 1px solid var(--pd-line);
+    color: var(--pd-text);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .action-btn:hover {
+    background: var(--pd-hover);
+    border-color: var(--pd-primary);
+    transform: translateY(-2px);
+  }
+
+  .action-btn .icon {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ========== Equipment Details ========== */
+  .equipment-details {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--pd-shadow);
+  }
+
+  .equipment-details h3 {
+    color: var(--pd-text);
+    margin-bottom: 1rem;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--pd-card);
+    border-radius: 6px;
+  }
+
+  .detail-label {
+    color: var(--pd-muted);
+    font-size: 0.9rem;
+  }
+
+  .detail-value {
+    color: var(--pd-text);
+    font-weight: 500;
+  }
+
+  /* ========== Recent Maintenance ========== */
+  .maintenance-section {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--pd-shadow);
+  }
+
+  .maintenance-section h3 {
+    color: var(--pd-text);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .maintenance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .maintenance-item {
+    background: var(--pd-card);
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+  }
+
+  .maintenance-item:hover {
+    background: var(--pd-hover);
+  }
+
+  .maintenance-info {
+    flex: 1;
+  }
+
+  .maintenance-task {
+    color: var(--pd-text);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+
+  .maintenance-meta {
+    color: var(--pd-muted);
+    font-size: 0.85rem;
+  }
+
+  .maintenance-cost {
+    color: var(--pd-primary);
+    font-weight: 600;
+  }
+
+  /* ========== Vendors Section ========== */
+  .vendors-section {
+    background: var(--pd-panel);
+    border-radius: var(--pd-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--pd-shadow);
+  }
+
+  .vendors-section h3 {
+    color: var(--pd-text);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .vendor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .vendor-card {
+    background: var(--pd-card);
+    padding: 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .vendor-card:hover {
+    background: var(--pd-hover);
+  }
+
+  .vendor-name {
+    color: var(--pd-text);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .vendor-type {
+    color: var(--pd-primary);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .vendor-phone {
+    color: var(--pd-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+
+  .vendor-phone:hover {
+    color: var(--pd-text);
+  }
+
+  /* ========== Buttons ========== */
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: var(--pd-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-700);
+  }
+
+  .btn-secondary {
+    background: var(--pd-card);
+    color: var(--pd-text);
+    border: 1px solid var(--pd-line);
+  }
+
+  .btn-secondary:hover {
+    background: var(--pd-hover);
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  /* ========== Empty State ========== */
+  .empty-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--pd-muted);
+  }
+
+  /* ========== Mobile Responsive ========== */
+  @media (max-width: 768px) {
+    .property-header {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .property-photo {
+      margin: 0 auto;
+    }
+
+    .property-actions {
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .action-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .maintenance-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="property-detail">
+  
+  {# ========== Back Navigation ========== #}
+  <div class="back-nav">
+    <a href="{{ url_for('realestate.dashboard', property_id=property.id) }}">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  {# ========== Property Header ========== #}
+  <div class="property-header">
+    <div class="property-photo">
+      {% if property.profile_photo %}
+        <img src="{{ url_for('static', filename='uploads/property_profiles/' + property.profile_photo) }}" 
+             alt="{{ property.name }}">
+      {% else %}
+        <div class="no-photo">🏠</div>
+      {% endif %}
+    </div>
+
+    <div class="property-info">
+      <h2>{{ property.name }}</h2>
+      <div class="property-meta">
+        {% if property.address %}
+          <span>📍 {{ property.address }}</span>
+        {% endif %}
+        {% if property.property_type %}
+          <span>🏷️ {{ property.property_type|capitalize }}</span>
+        {% endif %}
+        {% if property.year_built %}
+          <span>📅 Built {{ property.year_built }}</span>
+        {% endif %}
+        {% if property.square_footage %}
+          <span>📐 {{ "{:,}".format(property.square_footage) }} sq ft</span>
+        {% endif %}
+        {% if property.is_primary_residence %}
+          <span>⭐ Primary Residence</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="property-actions">
+      <a href="{{ url_for('realestate.edit_property', id=property.id) }}" 
+         class="btn btn-secondary btn-sm">
+        Edit Property
+      </a>
+    </div>
+  </div>
+
+  {# ========== Statistics ========== #}
+  <div class="stats-grid">
+    <div class="stat-card {% if stats.overdue_count > 0 %}danger{% endif %}">
+      <div class="value">{{ stats.overdue_count }}</div>
+      <div class="label">Overdue Tasks</div>
+    </div>
+
+    <div class="stat-card {% if stats.upcoming_count > 0 %}warning{% endif %}">
+      <div class="value">{{ stats.upcoming_count }}</div>
+      <div class="label">Due This Month</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="value">{{ stats.total_maintenance }}</div>
+      <div class="label">Total Tasks Logged</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="value">${{ "{:,.0f}".format(stats.ytd_cost) }}</div>
+      <div class="label">{{ datetime.utcnow().year }} Spending</div>
+    </div>
+  </div>
+
+  {# ========== Quick Actions ========== #}
+  <div class="quick-actions">
+    <h3>Quick Actions</h3>
+    <div class="action-grid">
+      <a href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">➕</span>
+        Add Maintenance
+      </a>
+      <a href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">⚡</span>
+        Quick Add
+      </a>
+      <a href="{{ url_for('realestate.maintenance_history', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">📋</span>
+        View History
+      </a>
+      <a href="{{ url_for('realestate.vendor_list', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">📞</span>
+        Vendors
+      </a>
+      <a href="{{ url_for('realestate.add_vendor', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">👤</span>
+        Add Vendor
+      </a>
+      <a href="{{ url_for('realestate.cost_analysis', property_id=property.id) }}" 
+         class="action-btn">
+        <span class="icon">📊</span>
+        Cost Analysis
+      </a>
+    </div>
+  </div>
+
+  {# ========== Equipment Details ========== #}
+  {% if property.hvac_filter_size or property.generator_model or property.water_heater_type or property.septic_tank_size_gallons %}
+  <div class="equipment-details">
+    <h3>Equipment & Systems</h3>
+    <div class="detail-grid">
+      {% if property.hvac_filter_size %}
+      <div class="detail-item">
+        <span class="detail-label">HVAC Filter Size</span>
+        <span class="detail-value">{{ property.hvac_filter_size }}</span>
+      </div>
+      {% endif %}
+      
+      {% if property.generator_make or property.generator_model %}
+      <div class="detail-item">
+        <span class="detail-label">Generator</span>
+        <span class="detail-value">
+          {{ property.generator_make or '' }} {{ property.generator_model or '' }}
+        </span>
+      </div>
+      {% endif %}
+      
+      {% if property.water_heater_type %}
+      <div class="detail-item">
+        <span class="detail-label">Water Heater</span>
+        <span class="detail-value">{{ property.water_heater_type }}</span>
+      </div>
+      {% endif %}
+      
+      {% if property.septic_tank_size_gallons %}
+      <div class="detail-item">
+        <span class="detail-label">Septic Tank</span>
+        <span class="detail-value">{{ "{:,}".format(property.septic_tank_size_gallons) }} gal</span>
+      </div>
+      {% endif %}
+      
+      {% if property.water_softener_model %}
+      <div class="detail-item">
+        <span class="detail-label">Water Softener</span>
+        <span class="detail-value">{{ property.water_softener_model }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ========== Recent Maintenance ========== #}
+  <div class="maintenance-section">
+    <h3>
+      Recent Maintenance
+      <a href="{{ url_for('realestate.maintenance_history', property_id=property.id) }}" 
+         class="btn btn-sm btn-secondary">
+        View All
+      </a>
+    </h3>
+    
+    {% if recent_maintenance %}
+    <div class="maintenance-list">
+      {% for task in recent_maintenance[:10] %}
+      <div class="maintenance-item">
+        <div class="maintenance-info">
+          <div class="maintenance-task">{{ task.task }}</div>
+          <div class="maintenance-meta">
+            {{ task.category }} • 
+            {{ task.date_completed.strftime('%m/%d/%Y') }} • 
+            {{ task.performed_by }}
+          </div>
+        </div>
+        {% if task.cost > 0 %}
+        <div class="maintenance-cost">
+          ${{ "{:.2f}".format(task.cost) }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-message">
+      No maintenance records yet.
+      <br><br>
+      <a href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}" 
+         class="btn btn-primary">
+        Add First Maintenance Record
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ========== Vendors ========== #}
+  <div class="vendors-section">
+    <h3>
+      Vendors & Contractors
+      <a href="{{ url_for('realestate.vendor_list', property_id=property.id) }}" 
+         class="btn btn-sm btn-secondary">
+        Manage
+      </a>
+    </h3>
+    
+    {% if vendors %}
+    <div class="vendor-grid">
+      {% for vendor in vendors[:6] %}
+      <div class="vendor-card">
+        <div class="vendor-name">{{ vendor.company_name }}</div>
+        <div class="vendor-type">{{ vendor.service_type }}</div>
+        {% if vendor.phone_primary %}
+        <a href="tel:{{ vendor.phone_primary }}" class="vendor-phone">
+          📞 {{ vendor.phone_primary }}
+        </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-message">
+      No vendors added yet.
+      <br><br>
+      <a href="{{ url_for('realestate.add_vendor', property_id=property.id) }}" 
+         class="btn btn-primary">
+        Add First Vendor
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ========== Notes ========== #}
+  {% if property.notes %}
+  <div class="equipment-details">
+    <h3>Notes</h3>
+    <p style="color: var(--pd-text); white-space: pre-wrap;">{{ property.notes }}</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
