@@ -13,7 +13,8 @@ def allowed_file(filename):
 
 def save_uploaded_photo(file, folder_type, base_name):
     """Save uploaded photo and return filename"""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    import uuid
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(uuid.uuid4())[:8]
     extension = file.filename.rsplit('.', 1)[1].lower()
     filename = f"{secure_filename(base_name)}_{timestamp}.{extension}"
     

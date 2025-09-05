@@ -11,8 +11,8 @@ class Config:
     
     # File uploads
     UPLOAD_FOLDER = 'static/equipment_photos'
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max (increased from 16MB)
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'webp'}  # added webp
     
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

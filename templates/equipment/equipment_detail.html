@@ -298,21 +298,59 @@
     </div>
   </div>
 
-  {% if next_due %}
-  <div class="next-due">
-    <h3>Next Maintenance Due</h3>
-    <p><strong>{{ next_due.service }}</strong> — {{ next_due.date.strftime('%B %d, %Y') }}</p>
-    <p>
-      {% if next_due.status == 'overdue' %}
-        <span class="badge danger">{{ abs(next_due.days) }} days overdue!</span>
-      {% elif next_due.status == 'upcoming' %}
-        <span class="badge warning">Due in {{ next_due.days }} days</span>
+{% if upcoming_maintenance %}
+<div class="next-due">
+  <h3>Maintenance Schedule</h3>
+  
+  {% for item in upcoming_maintenance %}
+  <div style="{% if not loop.last %}margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--ed-line);{% endif %}">
+    <p style="margin: 0 0 4px 0;">
+      <strong style="font-size: 1.05rem;">{{ item.service }}</strong>
+    </p>
+    
+    {# Show date-based threshold #}
+    {% if item.date %}
+    <p style="margin: 0 0 2px 0;">
+      📅 {{ item.date.strftime('%B %d, %Y') }}
+      {% if item.status == 'overdue' and item.days %}
+        <span class="badge danger">{{ abs(item.days) }} days overdue!</span>
+      {% elif item.status == 'upcoming' and item.days %}
+        <span class="badge warning">Due in {{ item.days }} days</span>
+      {% elif item.days %}
+        <span class="badge success">Due in {{ item.days }} days</span>
+      {% endif %}
+    </p>
+    {% endif %}
+    
+    {# Show mileage-based threshold #}
+    {% if item.next_mileage %}
+    <p style="margin: 0 0 2px 0;">
+      🚗 {{ "{:,}".format(item.next_mileage) }} miles
+      {% if item.miles_until is not none %}
+        {% if item.miles_until < 0 %}
+          <span class="badge danger">{{ "{:,}".format(abs(item.miles_until)) }} miles overdue!</span>
+        {% elif item.miles_until <= 500 %}
+          <span class="badge warning">{{ "{:,}".format(item.miles_until) }} miles remaining</span>
+        {% else %}
+          <span class="badge success">{{ "{:,}".format(item.miles_until) }} miles remaining</span>
+        {% endif %}
       {% else %}
-        <span class="badge success">Due in {{ next_due.days }} days</span>
+        <span style="color: var(--ed-muted); font-size: 0.85rem;">(current mileage unknown)</span>
+      {% endif %}
+    </p>
+    {% endif %}
+    
+    {# Show last service info #}
+    <p style="margin: 0; color: var(--ed-muted); font-size: 0.85rem;">
+      Last serviced: {{ item.last_service_date.strftime('%b %d, %Y') }}
+      {% if item.last_service_mileage %}
+        @ {{ "{:,}".format(item.last_service_mileage) }} mi
       {% endif %}
     </p>
   </div>
-  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
 
   {% if photos %}
   <div class="photo-gallery">

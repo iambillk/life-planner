@@ -85,24 +85,75 @@ def detail(id):
     
     photos = EquipmentPhoto.query.filter_by(equipment_id=id).all()
     
-    # Calculate next maintenance
-    next_due = None
-    if maintenance_records:
-        last_record = maintenance_records[0]
-        if last_record.next_service_date:
-            days_until = (last_record.next_service_date - datetime.now().date()).days
-            next_due = {
-                'service': last_record.service_type,
-                'date': last_record.next_service_date,
-                'days': days_until,
-                'status': 'overdue' if days_until < 0 else 'upcoming' if days_until <= 30 else 'good'
-            }
+    # Calculate ALL upcoming/overdue maintenance items
+    upcoming_maintenance = []
+    today = datetime.now().date()
+    current_mileage = equipment.mileage or 0
+    
+    # Check all maintenance records for their next service dates/mileage
+    seen_services = set()  # Track which service types we've seen
+    for record in maintenance_records:
+        if record.service_type not in seen_services:
+            # Check if there's a date OR mileage threshold
+            if record.next_service_date or record.next_service_mileage:
+                days_until = None
+                miles_until = None
+                
+                if record.next_service_date:
+                    days_until = (record.next_service_date - today).days
+                
+                if record.next_service_mileage and current_mileage:
+                    miles_until = record.next_service_mileage - current_mileage
+                
+                # Determine overall status based on both date and mileage
+                status = 'good'
+                if days_until is not None:
+                    if days_until < 0:
+                        status = 'overdue'
+                    elif days_until <= 30:
+                        status = 'upcoming'
+                
+                # Override with mileage status if it's more urgent
+                if miles_until is not None:
+                    if miles_until < 0:
+                        status = 'overdue'
+                    elif miles_until <= 500:  # Within 500 miles
+                        if status != 'overdue':
+                            status = 'upcoming'
+                
+                upcoming_maintenance.append({
+                    'service': record.service_type,
+                    'date': record.next_service_date,
+                    'days': days_until,
+                    'next_mileage': record.next_service_mileage,
+                    'miles_until': miles_until,
+                    'status': status,
+                    'last_service_date': record.service_date,
+                    'last_service_mileage': record.mileage_at_service
+                })
+                seen_services.add(record.service_type)
+    
+    # Sort by urgency (overdue first, then by whichever is sooner - date or mileage)
+    def sort_key(item):
+        # Overdue items first
+        if item['status'] == 'overdue':
+            return (0, item['days'] if item['days'] is not None else 999999)
+        elif item['status'] == 'upcoming':
+            return (1, item['days'] if item['days'] is not None else 999999)
+        else:
+            return (2, item['days'] if item['days'] is not None else 999999)
+    
+    upcoming_maintenance.sort(key=sort_key)
+    
+    # For backward compatibility, keep next_due as the first/most urgent one
+    next_due = upcoming_maintenance[0] if upcoming_maintenance else None
     
     return render_template('equipment_detail.html',
                          equipment=equipment,
                          maintenance_records=maintenance_records,
                          photos=photos,
                          next_due=next_due,
+                         upcoming_maintenance=upcoming_maintenance,
                          active='equipment')
 
 
@@ -214,7 +265,11 @@ def add_maintenance(id):
             from dateutil.relativedelta import relativedelta
             months = int(request.form.get('next_service_months'))
             record.next_service_date = record.service_date + relativedelta(months=months)
-        
+
+        # ADD THIS - Set next service mileage
+        if request.form.get('next_service_mileage'):
+            record.next_service_mileage = int(request.form.get('next_service_mileage'))
+
         db.session.add(record)
         db.session.commit()
         
@@ -586,17 +641,17 @@ def cost_analysis(id):
 
 @equipment_bp.route('/<int:id>/maintenance/<int:record_id>/edit', methods=['GET', 'POST'])
 def edit_maintenance(id, record_id):
-    """Edit maintenance record"""
+    """Edit maintenance record with photo management"""
     equipment = Equipment.query.get_or_404(id)
     record = MaintenanceRecord.query.get_or_404(record_id)
     
     # Verify this record belongs to this equipment
     if record.equipment_id != id:
-        flash('Invalid maintenance record', 'error')
-        return redirect(url_for('equipment.detail', id=id))
+       flash('Invalid maintenance record', 'error')
+       return redirect(url_for('equipment.detail', id=id))
     
     if request.method == 'POST':
-        # Update the record
+         # Update the record fields
         record.service_type = request.form.get('service_type')
         record.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
         record.mileage_at_service = int(request.form.get('mileage_at_service')) if request.form.get('mileage_at_service') else None
@@ -607,12 +662,64 @@ def edit_maintenance(id, record_id):
         record.performed_by = request.form.get('performed_by', 'Self')
         
         # Update next service date
-        if request.form.get('next_service_months'):
-            from dateutil.relativedelta import relativedelta
-            months = int(request.form.get('next_service_months'))
-            record.next_service_date = record.service_date + relativedelta(months=months)
-        else:
-            record.next_service_date = None
+    if request.form.get('next_service_months'):
+        from dateutil.relativedelta import relativedelta
+        months = int(request.form.get('next_service_months'))
+        record.next_service_date = record.service_date + relativedelta(months=months)
+    else:
+        record.next_service_date = None
+
+        # ADD THIS - Update next service mileage
+    if request.form.get('next_service_mileage'):
+        record.next_service_mileage = int(request.form.get('next_service_mileage'))
+    else:
+        record.next_service_mileage = None
+
+# Handle photo deletions
+        photos_to_delete = request.form.get('photos_to_delete')
+        
+        # Handle photo deletions
+        photos_to_delete = request.form.get('photos_to_delete')
+        if photos_to_delete:
+            photo_ids = [int(pid) for pid in photos_to_delete.split(',') if pid]
+            for photo_id in photo_ids:
+                photo = MaintenancePhoto.query.get(photo_id)
+                if photo and photo.maintenance_id == record.id:
+                    # Delete file from filesystem
+                    try:
+                        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'maintenance_photos', photo.filename)
+                        if os.path.exists(photo_path):
+                            os.remove(photo_path)
+                    except Exception as e:
+                        print(f"Error deleting photo file: {e}")
+                    # Delete from database
+                    db.session.delete(photo)
+        
+        # Handle new photo uploads (same as add_maintenance)
+        groups = [
+            ('before', 'before_photos', 'before_captions'),
+            ('after', 'after_photos', 'after_captions'),
+            ('receipt', 'receipt_photos', 'receipt_captions'),
+        ]
+        for group_name, files_field, caps_field in groups:
+            files = request.files.getlist(files_field)
+            captions = request.form.getlist(caps_field)
+            for idx, f in enumerate(files):
+                if not (f and allowed_file(f.filename)):
+                    continue
+                filename = save_uploaded_photo(
+                    f,
+                    'maintenance_photos',
+                    f"{equipment.name}_{record.service_type}_{group_name}"
+                )
+                caption = captions[idx] if idx < len(captions) else None
+                photo = MaintenancePhoto(
+                    maintenance_id=record.id,
+                    filename=filename,
+                    photo_type=group_name,
+                    caption=caption
+                )
+                db.session.add(photo)
         
         # Update equipment mileage/hours if this is the most recent record
         latest_record = MaintenanceRecord.query.filter_by(
