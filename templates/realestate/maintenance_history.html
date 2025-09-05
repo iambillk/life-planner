@@ -1,0 +1,125 @@
+{# ===================================================================
+   templates/realestate/maintenance_history.html
+   Maintenance History - Placeholder Template
+   Version: 0.1.0 (Stub)
+   Created: 2025-01-03
+   
+   PLACEHOLDER: This template is a stub for future implementation
+=================================================================== #}
+
+{% extends "base.html" %}
+{% block title %}Maintenance History - {{ property.name }}{% endblock %}
+{% block header %}Maintenance History{% endblock %}
+
+{% block extra_css %}
+<style>
+  .placeholder-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .placeholder-box {
+    background: var(--panel, #121a2a);
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  
+  .placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+  
+  .placeholder-title {
+    color: var(--text, #e6eaf2);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .placeholder-message {
+    color: var(--text-muted, #9fb0c8);
+    margin-bottom: 2rem;
+  }
+  
+  .feature-preview {
+    background: var(--card, #0f1625);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    text-align: left;
+  }
+  
+  .feature-preview h3 {
+    color: var(--text, #e6eaf2);
+    margin-bottom: 1rem;
+  }
+  
+  .feature-preview ul {
+    color: var(--text-muted, #9fb0c8);
+    list-style: none;
+    padding: 0;
+  }
+  
+  .feature-preview li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+  
+  .feature-preview li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success, #22c55e);
+  }
+  
+  .btn-back {
+    background: var(--primary, #6ea8ff);
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+  }
+  
+  .btn-back:hover {
+    background: var(--primary-700, #3f7fe6);
+    transform: translateY(-1px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="placeholder-container">
+  <div class="placeholder-box">
+    <div class="placeholder-icon">📋</div>
+    <h2 class="placeholder-title">Maintenance History</h2>
+    <p class="placeholder-message">
+      This feature is coming soon! Here you'll be able to view and filter all maintenance records for {{ property.name }}.
+    </p>
+    
+    <div class="feature-preview">
+      <h3>Planned Features:</h3>
+      <ul>
+        <li>Complete maintenance timeline</li>
+        <li>Filter by category (HVAC, Plumbing, Lawn, etc.)</li>
+        <li>Filter by date range</li>
+        <li>Search maintenance records</li>
+        <li>Export to CSV/PDF</li>
+        <li>Cost analysis by category</li>
+        <li>Photo gallery view</li>
+        <li>Edit/delete past records</li>
+      </ul>
+    </div>
+    
+    <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="btn-back">
+      ← Back to Property
+    </a>
+  </div>
+</div>
+{% endblock %}

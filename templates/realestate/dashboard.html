@@ -1,0 +1,661 @@
+{# ===================================================================
+   templates/realestate/dashboard.html
+   Real Estate Management Dashboard - Hybrid Card + Detail View
+   Version: 3.0.0
+   Created: 2025-01-03
+   
+   FEATURES:
+   - Property cards for overview
+   - Click card to see detailed view with all original features
+   - Overdue/upcoming tasks for selected property
+   - Quick add buttons
+   - Recent maintenance
+   - Cost tracking
+   
+   CHANGELOG:
+   v3.0.0 (2025-01-03)
+   - Hybrid approach: cards + detailed view
+   - Brought back all original dashboard features
+   - Property cards act as selectors
+   - Full detail panel with quick actions when property selected
+   
+   v2.0.0 (2025-01-03)
+   - Card-based layout
+   
+   v1.0.0 (2025-01-03)
+   - Original dropdown-based dashboard
+=================================================================== #}
+
+{% extends "base.html" %}
+{% block title %}Property Management{% endblock %}
+{% block header %}Property Management Center{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ==================== Real Estate Dashboard Styles ==================== */
+  :root {
+    --re-bg: var(--bg, #0b0f1a);
+    --re-panel: var(--panel, #121a2a);
+    --re-card: var(--card, #0f1625);
+    --re-hover: #1a2235;
+    --re-line: var(--line, #1f2a3d);
+    --re-text: var(--text, #e6eaf2);
+    --re-muted: var(--text-muted, #9fb0c8);
+    --re-primary: var(--primary, #6ea8ff);
+    --re-success: var(--success, #22c55e);
+    --re-warning: var(--warning, #f59e0b);
+    --re-danger: var(--danger, #ef4444);
+    --re-info: #38bdf8;
+    --re-radius: 12px;
+    --re-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  /* ========== Container ========== */
+  .property-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  /* ========== Dashboard Header ========== */
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .dashboard-title {
+    color: var(--re-text);
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+
+  .btn-add-property {
+    background: var(--re-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-add-property:hover {
+    background: var(--primary-700);
+    transform: translateY(-1px);
+  }
+
+  /* ========== Property Cards Grid (Selectors) ========== */
+  .property-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .property-card {
+    background: var(--re-panel);
+    border-radius: var(--re-radius);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+    text-align: center;
+  }
+
+  .property-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--re-shadow);
+  }
+
+  .property-card.selected {
+    border-color: var(--re-primary);
+    background: var(--re-card);
+  }
+
+  .property-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .property-card-name {
+    color: var(--re-text);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .property-card-meta {
+    color: var(--re-muted);
+    font-size: 0.85rem;
+  }
+
+  .property-card-badges {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .mini-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+  }
+
+  .mini-badge.overdue {
+    background: var(--re-danger);
+  }
+
+  .mini-badge.upcoming {
+    background: var(--re-warning);
+  }
+
+  /* ========== Selected Property Detail View (Original Dashboard) ========== */
+  .property-detail-view {
+    display: none;
+  }
+
+  .property-detail-view.active {
+    display: block;
+  }
+
+  /* ========== Alert Sections ========== */
+  .alert-section {
+    background: var(--re-panel);
+    border-radius: var(--re-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--re-shadow);
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--re-text);
+  }
+
+  .alert-header .badge {
+    background: var(--re-danger);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+  }
+
+  .alert-header.upcoming .badge {
+    background: var(--re-warning);
+  }
+
+  .alert-header.recent .badge {
+    background: var(--re-success);
+  }
+
+  /* ========== Task Cards ========== */
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .task-card {
+    background: var(--re-card);
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .task-card:hover {
+    background: var(--re-hover);
+    transform: translateX(2px);
+  }
+
+  .task-card.overdue {
+    border-left-color: var(--re-danger);
+  }
+
+  .task-card.upcoming {
+    border-left-color: var(--re-warning);
+  }
+
+  .task-card.completed {
+    border-left-color: var(--re-success);
+  }
+
+  .task-info {
+    flex: 1;
+  }
+
+  .task-title {
+    color: var(--re-text);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+
+  .task-meta {
+    color: var(--re-muted);
+    font-size: 0.85rem;
+  }
+
+  .task-action {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-complete {
+    background: var(--re-success);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .btn-complete:hover {
+    background: #1ea850;
+    transform: scale(1.05);
+  }
+
+  /* ========== Quick Add Section ========== */
+  .quick-add-section {
+    background: var(--re-panel);
+    border-radius: var(--re-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--re-shadow);
+  }
+
+  .quick-add-section h3 {
+    color: var(--re-text);
+    margin-bottom: 1rem;
+  }
+
+  .quick-add-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .quick-add-btn {
+    background: var(--re-card);
+    border: 2px solid var(--re-line);
+    color: var(--re-text);
+    padding: 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-weight: 500;
+    text-decoration: none;
+    display: block;
+  }
+
+  .quick-add-btn:hover {
+    background: var(--re-hover);
+    border-color: var(--re-primary);
+    transform: translateY(-2px);
+  }
+
+  .quick-add-btn .icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+
+  /* ========== Cost Summary ========== */
+  .cost-summary {
+    background: var(--re-panel);
+    border-radius: var(--re-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--re-shadow);
+  }
+
+  .cost-summary h3 {
+    color: var(--re-text);
+    margin-bottom: 1rem;
+  }
+
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .cost-card {
+    background: var(--re-card);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .cost-label {
+    color: var(--re-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .cost-amount {
+    color: var(--re-text);
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* ========== Empty State ========== */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--re-muted);
+  }
+
+  .empty-state .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  /* ========== Mobile Responsive ========== */
+  @media (max-width: 768px) {
+    .property-dashboard {
+      padding: 0.5rem;
+    }
+
+    .property-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-add-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .task-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .task-action {
+      width: 100%;
+    }
+
+    .btn-complete {
+      flex: 1;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="property-dashboard">
+  
+  {# ========== Dashboard Header ========== #}
+  <div class="dashboard-header">
+    <h1 class="dashboard-title">Property Management Center</h1>
+    <a href="{{ url_for('realestate.add_property') }}" class="btn-add-property">
+      <span>➕</span>
+      Add Property
+    </a>
+  </div>
+
+  {% if properties %}
+    
+    {# ========== Property Cards (Selectors) ========== #}
+    <div class="property-cards">
+      {% for prop in properties %}
+      <div class="property-card {% if selected_property and selected_property.id == prop.id %}selected{% endif %}"
+           onclick="selectProperty({{ prop.id }})">
+        <div class="property-card-icon">
+          {% if prop.is_primary_residence %}⭐{% else %}🏠{% endif %}
+        </div>
+        <div class="property-card-name">{{ prop.name }}</div>
+        <div class="property-card-meta">{{ prop.property_type|capitalize }}</div>
+        <div class="property-card-badges">
+          {% if prop.overdue_maintenance_count > 0 %}
+            <span class="mini-badge overdue">{{ prop.overdue_maintenance_count }} overdue</span>
+          {% endif %}
+          {% if prop.upcoming_maintenance_count > 0 %}
+            <span class="mini-badge upcoming">{{ prop.upcoming_maintenance_count }} soon</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ========== Selected Property Detail View ========== #}
+    {% if selected_property %}
+    <div class="property-detail-view active">
+      
+      {# ========== Overdue Maintenance ========== #}
+      {% if overdue_tasks %}
+      <div class="alert-section">
+        <div class="alert-header overdue">
+          ⚠️ Overdue Maintenance
+          <span class="badge">{{ overdue_tasks|length }}</span>
+        </div>
+        <div class="task-list">
+          {% for task in overdue_tasks[:5] %}
+          <div class="task-card overdue">
+            <div class="task-info">
+              <div class="task-title">{{ task.task }}</div>
+              <div class="task-meta">
+                {{ task.category }} • 
+                {{ (datetime.utcnow().date() - task.next_due_date).days }} days overdue
+              </div>
+            </div>
+            <div class="task-action">
+              <button class="btn-complete" onclick="quickComplete({{ task.id }})">
+                Complete
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ========== Upcoming Maintenance ========== #}
+      {% if upcoming_tasks %}
+      <div class="alert-section">
+        <div class="alert-header upcoming">
+          📅 Upcoming This Month
+          <span class="badge">{{ upcoming_tasks|length }}</span>
+        </div>
+        <div class="task-list">
+          {% for task in upcoming_tasks[:5] %}
+          <div class="task-card upcoming">
+            <div class="task-info">
+              <div class="task-title">{{ task.task }}</div>
+              <div class="task-meta">
+                {{ task.category }} • 
+                Due in {{ (task.next_due_date - datetime.utcnow().date()).days }} days
+              </div>
+            </div>
+            <div class="task-action">
+              <button class="btn-complete" onclick="quickComplete({{ task.id }})">
+                Complete
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ========== Quick Add Tasks ========== #}
+      <div class="quick-add-section">
+        <h3>Quick Add Task</h3>
+        <div class="quick-add-grid">
+          {% for task in quick_tasks %}
+          <button class="quick-add-btn" 
+                  onclick="quickAddTask('{{ task.category }}', '{{ task.task }}')">
+            <span class="icon">
+              {% if task.category == 'Lawn & Yard' %}🌱
+              {% elif task.category == 'HVAC' %}❄️
+              {% elif task.category == 'Plumbing' %}🚿
+              {% elif task.category == 'Generator' %}⚡
+              {% elif task.category == 'Roof & Gutters' %}🏠
+              {% else %}🔧{% endif %}
+            </span>
+            {{ task.task }}
+          </button>
+          {% endfor %}
+          <a href="{{ url_for('realestate.add_maintenance', property_id=selected_property.id) }}" 
+             class="quick-add-btn">
+            <span class="icon">➕</span>
+            Custom Task
+          </a>
+        </div>
+      </div>
+
+      {# ========== Recent Maintenance ========== #}
+      {% if recent_maintenance %}
+      <div class="alert-section">
+        <div class="alert-header recent">
+          ✅ Recently Completed
+          <span class="badge">{{ recent_maintenance|length }}</span>
+        </div>
+        <div class="task-list">
+          {% for task in recent_maintenance[:5] %}
+          <div class="task-card completed">
+            <div class="task-info">
+              <div class="task-title">{{ task.task }}</div>
+              <div class="task-meta">
+                {{ task.category }} • 
+                {{ task.date_completed.strftime('%m/%d/%Y') }}
+                {% if task.cost %} • ${{ "%.2f"|format(task.cost) }}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if selected_property %}
+        <div style="margin-top: 1rem; text-align: center;">
+          <a href="{{ url_for('realestate.property_detail', id=selected_property.id) }}" 
+             style="color: var(--re-primary); text-decoration: none;">
+            View Full History →
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# ========== Cost Summary ========== #}
+      <div class="cost-summary">
+        <h3>{{ datetime.utcnow().year }} Spending - {{ selected_property.name }}</h3>
+        <div class="cost-grid">
+          <div class="cost-card">
+            <div class="cost-label">YTD Total</div>
+            <div class="cost-amount">
+              ${{ "%.0f"|format(monthly_costs.values()|sum) }}
+            </div>
+          </div>
+          <div class="cost-card">
+            <div class="cost-label">Monthly Avg</div>
+            <div class="cost-amount">
+              ${{ "%.0f"|format(monthly_costs.values()|sum / (datetime.utcnow().month if monthly_costs else 1)) }}
+            </div>
+          </div>
+          <div class="cost-card">
+            <div class="cost-label">This Month</div>
+            <div class="cost-amount">
+              ${{ "%.0f"|format(monthly_costs.get(datetime.utcnow().month, 0)) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ========== Quick Links ========== #}
+      <div class="quick-add-section">
+        <h3>Quick Links</h3>
+        <div class="quick-add-grid">
+          <a href="{{ url_for('realestate.property_detail', id=selected_property.id) }}" 
+             class="quick-add-btn">
+            <span class="icon">🏠</span>
+            Property Details
+          </a>
+          <a href="{{ url_for('realestate.add_maintenance', property_id=selected_property.id) }}" 
+             class="quick-add-btn">
+            <span class="icon">➕</span>
+            Add Maintenance
+          </a>
+          {# These will be added as templates are created
+          <a href="#" class="quick-add-btn">
+            <span class="icon">📞</span>
+            Vendors
+          </a>
+          <a href="#" class="quick-add-btn">
+            <span class="icon">📊</span>
+            Cost Analysis
+          </a>
+          #}
+        </div>
+      </div>
+
+    </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="icon">👆</div>
+        <h3>Select a property above to view details</h3>
+      </div>
+    {% endif %}
+
+  {% else %}
+    {# ========== No Properties Yet ========== #}
+    <div class="empty-state">
+      <div class="icon">🏠</div>
+      <h2>Welcome to Property Management</h2>
+      <p>Start by adding your first property to track maintenance, vendors, and costs.</p>
+      <br>
+      <a href="{{ url_for('realestate.add_property') }}" class="btn-add-property">
+        <span>➕</span>
+        Add Your First Property
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+  // Select a property and reload with it selected
+  function selectProperty(propertyId) {
+    window.location.href = '{{ url_for("realestate.dashboard") }}?property_id=' + propertyId;
+  }
+
+  // Quick complete a recurring task
+  function quickComplete(taskId) {
+    if (confirm('Mark this task as completed today?')) {
+      // TODO: Implement AJAX endpoint to mark complete and recalculate next due
+      alert('Task completed! (AJAX implementation needed)');
+    }
+  }
+
+  // Quick add a common task
+  function quickAddTask(category, task) {
+    const propertyId = {{ selected_property.id if selected_property else 'null' }};
+    if (propertyId) {
+      // For now, go to the add maintenance form with pre-filled values
+      window.location.href = `{{ url_for("realestate.add_maintenance", property_id=0) }}`.replace('0', propertyId) + 
+                             `?category=${encodeURIComponent(category)}&task=${encodeURIComponent(task)}`;
+    }
+  }
+</script>
+{% endblock %}

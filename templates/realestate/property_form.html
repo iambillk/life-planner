@@ -1,0 +1,505 @@
+{# ===================================================================
+   templates/realestate/property_form.html
+   Property Add/Edit Form - Mobile-Optimized
+   Version: 1.0.0
+   Created: 2025-01-03
+   
+   FEATURES:
+   - Responsive form layout
+   - Collapsible sections for equipment details
+   - Photo upload with preview
+   - Auto-save draft (TODO)
+   
+   CHANGELOG:
+   v1.0.0 (2025-01-03)
+   - Initial creation
+   - Mobile-first design
+   - Progressive disclosure for complex fields
+=================================================================== #}
+
+{% extends "base.html" %}
+{% block title %}{% if property %}Edit{% else %}Add{% endif %} Property{% endblock %}
+{% block header %}{% if property %}Edit{% else %}Add New{% endif %} Property{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ==================== Property Form Styles ==================== */
+  .property-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .form-section {
+    background: var(--panel, #121a2a);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .form-section h3 {
+    color: var(--text, #e6eaf2);
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-group label {
+    display: block;
+    color: var(--text-muted, #9fb0c8);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .form-group label .required {
+    color: var(--danger, #ef4444);
+  }
+
+  .form-control {
+    width: 100%;
+    background: var(--card, #0f1625);
+    color: var(--text, #e6eaf2);
+    border: 1px solid var(--line, #1f2a3d);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary, #6ea8ff);
+    box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
+  }
+
+  textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* ========== Collapsible Sections ========== */
+  .collapsible {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 2rem;
+  }
+
+  .collapsible::after {
+    content: '▼';
+    position: absolute;
+    right: 0;
+    transition: transform 0.3s;
+  }
+
+  .collapsible.collapsed::after {
+    transform: rotate(-90deg);
+  }
+
+  .collapsible-content {
+    margin-top: 1rem;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .collapsed + .collapsible-content {
+    max-height: 0 !important;
+    margin-top: 0;
+  }
+
+  /* ========== Photo Upload ========== */
+  .photo-upload {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .photo-preview {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: var(--card, #0f1625);
+    border: 2px dashed var(--line, #1f2a3d);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+  }
+
+  .photo-preview:hover {
+    border-color: var(--primary, #6ea8ff);
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-preview .placeholder {
+    color: var(--text-muted, #9fb0c8);
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .photo-preview .placeholder .icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+  }
+
+  /* ========== Checkbox ========== */
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .form-check label {
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* ========== Buttons ========== */
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+  }
+
+  .btn-submit {
+    background: var(--primary, #6ea8ff);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover {
+    background: var(--primary-700, #3f7fe6);
+    transform: translateY(-1px);
+  }
+
+  .btn-cancel {
+    background: transparent;
+    color: var(--text-muted, #9fb0c8);
+    border: 1px solid var(--line, #1f2a3d);
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-cancel:hover {
+    background: var(--card, #0f1625);
+    color: var(--text, #e6eaf2);
+  }
+
+  /* ========== Mobile Responsive ========== */
+  @media (max-width: 768px) {
+    .property-form-container {
+      padding: 0.5rem;
+    }
+
+    .form-section {
+      padding: 1rem;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .btn-submit, .btn-cancel {
+      width: 100%;
+    }
+  }
+
+  /* ========== Help Text ========== */
+  .help-text {
+    font-size: 0.85rem;
+    color: var(--text-muted, #9fb0c8);
+    margin-top: 0.25rem;
+    opacity: 0.8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="property-form-container">
+  <form method="POST" enctype="multipart/form-data">
+    
+    {# ========== Basic Information ========== #}
+    <div class="form-section">
+      <h3>🏠 Basic Information</h3>
+      
+      <div class="form-group">
+        <label>Property Name <span class="required">*</span></label>
+        <input type="text" name="name" class="form-control" 
+               value="{{ property.name if property else '' }}"
+               placeholder="e.g., Main House, Lake Cottage" required>
+        <div class="help-text">A friendly name to identify this property</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Property Type <span class="required">*</span></label>
+          <select name="property_type" class="form-control" required>
+            {% for type in property_types %}
+              <option value="{{ type.lower() }}"
+                      {% if property and property.property_type == type.lower() %}selected{% endif %}>
+                {{ type }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Year Built</label>
+          <input type="number" name="year_built" class="form-control"
+                 value="{{ property.year_built if property else '' }}"
+                 placeholder="e.g., 1985" min="1800" max="2030">
+        </div>
+      </div>
+
+      <div class="form-check">
+        <input type="checkbox" id="is_primary" name="is_primary_residence"
+               {% if property and property.is_primary_residence %}checked{% endif %}>
+        <label for="is_primary">This is my primary residence</label>
+      </div>
+    </div>
+
+    {# ========== Location ========== #}
+    <div class="form-section">
+      <h3>📍 Location</h3>
+      
+      <div class="form-group">
+        <label>Street Address</label>
+        <input type="text" name="address" class="form-control"
+               value="{{ property.address if property else '' }}"
+               placeholder="123 Main Street">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" name="city" class="form-control"
+                 value="{{ property.city if property else '' }}"
+                 placeholder="City">
+        </div>
+
+        <div class="form-group">
+          <label>State</label>
+          <input type="text" name="state" class="form-control"
+                 value="{{ property.state if property else '' }}"
+                 placeholder="State" maxlength="2">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ZIP Code</label>
+        <input type="text" name="zip_code" class="form-control"
+               value="{{ property.zip_code if property else '' }}"
+               placeholder="12345" style="max-width: 150px;">
+      </div>
+    </div>
+
+    {# ========== Property Details ========== #}
+    <div class="form-section">
+      <h3>📐 Property Details</h3>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Square Footage</label>
+          <input type="number" name="square_footage" class="form-control"
+                 value="{{ property.square_footage if property else '' }}"
+                 placeholder="e.g., 2500">
+        </div>
+
+        <div class="form-group">
+          <label>Lot Size (acres)</label>
+          <input type="number" name="lot_size_acres" class="form-control"
+                 value="{{ property.lot_size_acres if property else '' }}"
+                 placeholder="e.g., 0.25" step="0.01">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Purchase Date</label>
+          <input type="date" name="purchase_date" class="form-control"
+                 value="{{ property.purchase_date.strftime('%Y-%m-%d') if property and property.purchase_date else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label>Purchase Price</label>
+          <input type="number" name="purchase_price" class="form-control"
+                 value="{{ property.purchase_price if property else '' }}"
+                 placeholder="e.g., 250000" step="1000">
+        </div>
+      </div>
+    </div>
+
+    {# ========== Equipment Details (Collapsible) ========== #}
+    <div class="form-section">
+      <h3 class="collapsible collapsed" onclick="toggleSection(this)">
+        ⚙️ Equipment Details
+      </h3>
+      <div class="collapsible-content" style="max-height: 0;">
+        
+        <div class="form-group">
+          <label>HVAC Filter Size</label>
+          <input type="text" name="hvac_filter_size" class="form-control"
+                 value="{{ property.hvac_filter_size if property else '' }}"
+                 placeholder="e.g., 20x25x1">
+          <div class="help-text">Remember this for easy filter purchases</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Generator Make</label>
+            <input type="text" name="generator_make" class="form-control"
+                   value="{{ property.generator_make if property else '' }}"
+                   placeholder="e.g., Generac">
+          </div>
+
+          <div class="form-group">
+            <label>Generator Model</label>
+            <input type="text" name="generator_model" class="form-control"
+                   value="{{ property.generator_model if property else '' }}"
+                   placeholder="e.g., GP5500">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Water Heater Type</label>
+          <select name="water_heater_type" class="form-control">
+            <option value="">Select...</option>
+            <option value="Gas" {% if property and property.water_heater_type == 'Gas' %}selected{% endif %}>Gas</option>
+            <option value="Electric" {% if property and property.water_heater_type == 'Electric' %}selected{% endif %}>Electric</option>
+            <option value="Tankless" {% if property and property.water_heater_type == 'Tankless' %}selected{% endif %}>Tankless</option>
+            <option value="Heat Pump" {% if property and property.water_heater_type == 'Heat Pump' %}selected{% endif %}>Heat Pump</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Septic Tank Size (gallons)</label>
+          <input type="number" name="septic_tank_size_gallons" class="form-control"
+                 value="{{ property.septic_tank_size_gallons if property else '' }}"
+                 placeholder="e.g., 1000">
+        </div>
+      </div>
+    </div>
+
+    {# ========== Photo Upload ========== #}
+    <div class="form-section">
+      <h3>📷 Property Photo</h3>
+      
+      <div class="photo-upload">
+        <div class="photo-preview" onclick="document.getElementById('photo-input').click()">
+          {% if property and property.profile_photo %}
+            <img src="{{ url_for('static', filename='property_profiles/' + property.profile_photo) }}" 
+                 alt="Property photo">
+          {% else %}
+            <div class="placeholder">
+              <div class="icon">📷</div>
+              <div>Click to upload photo</div>
+              <div style="font-size: 0.8rem; margin-top: 0.5rem;">
+                JPG, PNG up to 10MB
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        <input type="file" id="photo-input" name="profile_photo" 
+               accept="image/*" style="display: none;"
+               onchange="previewPhoto(this)">
+      </div>
+    </div>
+
+    {# ========== Notes ========== #}
+    <div class="form-section">
+      <h3>📝 Notes</h3>
+      
+      <div class="form-group">
+        <textarea name="notes" class="form-control" 
+                  placeholder="Any additional notes about this property...">{{ property.notes if property else '' }}</textarea>
+      </div>
+    </div>
+
+    {# ========== Form Actions ========== #}
+    <div class="form-section">
+      <div class="form-actions">
+        <a href="{{ url_for('realestate.dashboard') }}" class="btn-cancel">Cancel</a>
+        <button type="submit" class="btn-submit">
+          {% if property %}Save Changes{% else %}Add Property{% endif %}
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Toggle collapsible sections
+  function toggleSection(element) {
+    element.classList.toggle('collapsed');
+    const content = element.nextElementSibling;
+    if (element.classList.contains('collapsed')) {
+      content.style.maxHeight = '0';
+    } else {
+      content.style.maxHeight = content.scrollHeight + 'px';
+    }
+  }
+
+  // Preview uploaded photo
+  function previewPhoto(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.querySelector('.photo-preview');
+        preview.innerHTML = `<img src="${e.target.result}" alt="Property photo">`;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // Auto-save draft (TODO: Implement with localStorage)
+  // Could save form data every 30 seconds to localStorage
+  // and restore on page load if draft exists
+</script>
+{% endblock %}
