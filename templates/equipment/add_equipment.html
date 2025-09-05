@@ -1,179 +1,431 @@
+{# =============================================================================
+  FILE: equipment_add.html
+  PURPOSE: Create new equipment (rich dark UI, helpers, preview)
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme with safe fallbacks to base.html
+  - Sticky mini-header (page title + quick back)
+  - Quick Select: one-tap Category chips (uses your categories list)
+  - Smart autofill: auto-build Name from Year/Make/Model (editable)
+  - Live image preview + drag-and-drop for profile photo
+  - Year and Price bumpers (+/−) and inline validation hints
+  - Purchase date defaults to today
+  - Strong comments & clear sectioning for future maintenance
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI refactor, sticky header, category chips, smart name autofill,
+         image preview + drag&drop, price/year bumpers, today default date.
+============================================================================= #}
+
 {% extends "base.html" %}
 {% block title %}Add Equipment{% endblock %}
 {% block header %}Add New Equipment{% endblock %}
 
-{% block content %}
-<div class="add-equipment-container">
-    <form method="POST" action="{{ url_for('equipment.add') }}" enctype="multipart/form-data" class="equipment-form">
-        <div class="form-section">
-            <h3>Basic Information</h3>
-            
-            <div class="form-group">
-                <label for="name">Equipment Name *</label>
-                <input type="text" id="name" name="name" placeholder="e.g., John Deere Mower" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="category">Category *</label>
-                <select id="category" name="category" required>
-                    <option value="">Select Category</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat }}">{{ cat }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="make">Make</label>
-                    <input type="text" id="make" name="make" placeholder="e.g., John Deere">
-                </div>
-                
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <input type="text" id="model" name="model" placeholder="e.g., X350">
-                </div>
-                
-                <div class="form-group">
-                    <label for="year">Year</label>
-                    <input type="number" id="year" name="year" placeholder="e.g., 2020" min="1900" max="2030">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Additional Details</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="serial_number">Serial Number</label>
-                    <input type="text" id="serial_number" name="serial_number" placeholder="e.g., 1GX350A123456">
-                </div>
-                
-                <div class="form-group">
-                    <label for="location">Storage Location</label>
-                    <input type="text" id="location" name="location" placeholder="e.g., Garage, Shed, Barn">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="purchase_date">Purchase Date</label>
-                    <input type="date" id="purchase_date" name="purchase_date">
-                </div>
-                
-                <div class="form-group">
-                    <label for="purchase_price">Purchase Price</label>
-                    <input type="number" id="purchase_price" name="purchase_price" step="0.01" placeholder="e.g., 3500.00">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="profile_photo">Equipment Photo</label>
-                <input type="file" id="profile_photo" name="profile_photo" accept="image/*">
-                <small>Upload a photo of your equipment (optional)</small>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add Equipment</button>
-            <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
-</div>
-
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
 <style>
-.add-equipment-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
+  :root{
+    --ae-bg: var(--bg, #0b0f1a);
+    --ae-panel: var(--panel, #121a2a);
+    --ae-card: var(--card, #0f1625);
+    --ae-sub: #0c1322;
+    --ae-line: var(--line, #1f2a3d);
+    --ae-text: var(--text, #e6eaf2);
+    --ae-muted: var(--text-muted, #9fb0c8);
+    --ae-primary: var(--primary, #6ea8ff);
+    --ae-primary-700: var(--primary-700, #3f7fe6);
+    --ae-success: var(--success, #22c55e);
+    --ae-danger: var(--danger, #ef4444);
 
-.equipment-form {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+    --ae-radius: var(--radius, 14px);
+    --ae-radius-sm: var(--radius-sm, 10px);
+    --ae-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
 
-.form-section {
-    margin-bottom: 30px;
-}
+  .add-equipment-shell{ max-width: 920px; margin: 0 auto; padding: 16px; display:grid; gap:16px; }
 
-.form-section h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
-}
+  /* ================= Sticky header ================= */
+  .ae-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ae-line); border-radius: var(--ae-radius);
+    padding:12px; box-shadow: var(--ae-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+  }
+  .ae-title{ margin:0; font-size:1.2rem; letter-spacing:.2px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ae-line);
+    background: var(--ae-card); color: var(--ae-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--ae-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background: transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
 
-.form-group {
-    margin-bottom: 20px;
-}
+  /* ================= Card/form ================= */
+  .ae-card{
+    background: var(--ae-card); border:1px solid var(--ae-line);
+    border-radius: var(--ae-radius); padding:14px; box-shadow: var(--ae-shadow);
+  }
+  .form-section{ margin-bottom: 14px; }
+  .sec-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--ae-line); padding-bottom:6px; margin-bottom:10px;
+  }
+  .sec-head h3{ margin:0; font-size:1.05rem; }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
-}
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ font-size:.9rem; color: var(--ae-muted); }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+  input[type="text"], input[type="date"], input[type="number"], select, textarea{
+    width:100%; background:#0b1120; color: var(--ae-text);
+    border:1px solid var(--ae-line); border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  textarea{ min-height: 92px; resize: vertical; }
+  input:focus, select:focus, textarea:focus{ border-color: var(--ae-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+  .hint{ font-size:.8rem; color: var(--ae-muted); }
 
-.form-group textarea {
-    resize: vertical;
-}
+  /* Category chips */
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    padding:8px 12px; border-radius:999px; border:1px solid var(--ae-line);
+    background: var(--ae-sub); color: var(--ae-text); cursor:pointer;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    white-space: nowrap;
+  }
+  .chip:hover{ transform: translateY(-1px); border-color: var(--ae-primary); }
+  .chip.active{ background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
 
-.form-group small {
-    display: block;
-    margin-top: 5px;
-    color: #7f8c8d;
-}
+  /* Bumpers */
+  .grid-bumpers{ display:grid; grid-template-columns: 1fr auto auto; gap:6px; align-items:center; }
 
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
+  /* Photo picker */
+  .photo-row{ display:grid; grid-template-columns: 160px 1fr; gap:10px; align-items:start; }
+  .photo-drop{
+    width:160px; height:160px; border-radius:12px; background:#0b1120;
+    border:2px dashed var(--ae-line); display:flex; align-items:center; justify-content:center;
+    color:#94a3b8; text-align:center; padding:8px; cursor:pointer;
+    background-size: cover; background-position:center;
+  }
+  .photo-drop.drag{ border-color: var(--ae-primary); background-color:#0b1120; }
+  .photo-input{ display:none; }
 
-.form-actions {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
-    display: flex;
-    gap: 10px;
-}
+  .form-actions{
+    display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed var(--ae-line); padding-top:10px; margin-top:4px;
+  }
 
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
+  @media (max-width: 860px){
+    .ae-header{ grid-template-columns: 1fr; }
+    .photo-row{ grid-template-columns: 1fr; }
+  }
 </style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="add-equipment-shell">
+
+  {# =================== STICKY MINI-HEADER =================== #}
+  <div class="ae-header" aria-label="Add equipment header">
+    <h1 class="ae-title">Add New Equipment</h1>
+    <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+  </div>
+
+  {# =================== FORM CARD =================== #}
+  <form method="POST"
+        action="{{ url_for('equipment.add') }}"
+        enctype="multipart/form-data"
+        class="ae-card"
+        id="addEquipmentForm">
+
+    <!-- ===== BASIC INFO ===== -->
+    <div class="form-section" id="sec-basic">
+      <div class="sec-head">
+        <h3>Basic Information</h3>
+        <span class="hint">Name can auto-fill from Year / Make / Model — you can still edit it.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Equipment Name *</label>
+        <input type="text" id="name" name="name" placeholder="e.g., 2020 John Deere X350" required>
+      </div>
+
+      <div class="form-group">
+        <label>Quick Select Category</label>
+        <div class="chip-row" id="categoryChips">
+          <button type="button" class="chip" data-cat="Auto">Auto</button>
+          <button type="button" class="chip" data-cat="ATV">ATV</button>
+          <button type="button" class="chip" data-cat="Marine">Marine</button>
+          <button type="button" class="chip" data-cat="Lawn">Lawn</button>
+          <button type="button" class="chip" data-cat="Snow">Snow</button>
+          <button type="button" class="chip" data-cat="Power Tools">Power Tools</button>
+          {# Render remaining categories as chips too (avoids duplicates) #}
+          {% for cat in categories %}
+            {% if cat not in ['Auto','ATV','Marine','Lawn','Snow','Power Tools'] %}
+              <button type="button" class="chip" data-cat="{{ cat }}">{{ cat }}</button>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category *</label>
+        <select id="category" name="category" required>
+          <option value="">Select Category</option>
+          {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="make">Make</label>
+          <input type="text" id="make" name="make" placeholder="e.g., John Deere">
+        </div>
+
+        <div class="form-group">
+          <label for="model">Model</label>
+          <input type="text" id="model" name="model" placeholder="e.g., X350">
+        </div>
+
+        <div class="form-group">
+          <label for="year">Year</label>
+          <div class="grid-bumpers">
+            <input type="number" id="year" name="year" placeholder="e.g., 2020" min="1900" max="2035">
+            <button type="button" class="btn btn-outline btn-sm" data-ystep="-1">−1</button>
+            <button type="button" class="btn btn-outline btn-sm" data-ystep="+1">+1</button>
+          </div>
+          <span class="hint">Valid range 1900–2035.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ADDITIONAL DETAILS ===== -->
+    <div class="form-section" id="sec-details">
+      <div class="sec-head"><h3>Additional Details</h3></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="serial_number">Serial Number</label>
+          <input type="text" id="serial_number" name="serial_number" placeholder="e.g., 1GX350A123456">
+        </div>
+
+        <div class="form-group">
+          <label for="location">Storage Location</label>
+          <input list="locationList" id="location" name="location" placeholder="e.g., Garage, Shed, Barn">
+          <datalist id="locationList">
+            <option>Garage</option><option>Shed</option><option>Barn</option><option>Storage Unit</option><option>Driveway</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="purchase_date">Purchase Date</label>
+          <input type="date" id="purchase_date" name="purchase_date">
+        </div>
+
+        <div class="form-group">
+          <label for="purchase_price">Purchase Price</label>
+          <div class="grid-bumpers">
+            <input type="number" id="purchase_price" name="purchase_price" step="0.01" placeholder="e.g., 3500.00" min="0" inputmode="decimal">
+            <button type="button" class="btn btn-outline btn-sm" data-pstep="-100">−100</button>
+            <button type="button" class="btn btn-outline btn-sm" data-pstep="+100">+100</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
+      </div>
+    </div>
+
+    <!-- ===== PHOTO ===== -->
+    <div class="form-section" id="sec-photo">
+      <div class="sec-head"><h3>Equipment Photo</h3></div>
+
+      <div class="photo-row">
+        <label for="profile_photo" class="photo-drop" id="photoDrop">
+          <span id="photoDropText">Drag & drop or click to upload<br>PNG/JPG</span>
+        </label>
+        <div class="form-group">
+          <input type="file" id="profile_photo" name="profile_photo" accept="image/*" class="photo-input">
+          <span class="hint" id="photoFileName">No file selected</span>
+          <span class="hint">Optional, but it makes lists and dashboards look great.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ACTIONS ===== -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Add Equipment</button>
+      <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="ae-card" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--ae-muted);">
+v1.0.0 — Dark UI refactor; sticky header; category chips; auto-name; image preview & drag&drop; price/year bumpers; date default.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /add-equipment-shell -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Utilities
+============================================================================ */
+function clamp(val, min, max){
+  const n = parseInt(val || 0, 10);
+  if (isNaN(n)) return '';
+  return Math.min(max, Math.max(min, n));
+}
+
+/* ============================================================================
+   Category Quick Chips -> set <select>
+============================================================================ */
+const catSelect = document.getElementById('category');
+const chipRow = document.getElementById('categoryChips');
+chipRow?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip');
+  if(!btn) return;
+  const cat = btn.dataset.cat;
+  if(catSelect){
+    catSelect.value = cat;
+    // Visual state
+    chipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+  }
+});
+
+/* ============================================================================
+   Year bumpers (+/-) with clamping
+============================================================================ */
+const yearInput = document.getElementById('year');
+document.querySelectorAll('[data-ystep]').forEach(b => {
+  b.addEventListener('click', () => {
+    const step = parseInt(b.dataset.ystep.replace('+',''), 10);
+    const v = clamp((yearInput.value || ''), 1900, 2035);
+    yearInput.value = (v === '' ? new Date().getFullYear() : v) + step;
+    if (yearInput.value > 2035) yearInput.value = 2035;
+    if (yearInput.value < 1900) yearInput.value = 1900;
+    maybeBuildName();
+  });
+});
+
+/* ============================================================================
+   Price bumpers (+/-)
+============================================================================ */
+const priceInput = document.getElementById('purchase_price');
+document.querySelectorAll('[data-pstep]').forEach(b => {
+  b.addEventListener('click', () => {
+    const step = parseFloat(b.dataset.pstep.replace('+',''));
+    const cur = parseFloat(priceInput.value || '0');
+    const next = Math.max(0, cur + step);
+    priceInput.value = next.toFixed(2);
+  });
+});
+
+/* ============================================================================
+   Auto-build Name from Year/Make/Model if user hasn't typed a custom name
+   - If user edits Name manually (blur with non-empty), we stop auto-updating.
+============================================================================ */
+const nameInput = document.getElementById('name');
+const makeInput = document.getElementById('make');
+const modelInput = document.getElementById('model');
+let nameLockedByUser = false;
+
+nameInput?.addEventListener('input', () => { if ((nameInput.value || '').trim().length) nameLockedByUser = true; });
+
+[yearInput, makeInput, modelInput].forEach(el => {
+  el?.addEventListener('input', () => { if (!nameLockedByUser) maybeBuildName(); });
+  el?.addEventListener('blur', () => { if (!nameLockedByUser) maybeBuildName(); });
+});
+
+function maybeBuildName(){
+  if (nameLockedByUser) return;
+  const y = (yearInput?.value || '').trim();
+  const mk = (makeInput?.value || '').trim();
+  const md = (modelInput?.value || '').trim();
+  const parts = [y, mk, md].filter(Boolean);
+  if (parts.length) nameInput.value = parts.join(' ');
+}
+
+/* ============================================================================
+   Purchase date default to today if empty
+============================================================================ */
+const dateEl = document.getElementById('purchase_date');
+document.addEventListener('DOMContentLoaded', () => {
+  if (dateEl && !dateEl.value) dateEl.valueAsDate = new Date();
+});
+
+/* ============================================================================
+   Photo: click to open, drag&drop, live background preview
+============================================================================ */
+const drop = document.getElementById('photoDrop');
+const file = document.getElementById('profile_photo');
+const fileNameHint = document.getElementById('photoFileName');
+const dropText = document.getElementById('photoDropText');
+
+function setPreviewFromFile(f){
+  if (!f || !f.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    drop.style.backgroundImage = `url('${ev.target.result}')`;
+    dropText.textContent = '';
+    fileNameHint.textContent = f.name;
+  };
+  reader.readAsDataURL(f);
+}
+
+drop?.addEventListener('click', () => file?.click());
+
+['dragenter','dragover'].forEach(evt => {
+  drop?.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt => {
+  drop?.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('drag'); });
+});
+drop?.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const f = dt?.files?.[0];
+  if (f){ 
+    // Put file into input for form submission
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(f);
+    file.files = dataTransfer.files;
+    setPreviewFromFile(f);
+  }
+});
+file?.addEventListener('change', (e) => {
+  const f = e.target.files?.[0];
+  if (f) setPreviewFromFile(f);
+});
+
+/* ============================================================================
+   Basic HTML5 validation assist: if Name empty, try to auto-fill once
+============================================================================ */
+document.getElementById('addEquipmentForm')?.addEventListener('submit', (e) => {
+  if (!nameInput.value.trim()){
+    maybeBuildName();
+  }
+});
+</script>
 {% endblock %}

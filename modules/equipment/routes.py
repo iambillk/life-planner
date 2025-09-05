@@ -10,6 +10,7 @@ from collections import defaultdict
 import os
 from . import equipment_bp  # Import the blueprint from __init__.py
 
+
 @equipment_bp.route('/')
 def index():
     """Equipment dashboard with alerts"""
@@ -34,10 +35,15 @@ def index():
                          categories=EQUIPMENT_CATEGORIES,
                          active='equipment')
 
+
 @equipment_bp.route('/add', methods=['GET', 'POST'])
 def add():
     """Add new equipment"""
     if request.method == 'POST':
+        # Parse ownership fields
+        pd_str = request.form.get('purchase_date')
+        pp_str = request.form.get('purchase_price')
+
         equipment = Equipment(
             name=request.form.get('name'),
             category=request.form.get('category'),
@@ -46,7 +52,9 @@ def add():
             year=int(request.form.get('year')) if request.form.get('year') else None,
             serial_number=request.form.get('serial_number'),
             location=request.form.get('location'),
-            notes=request.form.get('notes')
+            notes=request.form.get('notes'),
+            purchase_date=datetime.strptime(pd_str, '%Y-%m-%d').date() if pd_str else None,
+            purchase_price=float(pp_str) if pp_str not in (None, '',) else None,
         )
         
         # Handle photo upload
@@ -65,6 +73,7 @@ def add():
     return render_template('add_equipment.html', 
                          categories=EQUIPMENT_CATEGORIES,
                          active='equipment')
+
 
 @equipment_bp.route('/<int:id>')
 def detail(id):
@@ -96,12 +105,14 @@ def detail(id):
                          next_due=next_due,
                          active='equipment')
 
+
 @equipment_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
 def edit(id):
     """Edit equipment"""
     equipment = Equipment.query.get_or_404(id)
     
     if request.method == 'POST':
+        # ----- core fields -----
         equipment.name = request.form.get('name')
         equipment.category = request.form.get('category')
         equipment.make = request.form.get('make')
@@ -113,9 +124,40 @@ def edit(id):
         equipment.location = request.form.get('location')
         equipment.status = request.form.get('status')
         equipment.notes = request.form.get('notes')
+
+        # ----- ownership fields (persist on edit) -----
+        pd_str = request.form.get('purchase_date')
+        equipment.purchase_date = datetime.strptime(pd_str, '%Y-%m-%d').date() if pd_str else None
+
+        pp_str = request.form.get('purchase_price')
+        equipment.purchase_price = float(pp_str) if pp_str not in (None, '',) else None
+
         equipment.updated_at = datetime.utcnow()
         
+        # ----- profile photo replacement -----
+        new_file = request.files.get('profile_photo')
+        old_filename = equipment.profile_photo
+        new_filename = None
+
+        if new_file and new_file.filename and allowed_file(new_file.filename):
+            # Save new image to same folder & update DB field
+            new_filename = save_uploaded_photo(new_file, 'equipment_profiles', equipment.name)
+            equipment.profile_photo = new_filename
+
+        # Commit changes (including possibly new profile photo filename)
         db.session.commit()
+
+        # Optional: remove old file after commit
+        if new_filename and old_filename and old_filename != new_filename:
+            try:
+                old_path = os.path.join(
+                    current_app.config['UPLOAD_FOLDER'], 'equipment_profiles', old_filename
+                )
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            except Exception as e:
+                current_app.logger.warning(f'Could not delete old profile photo {old_filename}: {e}')
+        
         flash(f'{equipment.name} updated successfully!', 'success')
         return redirect(url_for('equipment.detail', id=id))
     
@@ -127,7 +169,7 @@ def edit(id):
 
 @equipment_bp.route('/<int:id>/photos/upload', methods=['POST'])
 def upload_photo(id):
-    """Upload photos for equipment"""
+    """Upload photos for equipment (detail page slab) — single photo"""
     equipment = Equipment.query.get_or_404(id)
     
     if 'photo' in request.files:
@@ -148,9 +190,10 @@ def upload_photo(id):
     
     return redirect(url_for('equipment.detail', id=id))
 
+
 @equipment_bp.route('/<int:id>/maintenance/add', methods=['GET', 'POST'])
 def add_maintenance(id):
-    """Add maintenance record"""
+    """Add maintenance record (supports multi-photo groups with captions)"""
     equipment = Equipment.query.get_or_404(id)
     
     if request.method == 'POST':
@@ -175,24 +218,53 @@ def add_maintenance(id):
         db.session.add(record)
         db.session.commit()
         
-        # Handle photo uploads
-        for photo_type in ['before_photo', 'after_photo', 'receipt_photo']:
-            if photo_type in request.files:
-                file = request.files[photo_type]
-                if file and allowed_file(file.filename):
-                    filename = save_uploaded_photo(
-                        file, 
-                        'maintenance_photos',
-                        f"{equipment.name}_{record.service_type}_{photo_type}"
-                    )
-                    
-                    photo = MaintenancePhoto(
-                        maintenance_id=record.id,
-                        filename=filename,
-                        photo_type=photo_type.replace('_photo', ''),
-                        caption=request.form.get(f'{photo_type}_caption')
-                    )
-                    db.session.add(photo)
+        # --------- MULTI-PHOTO GROUPS (Before/After/Receipts) ---------
+        groups = [
+            ('before', 'before_photos', 'before_captions'),
+            ('after', 'after_photos', 'after_captions'),
+            ('receipt', 'receipt_photos', 'receipt_captions'),
+        ]
+        for group_name, files_field, caps_field in groups:
+            files = request.files.getlist(files_field)
+            captions = request.form.getlist(caps_field)
+            for idx, f in enumerate(files):
+                if not (f and allowed_file(f.filename)):
+                    continue
+                filename = save_uploaded_photo(
+                    f,
+                    'maintenance_photos',
+                    f"{equipment.name}_{record.service_type}_{group_name}"
+                )
+                caption = captions[idx] if idx < len(captions) else None
+                photo = MaintenancePhoto(
+                    maintenance_id=record.id,
+                    filename=filename,
+                    photo_type=group_name,
+                    caption=caption
+                )
+                db.session.add(photo)
+
+        # --------- BACK-COMPAT: single-file fields (if present) ---------
+        legacy = [
+            ('before', 'before_photo', 'before_photo_caption'),
+            ('after', 'after_photo', 'after_photo_caption'),
+            ('receipt', 'receipt_photo', 'receipt_photo_caption'),
+        ]
+        for group_name, file_field, cap_field in legacy:
+            f = request.files.get(file_field)
+            if f and allowed_file(f.filename):
+                filename = save_uploaded_photo(
+                    f,
+                    'maintenance_photos',
+                    f"{equipment.name}_{record.service_type}_{group_name}"
+                )
+                photo = MaintenancePhoto(
+                    maintenance_id=record.id,
+                    filename=filename,
+                    photo_type=group_name,
+                    caption=request.form.get(cap_field)
+                )
+                db.session.add(photo)
         
         # Update equipment mileage/hours
         if record.mileage_at_service:
@@ -204,10 +276,12 @@ def add_maintenance(id):
         flash('Maintenance record added successfully!', 'success')
         return redirect(url_for('equipment.detail', id=id))
     
+    # NOTE: keep your existing template name; swap to 'maintenance_add.html' if you moved it
     return render_template('maintenance_log.html',
                          equipment=equipment,
                          service_types=SERVICE_TYPES,
                          active='equipment')
+
 
 @equipment_bp.route('/<int:id>/export-pdf')
 def export_pdf(id):
@@ -222,19 +296,19 @@ def export_pdf(id):
     filename = f"{equipment.name}_maintenance_{datetime.now().strftime('%Y%m%d')}.pdf"
     return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
+
 @equipment_bp.route('/<int:id>/delete', methods=['POST'])
 def delete(id):
     """Delete equipment"""
     equipment = Equipment.query.get_or_404(id)
     name = equipment.name
     
-    # Delete photos from filesystem
+    # Delete profile photo from filesystem
     if equipment.profile_photo:
-        import os
         try:
             photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'equipment_profiles', equipment.profile_photo)
             os.remove(photo_path)
-        except:
+        except Exception:
             pass
     
     db.session.delete(equipment)
@@ -242,6 +316,7 @@ def delete(id):
     
     flash(f'{name} deleted successfully!', 'success')
     return redirect(url_for('equipment.index'))
+
 
 @equipment_bp.route('/category/<category>')
 def by_category(category):
@@ -256,6 +331,7 @@ def by_category(category):
                          category=category,
                          categories=EQUIPMENT_CATEGORIES,
                          active='equipment')
+
 
 @equipment_bp.route('/<int:id>/fuel')
 def fuel_history(id):
@@ -282,6 +358,7 @@ def fuel_history(id):
                          fuel_logs=fuel_logs,
                          stats=stats,
                          active='equipment')
+
 
 @equipment_bp.route('/<int:id>/fuel/add', methods=['GET', 'POST'])
 def add_fuel(id):
@@ -337,6 +414,7 @@ def add_fuel(id):
                          last_odometer=last_odometer,
                          active='equipment')
 
+
 @equipment_bp.route('/equipment/<int:id>/consumables')
 def consumables_history(id):
     equipment = Equipment.query.get_or_404(id)
@@ -375,6 +453,7 @@ def consumables_history(id):
                          months_tracked=months_tracked,
                          avg_monthly=avg_monthly,
                          cost_by_type=cost_by_type)
+
 
 @equipment_bp.route('/<int:id>/consumables/add', methods=['GET', 'POST'])
 def add_consumable(id):
@@ -416,6 +495,7 @@ def add_consumable(id):
                          common_items=common_items,
                          active='equipment')
 
+
 @equipment_bp.route('/<int:id>/carwash/add', methods=['GET', 'POST'])
 def add_carwash(id):
     """Log car wash"""
@@ -447,12 +527,13 @@ def add_carwash(id):
                          equipment=equipment,
                          active='equipment')
 
+
 @equipment_bp.route('/<int:id>/cost-analysis')
 def cost_analysis(id):
     """Total cost of ownership analysis"""
     equipment = Equipment.query.get_or_404(id)
     
-    # Get all costs
+    # Get ongoing costs (exclude purchase by design)
     maintenance_cost = db.session.query(func.sum(MaintenanceRecord.cost)).filter_by(equipment_id=id).scalar() or 0
     fuel_cost = db.session.query(func.sum(FuelLog.total_cost)).filter_by(equipment_id=id).scalar() or 0
     consumables_cost = db.session.query(func.sum(ConsumableLog.cost)).filter_by(equipment_id=id).scalar() or 0
@@ -463,24 +544,25 @@ def cost_analysis(id):
     else:
         wash_cost = 0
     
-    total_cost = maintenance_cost + fuel_cost + consumables_cost + wash_cost
+    total_cost_excl_purchase = maintenance_cost + fuel_cost + consumables_cost + wash_cost
+    upfront_cost = float(equipment.purchase_price or 0)
+    tco_including_purchase = total_cost_excl_purchase + upfront_cost
     
-    # Calculate cost per mile/hour
+    # Cost per mile/hour from ongoing costs
     cost_per_mile = None
     cost_per_hour = None
     
-    if equipment.mileage and equipment.purchase_price:
-        # Assume starting mileage was 0 or get from first log
+    if equipment.mileage:
         first_fuel = FuelLog.query.filter_by(equipment_id=id).order_by(FuelLog.date).first()
-        start_mileage = first_fuel.odometer if first_fuel else 0
+        start_mileage = first_fuel.odometer if first_fuel and first_fuel.odometer else 0
         miles_driven = equipment.mileage - start_mileage
         if miles_driven > 0:
-            cost_per_mile = total_cost / miles_driven
+            cost_per_mile = total_cost_excl_purchase / miles_driven
     
-    if equipment.hours and total_cost > 0:
-        cost_per_hour = total_cost / equipment.hours
+    if equipment.hours and total_cost_excl_purchase > 0:
+        cost_per_hour = total_cost_excl_purchase / equipment.hours
     
-    # Monthly breakdown
+    # Monthly breakdown (SQLite-friendly strftime)
     monthly_costs = db.session.query(
         func.strftime('%Y-%m', MaintenanceRecord.service_date).label('month'),
         func.sum(MaintenanceRecord.cost).label('cost')
@@ -492,13 +574,16 @@ def cost_analysis(id):
                          fuel_cost=fuel_cost,
                          consumables_cost=consumables_cost,
                          wash_cost=wash_cost,
-                         total_cost=total_cost,
+                         total_cost=total_cost_excl_purchase,           # keep legacy name if template expects it
+                         total_cost_excl_purchase=total_cost_excl_purchase,
+                         upfront_cost=upfront_cost,
+                         tco_including_purchase=tco_including_purchase,
                          cost_per_mile=cost_per_mile,
                          cost_per_hour=cost_per_hour,
                          monthly_costs=monthly_costs,
                          active='equipment')
-                         
-                         
+
+
 @equipment_bp.route('/<int:id>/maintenance/<int:record_id>/edit', methods=['GET', 'POST'])
 def edit_maintenance(id, record_id):
     """Edit maintenance record"""
@@ -550,6 +635,7 @@ def edit_maintenance(id, record_id):
                          service_types=SERVICE_TYPES,
                          active='equipment')
 
+
 @equipment_bp.route('/<int:id>/maintenance/<int:record_id>/delete', methods=['POST'])
 def delete_maintenance(id, record_id):
     """Delete maintenance record"""
@@ -567,7 +653,7 @@ def delete_maintenance(id, record_id):
             photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'maintenance_photos', photo.filename)
             if os.path.exists(photo_path):
                 os.remove(photo_path)
-        except:
+        except Exception:
             pass
     
     # Delete the record from database
@@ -576,6 +662,7 @@ def delete_maintenance(id, record_id):
     
     flash('Maintenance record deleted successfully!', 'success')
     return redirect(url_for('equipment.detail', id=id))
+
 
 # CAR WASH ROUTES
 
@@ -614,6 +701,7 @@ def add_car_wash(id):
     return render_template('equipment/add_car_wash.html',
                          equipment=equipment,
                          today=date.today())
+
 
 @equipment_bp.route('/<int:id>/car_wash')
 def car_wash_history(id):
@@ -666,6 +754,7 @@ def car_wash_history(id):
                          monthly_spending=dict(monthly_spending),
                          max_monthly=max_monthly)
 
+
 @equipment_bp.route('/car_wash/<int:id>/edit', methods=['GET', 'POST'])
 def edit_car_wash(id):
     wash = CarWashLog.query.get_or_404(id)
@@ -688,6 +777,7 @@ def edit_car_wash(id):
                          wash=wash,
                          today=wash.date)
 
+
 @equipment_bp.route('/car_wash/<int:id>/delete', methods=['POST'])
 def delete_car_wash(id):
     wash = CarWashLog.query.get_or_404(id)
@@ -698,7 +788,8 @@ def delete_car_wash(id):
     flash('Car wash record deleted.', 'success')
     
     return redirect(url_for('equipment.car_wash_history', id=equipment_id))
-    
+
+
 @equipment_bp.route('/<int:equipment_id>/photo/<int:photo_id>/delete', methods=['POST'])  
 def delete_photo(equipment_id, photo_id):
     """Delete an equipment photo"""
@@ -724,7 +815,8 @@ def delete_photo(equipment_id, photo_id):
     
     flash('Photo deleted successfully', 'success')
     return redirect(url_for('equipment.detail', id=equipment_id))
-    
+
+
 @equipment_bp.route('/fuel/<int:fuel_id>/edit', methods=['GET', 'POST'])  
 def edit_fuel(fuel_id):
     """Edit fuel record"""
@@ -773,6 +865,7 @@ def edit_fuel(fuel_id):
                          fuel_log=fuel_log,
                          equipment=equipment)
 
+
 @equipment_bp.route('/fuel/<int:fuel_id>/delete', methods=['POST'])
 def delete_fuel(fuel_id):
     """Delete fuel record"""
@@ -785,7 +878,7 @@ def delete_fuel(fuel_id):
             photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts', fuel_log.receipt_photo)
             if os.path.exists(photo_path):
                 os.remove(photo_path)
-        except:
+        except Exception:
             pass
     
     # Recalculate MPG for next record if needed

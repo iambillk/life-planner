@@ -1,188 +1,352 @@
+{# =============================================================================
+  FILE: equipment_edit_fuel.html
+  PURPOSE: Edit an existing fuel purchase record
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme with safe fallbacks to base vars
+  - Sticky action header (Back to History, Save, Cancel)
+  - Smart math: changes to Gallons / Price / Total keep the third in sync
+  - Soft validation & inline hints (positive numbers, date required)
+  - Tiny helpers: quick “fill total” and per-field clear buttons
+  - Receipt preview (image) + filename chip for PDFs
+  - Clean, compact layout with consistent paddings & radii
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI refactor, sticky header, tri-field auto-sync, validation,
+         receipt preview, accessible controls, clearer sectioning & comments.
+============================================================================= #}
+
 {% extends "base.html" %}
 {% block title %}Edit Fuel Record{% endblock %}
 {% block header %}Edit Fuel Record{% endblock %}
 
-{% block content %}
-<div class="edit-fuel-container">
-    <form method="POST" action="{{ url_for('equipment.edit_fuel', fuel_id=fuel_log.id) }}" 
-          enctype="multipart/form-data" class="fuel-form">
-        
-        <div class="form-section">
-            <h3>Station Information</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="station_name">Station Name</label>
-                    <input type="text" id="station_name" name="station_name" 
-                           value="{{ fuel_log.station_name or '' }}">
-                </div>
-                <div class="form-group">
-                    <label for="station_location">Location</label>
-                    <input type="text" id="station_location" name="station_location"
-                           value="{{ fuel_log.station_location or '' }}">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section">
-            <h3>Fuel Details</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="date">Date*</label>
-                    <input type="date" id="date" name="date" required
-                           value="{{ fuel_log.date.strftime('%Y-%m-%d') }}">
-                </div>
-                <div class="form-group">
-                    <label for="fuel_type">Fuel Type</label>
-                    <select id="fuel_type" name="fuel_type">
-                        <option value="Regular" {% if fuel_log.fuel_type == 'Regular' %}selected{% endif %}>Regular</option>
-                        <option value="Plus" {% if fuel_log.fuel_type == 'Plus' %}selected{% endif %}>Plus</option>
-                        <option value="Premium" {% if fuel_log.fuel_type == 'Premium' %}selected{% endif %}>Premium</option>
-                        <option value="Diesel" {% if fuel_log.fuel_type == 'Diesel' %}selected{% endif %}>Diesel</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="gallons">Gallons*</label>
-                    <input type="number" step="0.001" id="gallons" name="gallons" required
-                           value="{{ fuel_log.gallons }}">
-                </div>
-                <div class="form-group">
-                    <label for="price_per_gallon">Price per Gallon*</label>
-                    <input type="number" step="0.001" id="price_per_gallon" name="price_per_gallon" required
-                           value="{{ fuel_log.price_per_gallon }}">
-                </div>
-                <div class="form-group">
-                    <label for="total_cost">Total Cost*</label>
-                    <input type="number" step="0.01" id="total_cost" name="total_cost" required
-                           value="{{ fuel_log.total_cost }}">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section">
-            <h3>Mileage & Notes</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="odometer">Odometer Reading</label>
-                    <input type="number" id="odometer" name="odometer"
-                           value="{{ fuel_log.odometer or '' }}">
-                </div>
-                <div class="form-group">
-                    <label for="trip_purpose">Trip Purpose</label>
-                    <select id="trip_purpose" name="trip_purpose">
-                        <option value="">Select...</option>
-                        <option value="Personal" {% if fuel_log.trip_purpose == 'Personal' %}selected{% endif %}>Personal</option>
-                        <option value="Business" {% if fuel_log.trip_purpose == 'Business' %}selected{% endif %}>Business</option>
-                        <option value="Mixed" {% if fuel_log.trip_purpose == 'Mixed' %}selected{% endif %}>Mixed</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" rows="3">{{ fuel_log.notes or '' }}</textarea>
-            </div>
-        </div>
-
-        <div class="form-actions">
-            <a href="{{ url_for('equipment.fuel_history', id=fuel_log.equipment_id) }}" 
-               class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-        </div>
-    </form>
-</div>
-
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
 <style>
-.edit-fuel-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
+  :root{
+    --ef-bg: var(--bg, #0b0f1a);
+    --ef-card: var(--card, #0f1625);
+    --ef-sub: #0c1322;
+    --ef-line: var(--line, #1f2a3d);
+    --ef-text: var(--text, #e6eaf2);
+    --ef-muted: var(--text-muted, #9fb0c8);
+    --ef-primary: var(--primary, #6ea8ff);
+    --ef-success: var(--success, #22c55e);
+    --ef-danger: var(--danger, #ef4444);
+    --ef-accent: #38bdf8;
+    --ef-radius: var(--radius, 14px);
+    --ef-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
 
-.fuel-form {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  .ef-shell{ max-width: 900px; margin: 0 auto; padding: 16px; display:grid; gap:16px; }
 
-.form-section {
-    margin-bottom: 30px;
-}
+  /* Sticky header */
+  .ef-header{
+    position: sticky; top:12px; z-index:5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ef-line); border-radius: var(--ef-radius);
+    padding:12px; box-shadow: var(--ef-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+  }
+  .ef-title{ margin:0; font-size:1.2rem; }
+  .ef-sub{ color:var(--ef-muted); font-size:.95rem; margin-top:2px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 
-.form-section h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
-}
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ef-line);
+    background: var(--ef-card); color: var(--ef-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--ef-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
 
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
+  /* Card / form */
+  .card{
+    background: var(--ef-card); border:1px solid var(--ef-line);
+    border-radius: var(--ef-radius); padding:16px; box-shadow: var(--ef-shadow);
+  }
+  .form-section + .form-section{ margin-top:12px; }
+  .section-title{ margin:0 0 8px 0; font-size:1.05rem; }
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .form-group{ display:grid; gap:6px; }
+  label{ color: var(--ef-muted); font-size:.9rem; }
+  input[type="text"], input[type="date"], input[type="number"], select, textarea{
+    background:#0b1120; color: var(--ef-text); border:1px solid var(--ef-line); border-radius:10px; padding:10px;
+    outline:none;
+  }
+  textarea{ min-height:90px; resize: vertical; }
+  input:focus, select:focus, textarea:focus{ border-color: var(--ef-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
 
-.form-group {
-    margin-bottom: 20px;
-}
+  .inline-row{ display:flex; gap:6px; align-items:center; }
+  .hint{ color:var(--ef-muted); font-size:.8rem; }
+  .error{ color: #fecaca; background:#3b1115; border:1px solid #7f1d1d; padding:6px 10px; border-radius:10px; display:none; }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
-}
+  /* Math helper chip */
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; border:1px dashed var(--ef-line); background:#0b1120;
+    padding:6px 10px; border-radius:999px; color: var(--ef-muted); font-size:.8rem;
+  }
+  .chip b{ color: var(--ef-text); }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+  /* Receipt preview */
+  .preview{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:#0b1120; border:1px dashed var(--ef-line); padding:10px; border-radius:10px;
+  }
+  .preview img{ width:110px; height:110px; object-fit:cover; border-radius:10px; border:1px solid var(--ef-line); background:#020617; }
+  .file-pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--ef-line); }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
-}
+  /* Actions row at bottom */
+  .form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
 
-.btn {
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
+  @media (max-width: 860px){
+    .ef-header{ grid-template-columns:1fr; }
+  }
 </style>
+{% endblock %}
 
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="ef-shell">
+
+  {# ============ STICKY HEADER ============ #}
+  <div class="ef-header">
+    <div>
+      <h1 class="ef-title">Edit Fuel Record</h1>
+      <div class="ef-sub">
+        {{ fuel_log.date.strftime('%b %d, %Y') }} •
+        {{ fuel_log.station_name or 'Unnamed station' }}
+        {% if fuel_log.station_location %} • {{ fuel_log.station_location }}{% endif %}
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary" href="{{ url_for('equipment.fuel_history', id=fuel_log.equipment_id) }}">← Back to Fuel History</a>
+      <button form="fuelEditForm" type="submit" class="btn btn-primary">💾 Save Changes</button>
+      <a class="btn" href="{{ url_for('equipment.fuel_history', id=fuel_log.equipment_id) }}">Cancel</a>
+    </div>
+  </div>
+
+  {# ============ EDIT FORM ============ #}
+  <form id="fuelEditForm" method="POST"
+        action="{{ url_for('equipment.edit_fuel', fuel_id=fuel_log.id) }}"
+        enctype="multipart/form-data" class="card">
+
+    {# --- Station Information --- #}
+    <div class="form-section">
+      <h3 class="section-title">Station Information</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="station_name">Station Name</label>
+          <input type="text" id="station_name" name="station_name" value="{{ fuel_log.station_name or '' }}" placeholder="e.g., Shell, Costco">
+        </div>
+        <div class="form-group">
+          <label for="station_location">Location</label>
+          <input type="text" id="station_location" name="station_location" value="{{ fuel_log.station_location or '' }}" placeholder="e.g., Main St & 5th">
+        </div>
+      </div>
+    </div>
+
+    {# --- Fuel Details --- #}
+    <div class="form-section">
+      <h3 class="section-title">Fuel Details</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="date">Date <span class="hint">*</span></label>
+          <input type="date" id="date" name="date" required value="{{ fuel_log.date.strftime('%Y-%m-%d') }}">
+        </div>
+
+        <div class="form-group">
+          <label for="fuel_type">Fuel Type</label>
+          <select id="fuel_type" name="fuel_type">
+            <option value="Regular" {% if fuel_log.fuel_type == 'Regular' %}selected{% endif %}>Regular</option>
+            <option value="Plus" {% if fuel_log.fuel_type == 'Plus' %}selected{% endif %}>Plus</option>
+            <option value="Premium" {% if fuel_log.fuel_type == 'Premium' %}selected{% endif %}>Premium</option>
+            <option value="Diesel" {% if fuel_log.fuel_type == 'Diesel' %}selected{% endif %}>Diesel</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="gallons">Gallons <span class="hint">*</span></label>
+          <div class="inline-row">
+            <input type="number" step="0.001" id="gallons" name="gallons" required value="{{ fuel_log.gallons }}">
+            <button type="button" class="btn btn-sm" data-clear="gallons">✕</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="price_per_gallon">Price per Gallon <span class="hint">*</span></label>
+          <div class="inline-row">
+            <input type="number" step="0.001" id="price_per_gallon" name="price_per_gallon" required value="{{ fuel_log.price_per_gallon }}">
+            <button type="button" class="btn btn-sm" data-clear="price_per_gallon">✕</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="total_cost">Total Cost <span class="hint">*</span></label>
+          <div class="inline-row">
+            <input type="number" step="0.01" id="total_cost" name="total_cost" required value="{{ fuel_log.total_cost }}">
+            <button type="button" class="btn btn-sm" id="fillTotal">=</button>
+          </div>
+          <div class="chip" id="mathHint">
+            <span>Hint:</span> <b>gallons × price</b> → total
+          </div>
+        </div>
+      </div>
+
+      <div id="mathError" class="error">Please enter positive numbers for gallons, price, and total.</div>
+    </div>
+
+    {# --- Mileage & Notes --- #}
+    <div class="form-section">
+      <h3 class="section-title">Mileage & Notes</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="odometer">Odometer</label>
+          <input type="number" id="odometer" name="odometer" value="{{ fuel_log.odometer or '' }}" placeholder="Current mileage">
+        </div>
+        <div class="form-group">
+          <label for="trip_purpose">Trip Purpose</label>
+          <select id="trip_purpose" name="trip_purpose">
+            <option value="">Select…</option>
+            <option value="Personal" {% if fuel_log.trip_purpose == 'Personal' %}selected{% endif %}>Personal</option>
+            <option value="Business" {% if fuel_log.trip_purpose == 'Business' %}selected{% endif %}>Business</option>
+            <option value="Mixed" {% if fuel_log.trip_purpose == 'Mixed' %}selected{% endif %}>Mixed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="Any notes about this fill-up">{{ fuel_log.notes or '' }}</textarea>
+      </div>
+    </div>
+
+    {# --- Receipt (Optional) --- #}
+    <div class="form-section">
+      <h3 class="section-title">Receipt (Optional)</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="receipt">Upload Receipt</label>
+          <input type="file" id="receipt" name="receipt" accept="image/*,application/pdf">
+          <div class="preview" id="receiptPreview" style="display:none;">
+            <img id="receiptImg" alt="Receipt preview" />
+            <span class="file-pill" id="receiptFile"></span>
+          </div>
+          <span class="hint">Images show a preview. PDFs show filename.</span>
+        </div>
+      </div>
+    </div>
+
+    {# --- Form Actions --- #}
+    <div class="form-actions">
+      <a class="btn" href="{{ url_for('equipment.fuel_history', id=fuel_log.equipment_id) }}">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
 <script>
-// Auto-calculate total when gallons or price changes
-document.getElementById('gallons').addEventListener('input', calculateTotal);
-document.getElementById('price_per_gallon').addEventListener('input', calculateTotal);
+/* ============================================================================
+   Tri-field auto-sync
+   - If gallons or price change → recompute total
+   - If total changes (and gallons present) → recompute price
+   - Gentle validation (positive numbers)
+============================================================================ */
+(function(){
+  const g = document.getElementById('gallons');
+  const p = document.getElementById('price_per_gallon');
+  const t = document.getElementById('total_cost');
+  const err = document.getElementById('mathError');
+  const hint = document.getElementById('mathHint');
 
-function calculateTotal() {
-    const gallons = parseFloat(document.getElementById('gallons').value) || 0;
-    const price = parseFloat(document.getElementById('price_per_gallon').value) || 0;
-    document.getElementById('total_cost').value = (gallons * price).toFixed(2);
-}
+  function validPos(n){ return isFinite(n) && n >= 0; }
+
+  function calcTotal(){
+    const gv = parseFloat(g.value||'0');
+    const pv = parseFloat(p.value||'0');
+    if(!validPos(gv) || !validPos(pv)){ showError(true); return; }
+    const total = gv * pv;
+    if(isFinite(total)){ t.value = total.toFixed(2); }
+    showError(false);
+  }
+
+  function calcPriceFromTotal(){
+    const gv = parseFloat(g.value||'0');
+    const tv = parseFloat(t.value||'0');
+    if(!validPos(gv) || gv === 0){ return; }
+    if(!validPos(tv)){ showError(true); return; }
+    const price = tv / gv;
+    if(isFinite(price)){ p.value = price.toFixed(3); }
+    showError(false);
+  }
+
+  function showError(on){
+    err.style.display = on ? 'block' : 'none';
+    hint.style.display = on ? 'none' : 'inline-flex';
+  }
+
+  g.addEventListener('input', calcTotal);
+  p.addEventListener('input', calcTotal);
+  t.addEventListener('input', calcPriceFromTotal);
+
+  // Quick "=" button to fill total explicitly
+  const fillBtn = document.getElementById('fillTotal');
+  if(fillBtn){ fillBtn.addEventListener('click', calcTotal); }
+
+  // Tiny clear buttons
+  document.querySelectorAll('[data-clear]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-clear');
+      const el = document.getElementById(id);
+      if(el){ el.value = ''; el.dispatchEvent(new Event('input')); }
+    });
+  });
+})();
+
+/* ============================================================================
+   Receipt preview
+   - Shows image preview, or filename for PDFs
+============================================================================ */
+(function(){
+  const input = document.getElementById('receipt');
+  const box = document.getElementById('receiptPreview');
+  const img = document.getElementById('receiptImg');
+  const filePill = document.getElementById('receiptFile');
+  if(!input) return;
+
+  input.addEventListener('change', ()=>{
+    const f = input.files && input.files[0];
+    if(!f){ box.style.display='none'; return; }
+
+    const isImg = /^image\//.test(f.type);
+    if(isImg){
+      const url = URL.createObjectURL(f);
+      img.src = url;
+      img.style.display = 'block';
+      filePill.textContent = `${f.name} • ${(f.size/1024).toFixed(0)} KB`;
+      box.style.display='flex';
+    }else{
+      img.style.display = 'none';
+      filePill.textContent = `${f.name} • ${(f.size/1024).toFixed(0)} KB`;
+      box.style.display='flex';
+    }
+  });
+})();
 </script>
 {% endblock %}

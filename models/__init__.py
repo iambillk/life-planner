@@ -1,4 +1,4 @@
-# models/__init__.py - ADD TodoList and TodoItem imports
+# models/__init__.py - Complete file with ProjectFile import
 from .base import db
 from .daily import DailyTask
 from .equipment import (
@@ -18,11 +18,12 @@ from .projects import (
     TCHIdea,
     TCHMilestone,
     TCHProjectNote,
-    PersonalProject
+    PersonalProject,
+    ProjectFile  # ADD THIS LINE - This is what was missing!
 )
 from .goals import Goal
 from .health import WeightEntry
-from .todo import TodoList, TodoItem  # ADD THIS LINE
+from .todo import TodoList, TodoItem
 
 __all__ = [
     'db',
@@ -42,8 +43,9 @@ __all__ = [
     'TCHMilestone',
     'TCHProjectNote',
     'PersonalProject',
+    'ProjectFile',  # ADD THIS LINE TOO
     'Goal',
     'WeightEntry',
-    'TodoList',  # ADD THIS
-    'TodoItem'   # ADD THIS
+    'TodoList',
+    'TodoItem'
 ]

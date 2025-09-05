@@ -1,0 +1,505 @@
+{# =============================================================================
+  FILE: equipment_edit.html
+  PURPOSE: Edit equipment info (photo, core details, status, readings, notes)
+  TEMPLATE VERSION: v1.1.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, modern UI with page-scoped CSS vars (safe fallbacks to base)
+  - Sticky header with compact meta chips + quick action buttons
+  - Profile Photo: drag & drop upload with instant preview (single image)
+  - Dynamic inputs: auto vs non-auto toggles mileage/hours live
+  - Quick status chips (one-click set), live badge preview
+  - Local draft save/restore, unsaved-changes guard, Ctrl/Cmd+S to submit
+  - Inline input guards (non-negative, year max auto to current+1)
+  - NEW: Ownership & Purchase section (date + price), header chips, draft support
+
+  CHANGELOG
+  v1.1.0
+  - NEW: Ownership & Purchase section with purchase_date & purchase_price
+  - NEW: Sticky header chips show purchase date/price (when present)
+  - IMP: Draft save/restore now includes purchase_* fields
+
+  v1.0.0
+  - Sticky header, photo dropzone, quick status chips, dark restyle
+  - Local draft save/clear, unsaved-changes guard, keyboard submit
+  - Stronger sectioning, semantic grouping, input affordances
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Edit {{ equipment.name }}{% endblock %}
+{% block header %}Edit {{ equipment.name }}{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --ee-bg: var(--bg, #0b0f1a);
+    --ee-card: var(--card, #0f1625);
+    --ee-sub: #0c1322;
+    --ee-line: var(--line, #1f2a3d);
+    --ee-text: var(--text, #e6eaf2);
+    --ee-muted: var(--text-muted, #9fb0c8);
+    --ee-primary: var(--primary, #6ea8ff);
+    --ee-success: var(--success, #22c55e);
+    --ee-warn: #f59e0b;
+    --ee-danger: #ef4444;
+    --ee-radius: var(--radius, 14px);
+    --ee-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  .ee-shell{ max-width: 1000px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+
+  /* Sticky mini-header */
+  .ee-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ee-line); border-radius: var(--ee-radius);
+    padding: 12px; box-shadow: var(--ee-shadow); backdrop-filter: blur(6px);
+  }
+  .ee-header-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
+  .ee-title{ margin:0; font-size:1.2rem; }
+  .ee-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; color: var(--ee-muted); }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    background:#0b1120; color:var(--ee-muted); border:1px solid var(--ee-line); font-size:.85rem;
+  }
+  .chip strong{ color: var(--ee-text); }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ee-line);
+    background: var(--ee-card); color: var(--ee-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--ee-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  .card{ background: var(--ee-card); border:1px solid var(--ee-line);
+    border-radius: var(--ee-radius); padding:16px; box-shadow: var(--ee-shadow); }
+
+  .form-section{ background:var(--ee-sub); border:1px solid var(--ee-line);
+    border-radius:12px; padding:14px; }
+  .form-section h3{
+    margin:0 0 12px 0; color: var(--ee-text); font-size:1.05rem;
+    padding-bottom: 8px; border-bottom:1px dashed var(--ee-line);
+  }
+
+  label{ display:block; margin-bottom:6px; color: var(--ee-muted); font-weight:600; font-size:.9rem; }
+  .input, select, textarea{
+    width:100%; padding:10px; border-radius:10px; border:1px solid var(--ee-line);
+    background:#0b1120; color: var(--ee-text); font-size:.95rem; outline:none;
+  }
+  .input:focus, select:focus, textarea:focus{ border-color: var(--ee-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
+  textarea{ resize: vertical; }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+  .helper{ color: var(--ee-muted); font-size:.8rem; margin-top:6px; }
+
+  /* Photo dropzone + preview */
+  .photo-wrap{ display:grid; grid-template-columns: 220px 1fr; gap:12px; }
+  .current-photo{
+    width:100%; border-radius:12px; border:1px solid var(--ee-line); background:#0b1120; overflow:hidden;
+  }
+  .current-photo img{ width:100%; height:220px; object-fit:cover; display:block; }
+  .no-photo{ width:100%; height:220px; display:flex; align-items:center; justify-content:center; font-size:3rem; color:#94a3b8; background:#0b1120; border:1px dashed var(--ee-line); border-radius:12px; }
+
+  .dz{ background:#0b1120; border:2px dashed var(--ee-line); border-radius:12px; padding:12px; text-align:center; cursor:pointer; }
+  .dz.drag{ border-color: var(--ee-primary); background:#0a1426; }
+  .thumbs{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .thumb{ position:relative; width:110px; height:110px; border-radius:10px; overflow:hidden; border:1px solid var(--ee-line); background:#0b1120; display:flex; align-items:center; justify-content:center; }
+  .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .thumb .x{ position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; background:#3b1115; color:#fecaca; border:1px solid rgba(239,68,68,.45); }
+
+  /* Status badge styles */
+  .status-badge{
+    padding:4px 10px; border-radius:999px; font-weight:800; font-size:.75rem; letter-spacing:.06em;
+    display:inline-flex; align-items:center; gap:6px; text-transform:uppercase;
+  }
+  .status-active{ background: var(--ee-success); color:#0a0f1a; }
+  .status-storage{ background:#64748b; color:#0a0f1a; }
+  .status-maintenance{ background: var(--ee-warn); color:#0a0f1a; }
+  .status-needs_repair{ background:#e67e22; color:#0a0f1a; }
+  .status-retired{ background:#334155; color:#e2e8f0; }
+  .status-sold{ background: var(--ee-danger); color:#0a0f1a; }
+
+  .quick-status{ display:flex; gap:8px; flex-wrap:wrap; }
+  .qs{ padding:6px 10px; border-radius:999px; border:1px solid var(--ee-line); background:#0b1120; cursor:pointer; font-size:.85rem; }
+  .qs:hover{ border-color: var(--ee-primary); }
+
+  .actions{ display:flex; gap:10px; justify-content:flex-end; padding-top: 8px; }
+
+  :focus-visible{ outline: 2px solid var(--ee-primary); outline-offset: 2px; }
+
+  @media (max-width: 760px){
+    .ee-header-row{ grid-template-columns: 1fr; }
+    .photo-wrap{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="ee-shell">
+
+  {# =================== STICKY HEADER (meta + quick actions) =================== #}
+  <div class="ee-header">
+    <div class="ee-header-row">
+      <div>
+        <h1 class="ee-title">Edit — {{ equipment.name }}</h1>
+        <div class="ee-meta">
+          <span class="chip"><strong>Category:</strong> <span id="chipCategory">{{ equipment.category }}</span></span>
+          {% if equipment.location %}<span class="chip"><strong>Location:</strong> {{ equipment.location }}</span>{% endif %}
+          <span class="chip"><strong>Status:</strong>
+            <span id="liveStatus" class="status-badge status-{{ equipment.status|default('active') }}">{{ equipment.status }}</span>
+          </span>
+          {% if equipment.purchase_date %}
+            <span class="chip"><strong>Purchased:</strong> {{ equipment.purchase_date.strftime('%b %d, %Y') }}</span>
+          {% endif %}
+          {% if equipment.purchase_price %}
+            <span class="chip"><strong>Price:</strong> ${{ "%.2f"|format(equipment.purchase_price) }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back</a>
+        <button type="button" id="saveDraft" class="btn">💾 Save Draft</button>
+        <button type="button" id="clearDraft" class="btn">🧹 Clear Draft</button>
+        <button type="button" id="submitBtn" class="btn btn-primary">✅ Save</button>
+      </div>
+    </div>
+  </div>
+
+  <form id="editEquipmentForm" method="POST" action="{{ url_for('equipment.edit', id=equipment.id) }}" enctype="multipart/form-data" class="card" novalidate>
+
+    {# =================== PROFILE PHOTO =================== #}
+    <div class="form-section">
+      <h3>Profile Photo</h3>
+      <div class="photo-wrap">
+        <div>
+          {% if equipment.profile_photo %}
+            <a class="current-photo" href="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + equipment.profile_photo) }}" target="_blank" title="Open current photo">
+              <img src="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + equipment.profile_photo) }}" alt="{{ equipment.name }}">
+            </a>
+          {% else %}
+            <div class="no-photo">📷</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="dz" data-input="profile_photo">Drop image here or click to choose</div>
+          <input type="file" id="profile_photo" name="profile_photo" accept="image/*" style="display:none">
+          <div class="thumbs" id="thumb_profile_photo"></div>
+          <div class="helper">Optional. Uploading a new image will replace the profile photo for this equipment.</div>
+        </div>
+      </div>
+    </div>
+
+    {# =================== BASIC INFORMATION =================== #}
+    <div class="form-section">
+      <h3>Basic Information</h3>
+
+      <div class="form-group">
+        <label for="name">Equipment Name *</label>
+        <input type="text" id="name" name="name" value="{{ equipment.name }}" required class="input" placeholder="e.g., John Deere Mower">
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category *</label>
+        <select id="category" name="category" required>
+          {% for cat in categories %}
+          <option value="{{ cat }}" {% if equipment.category == cat %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+        <div class="helper">Changing category toggles mileage/hours inputs below.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="make">Make</label>
+          <input type="text" id="make" name="make" value="{{ equipment.make or '' }}" class="input" placeholder="e.g., Honda">
+        </div>
+
+        <div class="form-group">
+          <label for="model">Model</label>
+          <input type="text" id="model" name="model" value="{{ equipment.model or '' }}" class="input" placeholder="e.g., EU2200i">
+        </div>
+
+        <div class="form-group">
+          <label for="year">Year</label>
+          <input type="number" id="year" name="year" value="{{ equipment.year or '' }}" min="1900" max="2099" class="input" placeholder="e.g., 2020">
+          <div class="helper">Max year auto-sets to current year + 1.</div>
+        </div>
+      </div>
+    </div>
+
+    {# =================== OWNERSHIP & PURCHASE =================== #}
+    <div class="form-section">
+      <h3>Ownership & Purchase</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="purchase_date">Purchase Date</label>
+          <input type="date" id="purchase_date" name="purchase_date"
+                 value="{{ equipment.purchase_date.strftime('%Y-%m-%d') if equipment.purchase_date else '' }}" class="input">
+        </div>
+        <div class="form-group">
+          <label for="purchase_price">Purchase Price ($)</label>
+          <input type="number" step="0.01" min="0" id="purchase_price" name="purchase_price"
+                 value="{{ equipment.purchase_price or '' }}" class="input" placeholder="e.g., 3500.00">
+        </div>
+      </div>
+    </div>
+
+    {# =================== CURRENT STATUS =================== #}
+    <div class="form-section">
+      <h3>Current Status</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            <option value="active" {% if equipment.status == 'active' %}selected{% endif %}>active</option>
+            <option value="storage" {% if equipment.status == 'storage' %}selected{% endif %}>storage</option>
+            <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>maintenance</option>
+            <option value="needs_repair" {% if equipment.status == 'needs_repair' %}selected{% endif %}>needs_repair</option>
+            <option value="retired" {% if equipment.status == 'retired' %}selected{% endif %}>retired</option>
+            <option value="sold" {% if equipment.status == 'sold' %}selected{% endif %}>sold</option>
+          </select>
+          <div class="helper">Live badge preview shown in the header.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="location">Storage Location</label>
+          <input type="text" id="location" name="location" value="{{ equipment.location or '' }}" class="input" placeholder="e.g., Garage, Shed">
+        </div>
+      </div>
+
+      <div class="quick-status">
+        <button type="button" class="qs" data-status="active">Set Active</button>
+        <button type="button" class="qs" data-status="maintenance">Under Maintenance</button>
+        <button type="button" class="qs" data-status="needs_repair">Needs Repair</button>
+        <button type="button" class="qs" data-status="storage">In Storage</button>
+        <button type="button" class="qs" data-status="retired">Retired</button>
+        <button type="button" class="qs" data-status="sold">Sold</button>
+      </div>
+    </div>
+
+    {# =================== READINGS + SERIAL =================== #}
+    <div class="form-section">
+      <h3>Readings & Identifiers</h3>
+
+      <div class="form-row">
+        {# Both inputs exist; we toggle visibility via JS depending on category #}
+        <div class="form-group" id="wrapMileage">
+          <label for="mileage">Current Mileage</label>
+          <input type="number" id="mileage" name="mileage" value="{{ equipment.mileage or '' }}" class="input" min="0" step="1" placeholder="e.g., 83,250">
+        </div>
+
+        <div class="form-group" id="wrapHours">
+          <label for="hours">Current Hours</label>
+          <input type="number" step="0.1" id="hours" name="hours" value="{{ equipment.hours or '' }}" class="input" min="0" placeholder="e.g., 412.5">
+        </div>
+
+        <div class="form-group">
+          <label for="serial_number">Serial Number</label>
+          <input type="text" id="serial_number" name="serial_number" value="{{ equipment.serial_number or '' }}" class="input" placeholder="e.g., 1GX350A123456">
+        </div>
+      </div>
+    </div>
+
+    {# =================== NOTES =================== #}
+    <div class="form-section">
+      <h3>Notes</h3>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3" class="input" placeholder="Any additional info...">{{ equipment.notes or '' }}</textarea>
+      </div>
+    </div>
+
+    {# =================== ACTIONS =================== #}
+    <div class="actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="ee-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--ee-muted);">
+v1.1.0 — Added Ownership & Purchase (date/price), header chips, draft support for purchase_*.
+v1.0.0 — Sticky header, photo dropzone, quick status chips, dark restyle, draft save, guards.
+      </code>
+    </details>
+  </div>
+</div>
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Edit Equipment — Client Helpers
+   - Photo dropzone w/ preview (single)
+   - Dynamic mileage/hours visibility by category
+   - Live status badge + quick-set chips
+   - Year max -> current year + 1
+   - Input guards (non-negative)
+   - Draft save/restore to localStorage (includes purchase_* fields)
+   - Unsaved-changes guard, Ctrl/Cmd+S submits
+============================================================================ */
+(function(){
+  const form = document.getElementById('editEquipmentForm');
+  if(!form) return;
+
+  // ---- Refs
+  const category = document.getElementById('category');
+  const chipCategory = document.getElementById('chipCategory');
+  const statusSel = document.getElementById('status');
+  const liveStatus = document.getElementById('liveStatus');
+  const wrapMileage = document.getElementById('wrapMileage');
+  const wrapHours = document.getElementById('wrapHours');
+  const mileage = document.getElementById('mileage');
+  const hours = document.getElementById('hours');
+  const year = document.getElementById('year');
+  const submitBtn = document.getElementById('submitBtn');
+  const purchasePrice = document.getElementById('purchase_price');
+
+  // ---- Photo dropzone
+  const MAX_SIZE = 10 * 1024 * 1024;
+  function setupDrop(inputId){
+    const dz = document.querySelector(`.dz[data-input="${inputId}"]`);
+    const file = document.getElementById(inputId);
+    const thumbs = document.getElementById('thumb_'+inputId);
+    if(!dz || !file || !thumbs) return;
+
+    function clearThumbs(){ thumbs.innerHTML = ''; }
+    function setFile(f){
+      if(!f) return;
+      if(f.size > MAX_SIZE){ alert('File is larger than 10MB.'); return; }
+      file.files = new DataTransfer().files; // reset
+      const dt = new DataTransfer(); dt.items.add(f); file.files = dt.files;
+      renderThumb(f);
+    }
+    function renderThumb(f){
+      clearThumbs();
+      const url = URL.createObjectURL(f);
+      const wrap = document.createElement('div'); wrap.className='thumb';
+      wrap.innerHTML = `<img alt="preview"><div class="x" title="Remove">✕</div>`;
+      wrap.querySelector('img').src = url;
+      wrap.querySelector('.x').addEventListener('click', ()=>{ file.value=''; clearThumbs(); });
+      thumbs.appendChild(wrap);
+    }
+
+    dz.addEventListener('click', ()=> file.click());
+    file.addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(f) setFile(f); });
+
+    ['dragenter','dragover'].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('drag'); }));
+    dz.addEventListener('drop', (e)=>{ const f = e.dataTransfer.files?.[0]; if(f) setFile(f); });
+  }
+  setupDrop('profile_photo');
+
+  // ---- Category toggles mileage/hours visibility
+  function syncCategoryUI(){
+    const val = category.value;
+    chipCategory && (chipCategory.textContent = val);
+    const isAuto = (val === 'Auto');
+    wrapMileage.style.display = isAuto ? '' : 'none';
+    wrapHours.style.display = isAuto ? 'none' : '';
+  }
+  syncCategoryUI();
+  category.addEventListener('change', syncCategoryUI);
+
+  // ---- Status live badge + quick chips
+  function refreshStatusBadge(){
+    const v = (statusSel.value || '').trim() || 'active';
+    liveStatus.className = 'status-badge status-' + v;
+    liveStatus.textContent = v;
+  }
+  refreshStatusBadge();
+  statusSel.addEventListener('change', refreshStatusBadge);
+  document.querySelectorAll('.qs').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const v = btn.dataset.status;
+      statusSel.value = v;
+      refreshStatusBadge();
+    });
+  });
+
+  // ---- Year max => current year + 1
+  try{
+    const y = new Date().getFullYear() + 1;
+    year?.setAttribute('max', String(y));
+  }catch(_){}
+
+  // ---- Input guards
+  function nonNegative(el){ if(!el) return; el.addEventListener('blur', ()=>{ if(el.value){ const v = parseFloat(el.value); if(isNaN(v) || v < 0){ el.value = ''; } } }); }
+  nonNegative(mileage);
+  nonNegative(hours);
+  nonNegative(purchasePrice);
+
+  // ---- Draft save/restore
+  const DRAFT_KEY = 'equip_edit_{{ equipment.id }}';
+  function serialize(){
+    return {
+      name: document.getElementById('name').value,
+      category: category.value,
+      make: document.getElementById('make').value,
+      model: document.getElementById('model').value,
+      year: year.value,
+      status: statusSel.value,
+      location: document.getElementById('location').value,
+      mileage: mileage?.value || '',
+      hours: hours?.value || '',
+      serial_number: document.getElementById('serial_number').value,
+      notes: document.getElementById('notes').value,
+      purchase_date: document.getElementById('purchase_date').value,
+      purchase_price: document.getElementById('purchase_price').value
+      // photo not stored
+    };
+  }
+  function hydrate(data){
+    if(!data) return;
+    const set = (id, v)=>{ const el=document.getElementById(id); if(el && v!=null) el.value = v; };
+    set('name', data.name);
+    set('make', data.make);
+    set('model', data.model);
+    set('year', data.year);
+    set('location', data.location);
+    set('serial_number', data.serial_number);
+    set('notes', data.notes);
+    set('purchase_date', data.purchase_date);
+    set('purchase_price', data.purchase_price);
+    if(category && data.category){ category.value = data.category; syncCategoryUI(); }
+    if(statusSel && data.status){ statusSel.value = data.status; refreshStatusBadge(); }
+    if(mileage && data.mileage!=null) mileage.value = data.mileage;
+    if(hours && data.hours!=null) hours.value = data.hours;
+  }
+  // Restore (if any)
+  try{ const cached = localStorage.getItem(DRAFT_KEY); if(cached){ hydrate(JSON.parse(cached)); } }catch(_){}
+  document.getElementById('saveDraft')?.addEventListener('click', ()=>{ localStorage.setItem(DRAFT_KEY, JSON.stringify(serialize())); alert('Draft saved locally.'); });
+  document.getElementById('clearDraft')?.addEventListener('click', ()=>{ localStorage.removeItem(DRAFT_KEY); alert('Draft cleared.'); });
+
+  // ---- Unsaved changes guard
+  let dirty = false;
+  form.addEventListener('input', ()=>{ dirty = true; });
+  window.addEventListener('beforeunload', (e)=>{ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+  form.addEventListener('submit', ()=>{ dirty = false; localStorage.removeItem(DRAFT_KEY); });
+
+  // ---- Ctrl/Cmd+S submits
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); form.requestSubmit(); }
+  });
+  submitBtn?.addEventListener('click', ()=> form.requestSubmit());
+
+  // ---- Autogrow textarea (notes)
+  const ta = document.getElementById('notes');
+  if(ta){ const grow=()=>{ ta.style.height='auto'; ta.style.height=(ta.scrollHeight+2)+'px'; }; ta.addEventListener('input', grow); grow(); }
+})();
+</script>
+{% endblock %}

@@ -1,218 +1,522 @@
+{# =============================================================================
+  FILE: maintenance_add.html
+  PURPOSE: Log a maintenance record (smart defaults, quick templates, photos)
+  TEMPLATE VERSION: v1.1.0
+  LAST UPDATED: 2025-09-05
+
+  v1.1.0
+  - NEW: Multiple photo upload for Before/After/Receipts with inline captions
+  - NEW: Drag & drop supports many files; per-thumb delete; caption ordering kept
+  - NOTE: Backend should read request.files.getlist('<group>_photos')
+          and request.form.getlist('<group>_captions')
+
+  v1.0.0
+  - Dark UI, templates, helpers, previews, and guards
+============================================================================= #}
+
 {% extends "base.html" %}
 {% block title %}Add Maintenance - {{ equipment.name }}{% endblock %}
 {% block header %}Log Maintenance for {{ equipment.name }}{% endblock %}
 
-{% block content %}
-<div class="maintenance-log-container">
-    <form method="POST" action="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" enctype="multipart/form-data" class="maintenance-form">
-        
-        <div class="form-section">
-            <h3>Service Information</h3>
-            
-            <div class="form-group">
-                <label for="service_type">Service Type *</label>
-                <select id="service_type" name="service_type" required>
-                    <option value="">Select Service Type</option>
-                    {% for service in service_types %}
-                    <option value="{{ service }}">{{ service }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="service_date">Service Date *</label>
-                    <input type="date" id="service_date" name="service_date" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="performed_by">Performed By</label>
-                    <input type="text" id="performed_by" name="performed_by" value="Self" placeholder="Self or shop name">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Current Readings</h3>
-            
-            <div class="form-row">
-                {% if equipment.category == 'Auto' %}
-                <div class="form-group">
-                    <label for="mileage_at_service">Current Mileage</label>
-                    <input type="number" id="mileage_at_service" name="mileage_at_service" 
-                           value="{{ equipment.mileage or '' }}" placeholder="Current mileage">
-                </div>
-                {% else %}
-                <div class="form-group">
-                    <label for="hours_at_service">Current Hours</label>
-                    <input type="number" step="0.1" id="hours_at_service" name="hours_at_service" 
-                           value="{{ equipment.hours or '' }}" placeholder="Current hours">
-                </div>
-                {% endif %}
-                
-                <div class="form-group">
-                    <label for="cost">Cost ($)</label>
-                    <input type="number" step="0.01" id="cost" name="cost" placeholder="Service cost">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Service Details</h3>
-            
-            <div class="form-group">
-                <label for="parts_used">Parts Used</label>
-                <textarea id="parts_used" name="parts_used" rows="2" placeholder="List parts used (filters, oil type, etc.)"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Service Notes</label>
-                <textarea id="notes" name="notes" rows="3" placeholder="Any notes about the service"></textarea>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Next Service</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="next_service_months">Next Service In (Months)</label>
-                    <input type="number" id="next_service_months" name="next_service_months" placeholder="e.g., 6">
-                </div>
-                
-                {% if equipment.category == 'Auto' %}
-                <div class="form-group">
-                    <label for="next_service_mileage">Or At Mileage</label>
-                    <input type="number" id="next_service_mileage" name="next_service_mileage" placeholder="e.g., 85000">
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Photos</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="before_photo">Before Photo</label>
-                    <input type="file" id="before_photo" name="before_photo" accept="image/*">
-                    <input type="text" name="before_photo_caption" placeholder="Caption (optional)" class="caption-input">
-                </div>
-                
-                <div class="form-group">
-                    <label for="after_photo">After Photo</label>
-                    <input type="file" id="after_photo" name="after_photo" accept="image/*">
-                    <input type="text" name="after_photo_caption" placeholder="Caption (optional)" class="caption-input">
-                </div>
-                
-                <div class="form-group">
-                    <label for="receipt_photo">Receipt Photo</label>
-                    <input type="file" id="receipt_photo" name="receipt_photo" accept="image/*">
-                    <input type="text" name="receipt_photo_caption" placeholder="Caption (optional)" class="caption-input">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Maintenance Record</button>
-            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
-</div>
-
+{% block extra_css %}
 <style>
-.maintenance-log-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
+  :root{
+    --ml-bg: var(--bg, #0b0f1a);
+    --ml-card: var(--card, #0f1625);
+    --ml-sub: #0c1322;
+    --ml-line: var(--line, #1f2a3d);
+    --ml-text: var(--text, #e6eaf2);
+    --ml-muted: var(--text-muted, #9fb0c8);
+    --ml-primary: var(--primary, #6ea8ff);
+    --ml-success: var(--success, #22c55e);
+    --ml-warn: #f59e0b;
+    --ml-danger: #ef4444;
+    --ml-radius: var(--radius, 14px);
+    --ml-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
 
-.maintenance-form {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  .ml-shell{ max-width: 1000px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
 
-.form-section {
-    margin-bottom: 30px;
-}
+  .ml-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ml-line); border-radius: var(--ml-radius);
+    padding: 12px; box-shadow: var(--ml-shadow); backdrop-filter: blur(6px);
+  }
+  .ml-header-row{ display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .ml-title{ margin:0; font-size:1.2rem; }
+  .ml-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; color: var(--ml-muted); }
+  .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    background:#0b1120; color:var(--ml-muted); border:1px solid var(--ml-line); font-size:.85rem; }
+  .chip strong{ color: var(--ml-text); }
 
-.form-section h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
-}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ml-line);
+    background: var(--ml-card); color: var(--ml-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--ml-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
 
-.form-group {
-    margin-bottom: 20px;
-}
+  .card{ background: var(--ml-card); border:1px solid var(--ml-line);
+    border-radius: var(--ml-radius); padding:16px; box-shadow: var(--ml-shadow); }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
-}
+  .form-section{ background:var(--ml-sub); border:1px solid var(--ml-line);
+    border-radius:12px; padding:14px; margin-bottom: 0; }
+  .form-section h3{
+    margin:0 0 12px 0; color: var(--ml-text); font-size:1.05rem;
+    padding-bottom: 8px; border-bottom:1px dashed var(--ml-line);
+  }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+  .form-group{ margin-bottom: 14px; }
+  label{ display:block; margin-bottom:6px; color: var(--ml-muted); font-weight:600; font-size:.9rem; }
+  .input, select, textarea{
+    width:100%; padding:10px; border-radius:10px; border:1px solid var(--ml-line);
+    background:#0b1120; color: var(--ml-text); font-size:.95rem; outline:none;
+  }
+  .input:focus, select:focus, textarea:focus{ border-color: var(--ml-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
+  textarea{ resize: vertical; }
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
 
-.form-group textarea {
-    resize: vertical;
-}
+  .helper{ color: var(--ml-muted); font-size:.8rem; margin-top:6px; }
+  .preview-date{ display:inline-block; padding:4px 8px; border-radius:999px; background:#0b2a38; color:#cbeafe; font-size:.8rem; margin-left:6px; }
 
-.caption-input {
-    margin-top: 5px;
-}
+  .templates{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:8px; }
+  .tpl-btn{ padding:12px; border-radius:12px; border:1px solid var(--ml-line);
+    background:#0b1120; color: var(--ml-text); text-align:left; cursor:pointer; }
+  .tpl-btn:hover{ border-color: var(--ml-primary); transform: translateY(-1px); }
+  .tpl-btn .hint{ display:block; color:var(--ml-muted); font-size:.8rem; margin-top:4px; }
 
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
+  /* Dropzones + thumb grid */
+  .dz{ background:#0b1120; border:2px dashed var(--ml-line); border-radius:12px; padding:12px; text-align:center; cursor:pointer; }
+  .dz.drag{ border-color: var(--ml-primary); background:#0a1426; }
+  .thumbs{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:10px; margin-top:10px; }
+  .thumb-wrap{ display:grid; grid-template-rows: auto auto; gap:6px; }
+  .thumb{
+    position:relative; width:100%; aspect-ratio:1/1; border-radius:10px; overflow:hidden;
+    border:1px solid var(--ml-line); background:#0b1120; display:flex; align-items:center; justify-content:center;
+  }
+  .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .thumb .x{
+    position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:#3b1115; color:#fecaca; border:1px solid rgba(239,68,68,.45);
+  }
+  .cap-input{
+    width:100%; padding:8px; border-radius:10px; border:1px solid var(--ml-line);
+    background:#0b1120; color:var(--ml-text); font-size:.8rem;
+  }
+  .cap-input:focus{ border-color: var(--ml-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
-}
+  .actions{ display:flex; gap:10px; justify-content:flex-end; padding-top: 8px; }
 
-.btn {
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
+  :focus-visible{ outline: 2px solid var(--ml-primary); outline-offset: 2px; }
 
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #2980b9;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #7f8c8d;
-}
+  @media (max-width: 680px){
+    .ml-header-row{ grid-template-columns: 1fr; }
+  }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="ml-shell">
+
+  <div class="ml-header">
+    <div class="ml-header-row">
+      <div>
+        <h1 class="ml-title">Log Maintenance — {{ equipment.name }}</h1>
+        <div class="ml-meta">
+          <span class="chip"><strong>Category:</strong> {{ equipment.category }}</span>
+          {% if equipment.category == 'Auto' and equipment.mileage %}
+            <span class="chip"><strong>Odometer:</strong> {{ "{:,}".format(equipment.mileage) }} mi</span>
+          {% elif equipment.hours %}
+            <span class="chip"><strong>Hours:</strong> {{ equipment.hours }}</span>
+          {% endif %}
+          {% if equipment.location %}<span class="chip"><strong>Location:</strong> {{ equipment.location }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back</a>
+        <button type="button" id="saveDraft" class="btn">💾 Save Draft</button>
+        <button type="button" id="clearDraft" class="btn">🧹 Clear Draft</button>
+        <button type="button" id="submitBtn" class="btn btn-primary">✅ Save</button>
+      </div>
+    </div>
+  </div>
+
+  <form id="maintenanceForm" method="POST" action="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" enctype="multipart/form-data" class="card" novalidate>
+    
+    <div class="form-section">
+      <h3>Quick Templates</h3>
+      <div class="templates">
+        <button type="button" class="tpl-btn" data-template="Oil Change">🛢️ Oil Change <span class="hint">+5k mi / 6 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Tire Rotation">🛞 Tire Rotation <span class="hint">+5k mi / 6 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Brake Service">🛑 Brake Service <span class="hint">inspect/replace</span></button>
+        <button type="button" class="tpl-btn" data-template="Air Filter">🌬️ Air Filter <span class="hint">+12k mi / 12 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Battery Replacement">🔋 Battery Replacement <span class="hint">36–60 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="General Service">🔧 General Service <span class="hint">custom</span></button>
+      </div>
+      <div class="helper">Templates will set Service Type and pre-fill parts/next service hints. You can change anything.</div>
+    </div>
+
+    <div class="form-section">
+      <h3>Service Information</h3>
+      <div class="form-group">
+        <label for="service_type">Service Type *</label>
+        <select id="service_type" name="service_type" required>
+          <option value="">Select Service Type</option>
+          {% for service in service_types %}
+          <option value="{{ service }}">{{ service }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="service_date">Service Date *</label>
+          <input type="date" id="service_date" name="service_date" class="input" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="form-group">
+          <label for="performed_by">Performed By</label>
+          <input type="text" id="performed_by" name="performed_by" class="input" value="Self" placeholder="Self or shop name">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Current Readings</h3>
+      <div class="form-row">
+        {% if equipment.category == 'Auto' %}
+        <div class="form-group">
+          <label for="mileage_at_service">Current Mileage</label>
+          <input type="number" id="mileage_at_service" name="mileage_at_service" class="input"
+                 value="{{ equipment.mileage or '' }}" placeholder="Current mileage" min="0" step="1">
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label for="hours_at_service">Current Hours</label>
+          <input type="number" step="0.1" id="hours_at_service" name="hours_at_service" class="input"
+                 value="{{ equipment.hours or '' }}" placeholder="Current hours" min="0">
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label for="cost">Cost ($)</label>
+          <input type="number" step="0.01" id="cost" name="cost" class="input" placeholder="Service cost" min="0">
+          <div class="helper" id="costHint"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Service Details</h3>
+      <div class="form-group">
+        <label for="parts_used">Parts Used</label>
+        <textarea id="parts_used" name="parts_used" rows="2" placeholder="List parts used (filters, oil type, etc.)"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="notes">Service Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Any notes about the service"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Next Service</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="next_service_months">Next Service In (Months)</label>
+          <input type="number" id="next_service_months" name="next_service_months" class="input" placeholder="e.g., 6" min="0" step="1">
+          <div class="helper">Will be around <span id="nextDatePreview" class="preview-date">—</span></div>
+        </div>
+        {% if equipment.category == 'Auto' %}
+        <div class="form-group">
+          <label for="next_service_mileage">Or At Mileage</label>
+          <input type="number" id="next_service_mileage" name="next_service_mileage" class="input" placeholder="e.g., 85000" min="0" step="1">
+          <div class="helper">Auto-set when a template provides an interval and mileage is known.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# =================== PHOTOS (MULTI + CAPTIONS) =================== #}
+    <div class="form-section">
+      <h3>Photos</h3>
+      <div class="form-row">
+
+        <!-- BEFORE -->
+        <div class="form-group">
+          <label for="before_photos">Before Photos</label>
+          <div class="dz" data-input="before_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="before_photos" name="before_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_before_photos"></div>
+          <div class="helper">You can add multiple images. Max ~10MB each.</div>
+        </div>
+
+        <!-- AFTER -->
+        <div class="form-group">
+          <label for="after_photos">After Photos</label>
+          <div class="dz" data-input="after_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="after_photos" name="after_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_after_photos"></div>
+          <div class="helper">Add as many as needed.</div>
+        </div>
+
+        <!-- RECEIPTS -->
+        <div class="form-group">
+          <label for="receipt_photos">Receipt Photos</label>
+          <div class="dz" data-input="receipt_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="receipt_photos" name="receipt_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_receipt_photos"></div>
+          <div class="helper">Use captions for vendor/amount/notes if you’d like.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Maintenance Record</button>
+    </div>
+  </form>
+
+  <div class="ml-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--ml-muted);">
+v1.1.0 — Multi-photo uploads with inline captions.
+v1.0.0 — Dark UI, quick templates, live next-service preview, photo dropzones, draft save, and guards.
+      </code>
+    </details>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Add Maintenance — Client Helpers
+   (unchanged sections trimmed for space except photos)
+============================================================================ */
+(function(){
+  const form = document.getElementById('maintenanceForm');
+  if(!form) return;
+
+  // ----- El refs
+  const serviceType = document.getElementById('service_type');
+  const serviceDate = document.getElementById('service_date');
+  const performedBy = document.getElementById('performed_by');
+  const mileage = document.getElementById('mileage_at_service');
+  const hours = document.getElementById('hours_at_service');
+  const cost = document.getElementById('cost');
+  const parts = document.getElementById('parts_used');
+  const notes = document.getElementById('notes');
+  const nextMonths = document.getElementById('next_service_months');
+  const nextMiles = document.getElementById('next_service_mileage');
+  const nextPreview = document.getElementById('nextDatePreview');
+  const costHint = document.getElementById('costHint');
+  const submitBtn = document.getElementById('submitBtn');
+
+  const isAuto = {{ 'true' if equipment.category == 'Auto' else 'false' }};
+  const TPLS = {
+    'Oil Change': { parts: 'Engine oil (spec), Oil filter (PN ___)', months: 6, milesInterval: 5000, costHint: isAuto ? 'Typical shop $40–$120 (DIY lower)' : 'Cost varies by capacity/type', notes: 'Reset maintenance light if applicable.' },
+    'Tire Rotation': { parts: '—', months: 6, milesInterval: 5000, costHint: 'Often bundled with services; DIY possible.', notes: 'Cross-rotate if applicable; torque lugs to spec.' },
+    'Brake Service': { parts: 'Brake pads (axle ___), Rotors (optional), Brake grease', months: 12, milesInterval: 12000, costHint: 'Wide range; pads/rotors vary by axle.', notes: 'Measure rotor thickness; bed-in pads after install.' },
+    'Air Filter': { parts: 'Engine air filter (PN ___)', months: 12, milesInterval: 12000, costHint: 'Usually low; quick DIY.', notes: 'Inspect cabin filter as well.' },
+    'Battery Replacement': { parts: 'Battery (group size ___), anti-corrosion pads', months: 36, milesInterval: null, costHint: 'Depends on battery spec; 36–60 mo life typical.', notes: 'Record warranty date.' },
+    'General Service': { parts: '', months: null, milesInterval: null, costHint: '', notes: '' }
+  };
+
+  function applyTemplate(name){
+    const t = TPLS[name]; if(!t) return;
+    const opt = Array.from(serviceType.options).find(o => o.value === name);
+    if(opt) serviceType.value = name; else serviceType.value = serviceType.value || name;
+    if (t.parts){ if(!parts.value.trim()) parts.value = t.parts; else if(!parts.value.includes(t.parts)) parts.value += (parts.value.endsWith('\n')?'':'\n') + t.parts; }
+    if (t.notes){ if(!notes.value.trim()) notes.value = t.notes; else if(!notes.value.includes(t.notes)) notes.value += (notes.value.endsWith('\n')?'':'\n') + t.notes; }
+    costHint.textContent = t.costHint || '';
+    if (t.months != null){ nextMonths.value = t.months; updateNextDatePreview(); }
+    if (isAuto && t.milesInterval != null && mileage && mileage.value){
+      const cur = parseInt(mileage.value || '0', 10);
+      if(!isNaN(cur) && nextMiles) nextMiles.value = cur + t.milesInterval;
+    }
+  }
+  document.querySelectorAll('.tpl-btn').forEach(btn=> btn.addEventListener('click', ()=> applyTemplate(btn.dataset.template)));
+
+  function addMonthsSafe(date, months){
+    const d = new Date(date.getTime()); const day = d.getDate();
+    d.setMonth(d.getMonth() + months); if (d.getDate() < day) d.setDate(0); return d;
+  }
+  function updateNextDatePreview(){
+    const months = parseInt(nextMonths?.value || 'NaN', 10);
+    const base = serviceDate?.value ? new Date(serviceDate.value + 'T12:00:00') : new Date();
+    if (!isNaN(months) && months > 0){
+      const dt = addMonthsSafe(base, months);
+      nextPreview.textContent = dt.toLocaleDateString(undefined, {year:'numeric', month:'long', day:'2-digit'});
+    } else { nextPreview.textContent = '—'; }
+  }
+  nextMonths?.addEventListener('input', updateNextDatePreview);
+  serviceDate?.addEventListener('input', updateNextDatePreview);
+  updateNextDatePreview();
+
+  mileage?.addEventListener('input', ()=>{
+    const t = TPLS[serviceType.value];
+    if(isAuto && t?.milesInterval != null){
+      const cur = parseInt(mileage.value || '0', 10);
+      if(!isNaN(cur) && nextMiles) nextMiles.value = cur + t.milesInterval;
+    }
+  });
+
+  cost?.addEventListener('blur', ()=>{
+    if(cost.value){
+      let v = parseFloat(cost.value);
+      if(isNaN(v) || v < 0){ cost.value=''; return; }
+      cost.value = v.toFixed(2);
+    }
+  });
+
+  /* =================== PHOTOS: multiple + inline captions =================== */
+  (function(){
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+    function setupPhotoGroup(groupId, captionsName){
+      const dz = document.querySelector(`.dz[data-input="${groupId}"]`);
+      const input = document.getElementById(groupId);
+      const grid = document.getElementById('thumb_' + groupId);
+      if(!dz || !input || !grid) return;
+
+      /** state: [{file: File, caption: string}] */
+      let items = [];
+
+      function syncFileInput(){
+        const dt = new DataTransfer();
+        items.forEach(it => dt.items.add(it.file));
+        input.files = dt.files;
+      }
+
+      function render(){
+        grid.innerHTML = '';
+        items.forEach((it, idx) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'thumb-wrap';
+
+          // Thumb
+          const thumb = document.createElement('div');
+          thumb.className = 'thumb';
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(it.file);
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.className = 'x';
+          x.title = 'Remove';
+          x.textContent = '✕';
+          x.addEventListener('click', () => {
+            items.splice(idx, 1);
+            syncFileInput();
+            render();
+          });
+          thumb.appendChild(img);
+          thumb.appendChild(x);
+
+          // Caption input (posted with the form)
+          const cap = document.createElement('input');
+          cap.type = 'text';
+          cap.className = 'cap-input';
+          cap.name = captionsName;           // e.g., "before_captions"
+          cap.placeholder = 'Caption';
+          cap.value = it.caption || '';
+          cap.addEventListener('input', (e)=> { it.caption = e.target.value; });
+
+          wrap.appendChild(thumb);
+          wrap.appendChild(cap);
+          grid.appendChild(wrap);
+        });
+      }
+
+      function addFiles(fileList){
+        const toAdd = Array.from(fileList || []);
+        for(const f of toAdd){
+          if(!f.type.startsWith('image/')) continue;
+          if(f.size > MAX_SIZE){ alert(`${f.name} is larger than 10MB and was skipped.`); continue; }
+          items.push({file: f, caption: ''});
+        }
+        syncFileInput();
+        render();
+      }
+
+      dz.addEventListener('click', () => input.click());
+      input.addEventListener('change', (e) => addFiles(e.target.files));
+
+      ['dragenter','dragover'].forEach(evt =>
+        dz.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('drag'); })
+      );
+      ['dragleave','drop'].forEach(evt =>
+        dz.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('drag'); })
+      );
+      dz.addEventListener('drop', (e)=> addFiles(e.dataTransfer.files));
+    }
+
+    setupPhotoGroup('before_photos',  'before_captions');
+    setupPhotoGroup('after_photos',   'after_captions');
+    setupPhotoGroup('receipt_photos', 'receipt_captions');
+  })();
+
+  /* =================== Drafts / guards / submit =================== */
+  const DRAFT_KEY = 'maint_draft_{{ equipment.id }}';
+  function serialize(){
+    const data = {
+      service_type: serviceType.value,
+      service_date: serviceDate.value,
+      performed_by: performedBy.value,
+      mileage_at_service: mileage?.value || '',
+      hours_at_service: hours?.value || '',
+      cost: cost.value,
+      parts_used: parts.value,
+      notes: notes.value,
+      next_service_months: nextMonths?.value || '',
+      next_service_mileage: nextMiles?.value || '',
+    };
+    return data;
+  }
+  function hydrate(data){
+    if(!data) return;
+    serviceType.value = data.service_type || serviceType.value;
+    serviceDate.value = data.service_date || serviceDate.value;
+    performedBy.value = data.performed_by || performedBy.value;
+    if(mileage) mileage.value = data.mileage_at_service || mileage.value;
+    if(hours) hours.value = data.hours_at_service || hours.value;
+    cost.value = data.cost || cost.value;
+    parts.value = data.parts_used || parts.value;
+    notes.value = data.notes || notes.value;
+    if(nextMonths) nextMonths.value = data.next_service_months || nextMonths.value;
+    if(nextMiles) nextMiles.value = data.next_service_mileage || nextMiles.value;
+    (function(){ const ev = new Event('input'); nextMonths?.dispatchEvent(ev); serviceDate?.dispatchEvent(ev); })();
+  }
+  try{ const cached = localStorage.getItem(DRAFT_KEY); if(cached){ hydrate(JSON.parse(cached)); } }catch(_){}
+  document.getElementById('saveDraft')?.addEventListener('click', ()=>{
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(serialize()));
+    alert('Draft saved locally.');
+  });
+  document.getElementById('clearDraft')?.addEventListener('click', ()=>{
+    localStorage.removeItem(DRAFT_KEY);
+    alert('Draft cleared.');
+  });
+
+  let dirty = false;
+  form.addEventListener('input', ()=>{ dirty = true; });
+  window.addEventListener('beforeunload', (e)=>{
+    if(dirty){ e.preventDefault(); e.returnValue = ''; }
+  });
+  form.addEventListener('submit', ()=>{ dirty = false; localStorage.removeItem(DRAFT_KEY); });
+
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  submitBtn?.addEventListener('click', ()=> form.requestSubmit());
+})();
+</script>
 {% endblock %}

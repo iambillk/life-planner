@@ -1,4 +1,4 @@
-# models/projects.py - Enhanced version with categories
+# models/projects.py - Complete file with file attachments
 from datetime import datetime
 from .base import db
 
@@ -12,7 +12,7 @@ class TCHProject(db.Model):
     motivation = db.Column(db.Text)  # Why this project matters
     strategy = db.Column(db.Text)  # How to achieve the goal
     
-    # Category field - NEW
+    # Category field
     category = db.Column(db.String(50), default='General')
     
     # Dates
@@ -39,6 +39,11 @@ class TCHProject(db.Model):
     ideas = db.relationship('TCHIdea', backref='project', cascade='all, delete-orphan')
     milestones = db.relationship('TCHMilestone', backref='project', cascade='all, delete-orphan', order_by='TCHMilestone.target_date')
     notes = db.relationship('TCHProjectNote', backref='project', cascade='all, delete-orphan')
+    files = db.relationship('ProjectFile', 
+                           primaryjoin="and_(TCHProject.id==ProjectFile.project_id, ProjectFile.project_type=='tch')",
+                           foreign_keys='ProjectFile.project_id',
+                           cascade='all, delete-orphan',
+                           viewonly=True)
 
 class TCHTask(db.Model):
     __tablename__ = 'tch_tasks'
@@ -103,7 +108,6 @@ class TCHProjectNote(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-# Keep PersonalProject as is for now
 class PersonalProject(db.Model):
     __tablename__ = 'personal_projects'
     
@@ -115,3 +119,25 @@ class PersonalProject(db.Model):
     progress = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to files
+    files = db.relationship('ProjectFile',
+                           primaryjoin="and_(PersonalProject.id==ProjectFile.project_id, ProjectFile.project_type=='personal')",
+                           foreign_keys='ProjectFile.project_id',
+                           cascade='all, delete-orphan',
+                           viewonly=True)
+
+# NEW MODEL FOR FILE ATTACHMENTS
+class ProjectFile(db.Model):
+    """Simple file attachment for projects"""
+    __tablename__ = 'project_files'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, nullable=False)
+    project_type = db.Column(db.String(20), nullable=False)  # 'tch' or 'personal'
+    filename = db.Column(db.String(255), nullable=False)  # Stored filename
+    original_name = db.Column(db.String(255), nullable=False)  # Original filename
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ProjectFile {self.original_name}>'

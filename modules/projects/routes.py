@@ -1,9 +1,11 @@
-# modules/projects/routes.py - Complete version with categories and task edit functionality
-from flask import render_template, request, redirect, url_for, flash, jsonify
+# modules/projects/routes.py - Complete file with file attachments
+import os
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
+from werkzeug.utils import secure_filename
 from datetime import datetime
 from . import projects_bp
 from .constants import PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
-from models import db, TCHProject, TCHTask, TCHIdea, TCHMilestone, TCHProjectNote, PersonalProject
+from models import db, TCHProject, TCHTask, TCHIdea, TCHMilestone, TCHProjectNote, PersonalProject, ProjectFile
 
 # ==================== TCH PROJECTS ====================
 
@@ -59,8 +61,9 @@ def tch_index():
 
 @projects_bp.route('/tch/add', methods=['GET', 'POST'])
 def add_tch():
-    """Add new TCH project with category"""
+    """Add new TCH project with file attachments"""
     if request.method == 'POST':
+        # Create the project first
         project = TCHProject(
             name=request.form.get('name'),
             description=request.form.get('description'),
@@ -74,9 +77,46 @@ def add_tch():
             deadline=datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date() if request.form.get('deadline') else None
         )
         db.session.add(project)
+        db.session.flush()  # This gets us the project.id without committing
+        
+        # Handle file uploads
+        uploaded_files = []
+        if 'attachments' in request.files:
+            files = request.files.getlist('attachments')
+            
+            # Create project folder
+            upload_folder = os.path.join('static', 'project_files', 'tch', str(project.id))
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            for file in files:
+                if file and file.filename:
+                    # Secure the filename
+                    filename = secure_filename(file.filename)
+                    # Make it unique
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    unique_filename = f"{timestamp}_{filename}"
+                    
+                    # Save the file
+                    filepath = os.path.join(upload_folder, unique_filename)
+                    file.save(filepath)
+                    
+                    # Create database record
+                    attachment = ProjectFile(
+                        project_id=project.id,
+                        project_type='tch',
+                        filename=unique_filename,
+                        original_name=filename
+                    )
+                    db.session.add(attachment)
+                    uploaded_files.append(filename)
+        
         db.session.commit()
         
-        flash(f'Project "{project.name}" created!', 'success')
+        if uploaded_files:
+            flash(f'Project "{project.name}" created with {len(uploaded_files)} files!', 'success')
+        else:
+            flash(f'Project "{project.name}" created!', 'success')
+            
         return redirect(url_for('projects.tch_detail', id=project.id))
     
     return render_template('tch_add_project.html', 
@@ -113,10 +153,17 @@ def tch_detail(id):
         is_archived=False
     ).order_by(TodoList.is_pinned.desc(), TodoList.created_at.desc()).all()
     
+    # Get files for this project
+    files = ProjectFile.query.filter_by(
+        project_type='tch',
+        project_id=id
+    ).order_by(ProjectFile.uploaded_at.desc()).all()
+    
     return render_template('tch_project_detail.html', 
                          project=project,
                          tasks_by_category=tasks_by_category,
                          project_todos=project_todos,
+                         files=files,
                          module_type='tch_project',
                          active='tch')
 
@@ -167,35 +214,65 @@ def delete_tch(id):
     """Delete TCH project"""
     project = TCHProject.query.get_or_404(id)
     name = project.name
+    
+    # Delete project files from filesystem
+    import shutil
+    project_folder = os.path.join('static', 'project_files', 'tch', str(id))
+    if os.path.exists(project_folder):
+        shutil.rmtree(project_folder)
+    
     db.session.delete(project)
     db.session.commit()
     flash(f'Project "{name}" deleted!', 'success')
     return redirect(url_for('projects.tch_index'))
 
-# ==================== TASK MANAGEMENT ====================
+# ==================== FILE MANAGEMENT ====================
+
+@projects_bp.route('/tch/<int:project_id>/file/<int:file_id>/delete', methods=['POST'])
+def delete_file(project_id, file_id):
+    """Delete a project file"""
+    file = ProjectFile.query.get_or_404(file_id)
+    
+    # Delete physical file
+    try:
+        filepath = os.path.join('static', 'project_files', 'tch', str(project_id), file.filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    except:
+        pass  # File might already be gone
+    
+    # Delete database record
+    db.session.delete(file)
+    db.session.commit()
+    
+    flash('File deleted', 'success')
+    return redirect(url_for('projects.tch_detail', id=project_id))
+
+@projects_bp.route('/tch/<int:project_id>/file/<int:file_id>/download')
+def download_file(project_id, file_id):
+    """Download a project file"""
+    file = ProjectFile.query.get_or_404(file_id)
+    filepath = os.path.join('static', 'project_files', 'tch', str(project_id), file.filename)
+    
+    return send_file(filepath, 
+                     as_attachment=True, 
+                     download_name=file.original_name)
+
+# ==================== TASKS ====================
 
 @projects_bp.route('/tch/<int:project_id>/task/add', methods=['POST'])
 def add_tch_task(project_id):
     """Add task to project"""
-    project = TCHProject.query.get_or_404(project_id)
-    
     task = TCHTask(
         project_id=project_id,
         title=request.form.get('title'),
         description=request.form.get('description'),
         category=request.form.get('category'),
         priority=request.form.get('priority', 'medium'),
-        due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date() if request.form.get('due_date') else None,
-        assigned_to=request.form.get('assigned_to')
+        due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date() if request.form.get('due_date') else None
     )
-    
-    # Set order number
-    max_order = db.session.query(db.func.max(TCHTask.order_num)).filter_by(project_id=project_id).scalar()
-    task.order_num = (max_order or 0) + 1
-    
     db.session.add(task)
     db.session.commit()
-    
     flash('Task added!', 'success')
     return redirect(url_for('projects.tch_detail', id=project_id))
 
@@ -204,23 +281,13 @@ def toggle_tch_task(task_id):
     """Toggle task completion"""
     task = TCHTask.query.get_or_404(task_id)
     task.completed = not task.completed
-    
-    if task.completed:
-        task.completed_date = datetime.utcnow()
-    else:
-        task.completed_date = None
-    
+    task.completed_date = datetime.utcnow() if task.completed else None
     db.session.commit()
-    
-    # Return JSON for AJAX requests
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'completed': task.completed})
-    
-    return redirect(url_for('projects.tch_detail', id=task.project_id))
+    return jsonify({'success': True, 'completed': task.completed})
 
 @projects_bp.route('/tch/task/<int:task_id>/edit', methods=['GET', 'POST'])
 def edit_tch_task(task_id):
-    """Edit task details"""
+    """Edit task"""
     task = TCHTask.query.get_or_404(task_id)
     project = task.project
     
@@ -231,14 +298,11 @@ def edit_tch_task(task_id):
         task.priority = request.form.get('priority', 'medium')
         task.assigned_to = request.form.get('assigned_to')
         
-        # Handle due date
         if request.form.get('due_date'):
             task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date()
-        else:
-            task.due_date = None
         
         db.session.commit()
-        flash('Task updated successfully!', 'success')
+        flash('Task updated!', 'success')
         return redirect(url_for('projects.tch_detail', id=task.project_id))
     
     # Task categories for the dropdown

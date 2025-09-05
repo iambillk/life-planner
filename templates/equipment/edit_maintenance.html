@@ -1,217 +1,463 @@
+{# =============================================================================
+  FILE: maintenance_edit.html
+  PURPOSE: Edit an existing maintenance record for a piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe fallbacks to base vars)
+  - Sticky header with Save / Cancel / Delete actions
+  - Quick-pick service chips sourced from `service_types`
+  - Helpers: “Today” (date), “Self” (performed_by), “Use current reading”
+  - Cost helper (Parts + Labor → Cost) with one-click fill
+  - Live “Next Service” preview from months (+ quick chips 3/6/12)
+  - Autogrow textareas, notes character counter, soft validations
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Full UX refactor with sticky header, helpers, live previews,
+         better sectioning, comments, and accessibility polish.
+============================================================================= #}
+
 {% extends "base.html" %}
 {% block title %}Edit Maintenance - {{ equipment.name }}{% endblock %}
 {% block header %}Edit Maintenance Record for {{ equipment.name }}{% endblock %}
 
-{% block content %}
-<div class="maintenance-edit-container">
-    <form method="POST" action="{{ url_for('equipment.edit_maintenance', id=equipment.id, record_id=record.id) }}" class="maintenance-form">
-        
-        <div class="form-section">
-            <h3>Service Information</h3>
-            
-            <div class="form-group">
-                <label for="service_type">Service Type *</label>
-                <select id="service_type" name="service_type" required>
-                    <option value="">Select Service Type</option>
-                    {% for service in service_types %}
-                    <option value="{{ service }}" {% if record.service_type == service %}selected{% endif %}>{{ service }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="service_date">Service Date *</label>
-                    <input type="date" id="service_date" name="service_date" 
-                           value="{{ record.service_date.strftime('%Y-%m-%d') }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="performed_by">Performed By</label>
-                    <input type="text" id="performed_by" name="performed_by" 
-                           value="{{ record.performed_by or 'Self' }}" placeholder="Self or shop name">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Service Readings</h3>
-            
-            <div class="form-row">
-                {% if equipment.category == 'Auto' %}
-                <div class="form-group">
-                    <label for="mileage_at_service">Mileage at Service</label>
-                    <input type="number" id="mileage_at_service" name="mileage_at_service" 
-                           value="{{ record.mileage_at_service or '' }}" placeholder="Mileage">
-                </div>
-                {% else %}
-                <div class="form-group">
-                    <label for="hours_at_service">Hours at Service</label>
-                    <input type="number" step="0.1" id="hours_at_service" name="hours_at_service" 
-                           value="{{ record.hours_at_service or '' }}" placeholder="Hours">
-                </div>
-                {% endif %}
-                
-                <div class="form-group">
-                    <label for="cost">Cost ($)</label>
-                    <input type="number" step="0.01" id="cost" name="cost" 
-                           value="{{ record.cost or '' }}" placeholder="Service cost">
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Service Details</h3>
-            
-            <div class="form-group">
-                <label for="parts_used">Parts Used</label>
-                <textarea id="parts_used" name="parts_used" rows="2" 
-                          placeholder="List parts used">{{ record.parts_used or '' }}</textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Service Notes</label>
-                <textarea id="notes" name="notes" rows="3" 
-                          placeholder="Any notes about the service">{{ record.notes or '' }}</textarea>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Next Service</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="next_service_months">Next Service In (Months)</label>
-                    <input type="number" id="next_service_months" name="next_service_months" 
-                           placeholder="e.g., 6">
-                    {% if record.next_service_date %}
-                    <small>Current: {{ record.next_service_date.strftime('%B %d, %Y') }}</small>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
-            
-            <!-- Delete button with confirmation -->
-            <button type="button" onclick="confirmDelete()" class="btn btn-danger">Delete Record</button>
-        </div>
-    </form>
-    
-    <!-- Hidden delete form -->
-    <form id="delete-form" method="POST" 
-          action="{{ url_for('equipment.delete_maintenance', id=equipment.id, record_id=record.id) }}" 
-          style="display: none;">
-    </form>
-</div>
-
-<script>
-function confirmDelete() {
-    if (confirm('Are you sure you want to delete this maintenance record? This cannot be undone.')) {
-        document.getElementById('delete-form').submit();
-    }
-}
-</script>
-
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
 <style>
-.maintenance-edit-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
+  :root{
+    --me-bg: var(--bg, #0b0f1a);
+    --me-card: var(--card, #0f1625);
+    --me-sub: #0c1322;
+    --me-line: var(--line, #1f2a3d);
+    --me-text: var(--text, #e6eaf2);
+    --me-muted: var(--text-muted, #9fb0c8);
+    --me-primary: var(--primary, #6ea8ff);
+    --me-success: var(--success, #22c55e);
+    --me-danger: var(--danger, #ef4444);
+    --me-warn: #f59e0b;
+    --me-radius: var(--radius, 14px);
+    --me-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
 
-.maintenance-form {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  .me-shell{ max-width: 900px; margin: 0 auto; padding: 16px; display:grid; gap:16px; }
 
-.form-section {
-    margin-bottom: 30px;
-}
+  /* Sticky header */
+  .me-header{
+    position: sticky; top:12px; z-index:5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--me-line); border-radius: var(--me-radius);
+    padding:12px; box-shadow: var(--me-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+  }
+  .me-title{ margin:0; font-size:1.2rem; }
+  .me-sub{ color:var(--me-muted); font-size:.95rem; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--me-line);
+    background: var(--me-card); color: var(--me-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--me-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
 
-.form-section h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
-}
+  /* Card & form */
+  .card{
+    background: var(--me-card); border:1px solid var(--me-line);
+    border-radius: var(--me-radius); padding:16px; box-shadow: var(--me-shadow);
+  }
+  .form-section + .form-section{ margin-top:12px; }
+  .section-title{ margin:0 0 8px 0; font-size:1.05rem; }
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .form-group{ display:grid; gap:6px; }
+  label{ color: var(--me-muted); font-size:.9rem; }
+  input[type="text"], input[type="date"], input[type="number"], select, textarea{
+    background:#0b1120; color: var(--me-text); border:1px solid var(--me-line); border-radius:10px; padding:10px;
+    outline:none;
+  }
+  textarea{ min-height:96px; resize: vertical; }
+  input:focus, select:focus, textarea:focus{ border-color: var(--me-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
+  .hint{ color:var(--me-muted); font-size:.8rem; }
 
-.form-group {
-    margin-bottom: 20px;
-}
+  /* Chips / helpers */
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; border:1px dashed var(--me-line); background:#0b1120;
+    padding:6px 10px; border-radius:999px; color: var(--me-muted); font-size:.8rem; cursor:pointer;
+  }
+  .chip:hover{ border-color: var(--me-primary); color: var(--me-text); }
+  .inline-row{ display:flex; gap:6px; align-items:center; }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
-}
+  /* Soft validation */
+  .error{ color: #fecaca; background:#3b1115; border:1px solid #7f1d1d; padding:6px 10px; border-radius:10px; display:none; }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+  /* Footer actions */
+  .form-actions{ display:flex; gap:8px; justify-content:space-between; margin-top:8px; border-top:1px dashed var(--me-line); padding-top:12px; }
 
-.form-group textarea {
-    resize: vertical;
-}
+  /* Delete modal */
+  .modal{ display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.6); }
+  .modal-card{
+    width:min(92vw,460px); margin:12vh auto; background: var(--me-card); border:1px solid var(--me-line);
+    border-radius:16px; padding:18px; box-shadow: var(--me-shadow); color: var(--me-text); text-align:center;
+  }
+  .modal-actions{ margin-top:12px; display:flex; justify-content:center; gap:10px; }
 
-.form-group small {
-    display: block;
-    margin-top: 5px;
-    color: #7f8c8d;
-    font-size: 12px;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: space-between;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
-}
-
-.btn {
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-danger {
-    background: #e74c3c;
-    color: white;
-}
-
-.btn:hover {
-    opacity: 0.9;
-}
+  @media (max-width: 860px){
+    .me-header{ grid-template-columns:1fr; }
+  }
 </style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="me-shell">
+
+  {# =================== STICKY HEADER (context + actions) =================== #}
+  <div class="me-header">
+    <div>
+      <h1 class="me-title">Edit Maintenance — {{ equipment.name }}</h1>
+      <div class="me-sub">
+        <span><strong>{{ record.service_type }}</strong></span>
+        <span>• {{ record.service_date.strftime('%b %d, %Y') }}</span>
+        {% if record.cost %}<span>• ${{ "%.2f"|format(record.cost) }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary" href="{{ url_for('equipment.detail', id=equipment.id) }}">← Back to Equipment</a>
+      <button form="maintenanceEditForm" type="submit" class="btn btn-primary">💾 Save Changes</button>
+      <button type="button" class="btn btn-danger" id="openDelete">🗑️ Delete</button>
+    </div>
+  </div>
+
+  {# =================== EDIT FORM =================== #}
+  <form id="maintenanceEditForm" method="POST"
+        action="{{ url_for('equipment.edit_maintenance', id=equipment.id, record_id=record.id) }}"
+        class="card">
+
+    {# --- Service Information ------------------------------------------------ #}
+    <div class="form-section">
+      <h3 class="section-title">Service Information</h3>
+
+      <div class="form-group">
+        <label for="service_type">Service Type <span class="hint">*</span></label>
+        <select id="service_type" name="service_type" required>
+          <option value="">Select Service Type</option>
+          {% for service in service_types %}
+            <option value="{{ service }}" {% if record.service_type == service %}selected{% endif %}>{{ service }}</option>
+          {% endfor %}
+        </select>
+        {# Quick-pick chips from provided service_types (show up to 8) #}
+        <div class="chip-row" aria-label="Quick picks">
+          {% for service in service_types[:8] %}
+            <button type="button" class="chip" data-service="{{ service }}">➜ {{ service }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="service_date">Service Date <span class="hint">*</span></label>
+          <div class="inline-row">
+            <input type="date" id="service_date" name="service_date" value="{{ record.service_date.strftime('%Y-%m-%d') }}" required>
+            <button type="button" class="btn btn-sm" id="setToday">Today</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="performed_by">Performed By</label>
+          <div class="inline-row">
+            <input type="text" id="performed_by" name="performed_by" value="{{ record.performed_by or 'Self' }}" placeholder="Self or shop name">
+            <button type="button" class="btn btn-sm" id="setSelf">Self</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Service Readings --------------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Service Readings</h3>
+
+      <div class="form-row">
+        {% if equipment.category == 'Auto' %}
+          <div class="form-group">
+            <label for="mileage_at_service">Mileage at Service</label>
+            <div class="inline-row">
+              <input type="number" id="mileage_at_service" name="mileage_at_service"
+                     value="{{ record.mileage_at_service or '' }}" placeholder="Mileage">
+              {% if equipment.mileage %}
+              <button type="button" class="btn btn-sm" data-fill="mileage_at_service" data-val="{{ equipment.mileage }}">Use {{ "{:,}".format(equipment.mileage) }}</button>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <div class="form-group">
+            <label for="hours_at_service">Hours at Service</label>
+            <div class="inline-row">
+              <input type="number" step="0.1" id="hours_at_service" name="hours_at_service"
+                     value="{{ record.hours_at_service or '' }}" placeholder="Hours">
+              {% if equipment.hours %}
+              <button type="button" class="btn btn-sm" data-fill="hours_at_service" data-val="{{ equipment.hours }}">Use {{ equipment.hours }}</button>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="cost">Cost ($)</label>
+          <div class="inline-row">
+            <input type="number" step="0.01" id="cost" name="cost" value="{{ record.cost or '' }}" placeholder="Service cost">
+            <button type="button" class="btn btn-sm" id="fillCost">=</button>
+          </div>
+          <div class="hint">Use the helper below (Parts + Labor) then press “=”.</div>
+        </div>
+      </div>
+
+      {# Cost helper (not submitted—no name attributes) #}
+      <div class="form-row" aria-label="Cost helper">
+        <div class="form-group">
+          <label>Parts (helper)</label>
+          <input type="number" step="0.01" id="h_parts" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Labor (helper)</label>
+          <input type="number" step="0.01" id="h_labor" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Total (preview)</label>
+          <input type="text" id="h_total" placeholder="$0.00" readonly>
+        </div>
+      </div>
+    </div>
+
+    {# --- Service Details ---------------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Service Details</h3>
+
+      <div class="form-group">
+        <label for="parts_used">Parts Used</label>
+        <textarea id="parts_used" name="parts_used" rows="2" placeholder="List parts used">{{ record.parts_used or '' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Service Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Any notes about the service">{{ record.notes or '' }}</textarea>
+        <div class="hint"><span id="notesCount">0</span> characters</div>
+      </div>
+    </div>
+
+    {# --- Next Service ------------------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Next Service</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="next_service_months">Next Service In (Months)</label>
+          <div class="inline-row">
+            <input type="number" id="next_service_months" name="next_service_months"
+                   value="{{ record.next_service_months or '' }}" placeholder="e.g., 6">
+            <div class="chip-row" style="margin-left:6px;">
+              <button type="button" class="chip" data-months="3">3 mo</button>
+              <button type="button" class="chip" data-months="6">6 mo</button>
+              <button type="button" class="chip" data-months="12">12 mo</button>
+            </div>
+          </div>
+          <div class="hint" id="nextServicePreview">
+            {% if record.next_service_date %}
+              Current target: <strong>{{ record.next_service_date.strftime('%B %d, %Y') }}</strong>
+            {% else %}
+              Set months to preview the target date.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Actions ------------------------------------------------------------ #}
+    <div class="form-actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn">Cancel</a>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="button" class="btn btn-danger" id="openDeleteBottom">Delete Record</button>
+      </div>
+    </div>
+  </form>
+
+  {# Hidden delete form #}
+  <form id="delete-form" method="POST"
+        action="{{ url_for('equipment.delete_maintenance', id=equipment.id, record_id=record.id) }}"
+        style="display:none;"></form>
+
+  {# Delete confirmation modal #}
+  <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+    <div class="modal-card">
+      <h3 id="delTitle" style="margin:0 0 6px 0; color:#fecaca;">Delete this maintenance record?</h3>
+      <p class="hint" style="margin:0;">This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="closeDelete">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  {# Page Info & Changelog #}
+  <div class="me-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--me-muted);">
+v1.0.0 — Sticky header, quick service chips, helpers (Today/Self/Use reading),
+cost helper, next-service preview, autogrow textareas, validations, dark UI.
+      </code>
+    </details>
+  </div>
+
+</div>
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Helpers & UX glue
+============================================================================ */
+(function(){
+  // Quick-pick service chips
+  document.querySelectorAll('[data-service]').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const val = chip.getAttribute('data-service');
+      const sel = document.getElementById('service_type');
+      if(!sel) return;
+      [...sel.options].forEach(o => { if(o.value === val) sel.value = val; });
+    });
+  });
+
+  // Today & Self buttons
+  const setToday = document.getElementById('setToday');
+  if(setToday){
+    setToday.addEventListener('click', ()=>{
+      const d = document.getElementById('service_date');
+      const now = new Date(); const m = String(now.getMonth()+1).padStart(2,'0'); const day = String(now.getDate()).padStart(2,'0');
+      d.value = `${now.getFullYear()}-${m}-${day}`;
+    });
+  }
+  const setSelf = document.getElementById('setSelf');
+  if(setSelf){
+    setSelf.addEventListener('click', ()=>{
+      const el = document.getElementById('performed_by');
+      if(el) el.value = 'Self';
+    });
+  }
+
+  // Use current reading buttons
+  document.querySelectorAll('[data-fill]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-fill');
+      const val = btn.getAttribute('data-val');
+      const input = document.getElementById(id);
+      if(input){ input.value = val; }
+    });
+  });
+
+  // Cost helper (parts + labor -> cost)
+  const parts = document.getElementById('h_parts');
+  const labor = document.getElementById('h_labor');
+  const htotal = document.getElementById('h_total');
+  const cost = document.getElementById('cost');
+  function updateHelper(){
+    const p = parseFloat(parts.value||'0')||0;
+    const l = parseFloat(labor.value||'0')||0;
+    const tot = p + l;
+    htotal.value = `$${tot.toFixed(2)}`;
+  }
+  [parts, labor].forEach(el=> el && el.addEventListener('input', updateHelper));
+  updateHelper();
+  const fillCost = document.getElementById('fillCost');
+  fillCost && fillCost.addEventListener('click', ()=>{
+    const v = (parseFloat(parts.value||'0')||0) + (parseFloat(labor.value||'0')||0);
+    if(cost) cost.value = v.toFixed(2);
+  });
+
+  // Notes char counter + autogrow textareas
+  const notes = document.getElementById('notes');
+  const count = document.getElementById('notesCount');
+  function updateCount(){ if(count && notes) count.textContent = notes.value.length; }
+  function autogrow(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
+  document.querySelectorAll('textarea').forEach(t=>{
+    autogrow(t);
+    t.addEventListener('input', ()=>{ autogrow(t); updateCount(); });
+  });
+  updateCount();
+
+  // Next service preview: service_date + months
+  const monthsInput = document.getElementById('next_service_months');
+  const dateInput = document.getElementById('service_date');
+  const preview = document.getElementById('nextServicePreview');
+  function addMonths(date, months){
+    const d = new Date(date.getTime());
+    const day = d.getDate();
+    d.setMonth(d.getMonth()+months);
+    // Handle month rollover
+    if(d.getDate() < day){ d.setDate(0); }
+    return d;
+  }
+  function fmt(d){
+    return d.toLocaleDateString(undefined, {year:'numeric', month:'long', day:'2-digit'});
+  }
+  function updatePreview(){
+    const m = parseInt(monthsInput.value, 10);
+    const sdv = dateInput.value;
+    if(!isNaN(m) && sdv){
+      const base = new Date(sdv+'T12:00:00'); // avoid TZ midnight issues
+      const target = addMonths(base, m);
+      preview.innerHTML = `Target: <strong>${fmt(target)}</strong>`;
+    }
+  }
+  monthsInput && monthsInput.addEventListener('input', updatePreview);
+  dateInput && dateInput.addEventListener('input', updatePreview);
+  document.querySelectorAll('[data-months]').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      monthsInput.value = ch.getAttribute('data-months');
+      updatePreview();
+    });
+  });
+  updatePreview();
+
+  // Soft validation on submit (non-negative numerics)
+  const form = document.getElementById('maintenanceEditForm');
+  const errorBox = document.createElement('div');
+  errorBox.className = 'error';
+  errorBox.textContent = 'Please make sure numeric values are zero or greater.';
+  form.insertBefore(errorBox, form.firstElementChild);
+  form.addEventListener('submit', (e)=>{
+    const fields = ['cost','mileage_at_service','hours_at_service'];
+    const bad = fields
+      .map(id => document.getElementById(id))
+      .filter(el => el && el.value !== '')
+      .some(el => parseFloat(el.value) < 0);
+    if(bad){
+      e.preventDefault();
+      errorBox.style.display = 'block';
+      errorBox.scrollIntoView({behavior:'smooth', block:'center'});
+    } else {
+      errorBox.style.display = 'none';
+    }
+  });
+
+  // Delete modal
+  const modal = document.getElementById('deleteModal');
+  const openBtns = [document.getElementById('openDelete'), document.getElementById('openDeleteBottom')].filter(Boolean);
+  const closeBtn = document.getElementById('closeDelete');
+  const confirmBtn = document.getElementById('confirmDelete');
+  openBtns.forEach(b => b.addEventListener('click', ()=> modal.style.display='block'));
+  closeBtn && closeBtn.addEventListener('click', ()=> modal.style.display='none');
+  confirmBtn && confirmBtn.addEventListener('click', ()=> document.getElementById('delete-form').submit());
+  window.addEventListener('keydown', (e)=> { if(e.key==='Escape') modal.style.display='none'; });
+  window.addEventListener('click', (e)=> { if(e.target===modal) modal.style.display='none'; });
+})();
+</script>
 {% endblock %}

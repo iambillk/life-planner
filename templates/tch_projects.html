@@ -1,505 +1,459 @@
+{# =============================================================================
+   FILE: templates/projects_tch.html
+   PURPOSE: TCH Projects index/list
+   TEMPLATE VERSION: v1.0.1
+   LAST UPDATED: 2025-09-04
+
+   HIGHLIGHTS
+   - Dark UI matching base.html variables
+   - Compact, responsive filter tabs + category chips
+   - Search + Sort controls (front-end only)
+   - Clean cards with priority, status, progress, meta
+   - Description now styled like Goal (boxed with label)
+   - Priority ribbon offset so it doesn’t collide with status chip
+   - Accessible structure + keyboard focus states
+   - Changelog panel at bottom of page
+
+   CHANGELOG
+   v1.0.1
+   - IMP: Project description styled exactly like Goal (boxed with "Description:" label).
+   - FIX: Priority ribbon position and clipping; status chip spacing; card overflow visible.
+   v1.0.0
+   - NEW: Dark theme, layout polish, tighter spacing
+   - NEW: Search (client-side) and Sort dropdown
+   - NEW: Slim badges; consistent category/status color system
+   - NEW: Overdue badge logic preserved
+   - NEW: Inline CSS isolated in extra_css block to avoid global bleed
+============================================================================= #}
+
 {% extends "base.html" %}
 
 {% block title %}TCH Projects{% endblock %}
+{% block header %}TCH Projects{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ========= Page-scoped CSS (dark) ======================================= */
+  :root{
+    /* Fallbacks if base variables are missing (kept subtle) */
+    --tch-bg: var(--bg, #0b0f1a);
+    --tch-panel: var(--panel, #121a2a);
+    --tch-card: var(--card, #0f1625);
+    --tch-line: var(--line, #1f2a3d);
+    --tch-text: var(--text, #e6eaf2);
+    --tch-muted: var(--text-muted, #9fb0c8);
+    --tch-primary: var(--primary, #6ea8ff);
+    --tch-primary-700: var(--primary-700, #3f7fe6);
+    --tch-success: var(--success, #22c55e);
+    --tch-warn: var(--warning, #f59e0b);
+    --tch-danger: var(--danger, #ef4444);
+
+    --tch-radius: var(--radius, 14px);
+    --tch-radius-sm: var(--radius-sm, 10px);
+    --tch-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .projects-container{ display:grid; gap:16px; }
+
+  /* ======= Page Header ======= */
+  .page-header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--tch-line); border-radius: var(--tch-radius);
+    box-shadow: var(--tch-shadow);
+  }
+  .page-header h1{ margin:0; font-size:1.15rem; letter-spacing:.2px; }
+  .page-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--tch-line);
+    background:var(--tch-card); color:var(--tch-text); text-decoration:none;
+    transition:transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color:var(--tch-primary); transform:translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary:hover{ background: rgba(110,168,255,.25); }
+
+  /* ======= Controls Row (search + sort + tabs) ======= */
+  .controls{ display:grid; gap:12px; }
+  .controls-row{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius: var(--tch-radius); padding:10px;
+  }
+  .search-input, .select{
+    appearance:none; outline:none;
+    background:#0c1322; color:var(--tch-text);
+    border:1px solid var(--tch-line); border-radius:10px;
+    padding:8px 12px; font-size:.95rem;
+  }
+  .search-input{ min-width: 220px; }
+  .select{ min-width: 160px; }
+
+  /* Status tabs */
+  .filter-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tab{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px;
+    background:var(--tch-card); border:1px solid var(--tch-line);
+    color:var(--tch-muted); text-decoration:none; font-size:.9rem;
+    transition: background .2s ease, border-color .2s ease, transform .1s ease;
+  }
+  .tab:hover{ background:rgba(255,255,255,.04); border-color:var(--tch-primary); transform:translateY(-1px); }
+  .tab.active{ color:var(--tch-text); background:rgba(110,168,255,.16); border-color:rgba(110,168,255,.45); }
+  .tab .badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 6px; border-radius:999px;
+    background:var(--tch-danger); color:#fff; font-size:.7rem; font-weight:800;
+  }
+
+  /* Category chips */
+  .category-filter-section{
+    background: var(--tch-card); border:1px solid var(--tch-line);
+    border-radius: var(--tch-radius); box-shadow: var(--tch-shadow);
+    padding:12px;
+  }
+  .category-filter-section h3{ margin:0 0 8px 0; color:var(--tch-muted); font-size:.9rem; letter-spacing:.2px; }
+  .category-filters{ display:flex; gap:6px; flex-wrap:wrap; }
+  .category-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:12px; font-size:.9rem;
+    background:#0c1322; color:var(--tch-muted);
+    border:1px solid var(--tch-line); text-decoration:none;
+    transition: background .2s ease, border-color .2s ease, transform .1s ease;
+  }
+  .category-tag:hover{ transform:translateY(-1px); border-color:var(--tch-primary); }
+  .category-tag.active{ background:rgba(110,168,255,.16); color:var(--tch-text); border-color:rgba(110,168,255,.45); }
+  .category-tag .count{ font-weight:800; color:var(--tch-text); font-size:.85em; }
+
+  /* Grid */
+  .projects-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap:14px;
+  }
+
+  /* Cards */
+  .project-card{
+    position:relative; background:var(--tch-card);
+    border:1px solid var(--tch-line); border-left-width:2px;
+    border-radius: var(--tch-radius); padding:14px;
+    box-shadow: var(--tch-shadow);
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+    overflow: visible; /* allow corner ribbon to sit outside neatly */
+  }
+  .project-card:hover{ transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,.45); }
+
+  .project-card.priority-critical{ border-left-color: var(--tch-danger); }
+  .project-card.priority-high{ border-left-color: var(--tch-warn); }
+
+  .priority-indicator{
+    position:absolute; top:-10px; right:-10px;
+    padding:4px 8px; font-size:.7rem; font-weight:800; letter-spacing:.08em;
+    border-radius:10px; z-index:2; box-shadow:0 4px 10px rgba(0,0,0,.35);
+    pointer-events:none;
+  }
+  .priority-indicator.critical{ background: var(--tch-danger); color:#0a0f1a; }
+  .priority-indicator.high{ background: var(--tch-warn); color:#0a0f1a; }
+
+  .project-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .project-header h3{ margin:0; font-size:1.02rem; line-height:1.25; }
+  .project-header h3 a{ color:var(--tch-text); text-decoration:none; }
+  .project-header h3 a:hover{ color: var(--tch-primary); }
+
+  /* Status badge */
+  .status-badge{
+    padding:4px 8px; border-radius:999px; font-size:.72rem; font-weight:800;
+    text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;
+    position:relative; z-index:1; margin-top:8px; /* space from ribbon above */
+  }
+  .status-planning{ background:#4b5563; color:#fff; }
+  .status-active{ background:#3b82f6; color:#0a0f1a; }
+  .status-on_hold{ background:#f59e0b; color:#0a0f1a; }
+  .status-completed{ background:#22c55e; color:#0a0f1a; }
+  .status-cancelled{ background:#ef4444; color:#0a0f1a; }
+
+  /* Category badge */
+  .project-category{ margin-bottom:10px; }
+  .category-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font-size:.75rem; font-weight:800;
+    background:#0c1322; color:var(--tch-text);
+    border:1px solid var(--tch-line);
+  }
+  /* Category colors */
+  .category-marketing{ background:#7c3aed; }
+  .category-dc-work{ background:#2563eb; }
+  .category-coding{ background:#16a34a; }
+  .category-managerial{ background:#dc2626; }
+  .category-sales{ background:#f59e0b; }
+  .category-client-health{ background:#14b8a6; }
+  .category-operations{ background:#334155; }
+  .category-research{ background:#0ea5e9; }
+  .category-development{ background:#22c55e; }
+  .category-general{ background:#6b7280; }
+  .category-marketing, .category-dc-work, .category-coding, .category-managerial,
+  .category-sales, .category-client-health, .category-operations,
+  .category-research, .category-development, .category-general{
+    color:#0a0f1a;
+  }
+
+  /* Goal & Description — same visual treatment */
+  .project-goal{
+    background:#0c1322; border:1px solid var(--tch-line); border-radius:10px;
+    color:var(--tch-text); font-size:.92rem; padding:10px; margin-bottom:8px;
+  }
+  .project-desc{ /* alias class so template can share styles cleanly */
+    background:#0c1322; border:1px solid var(--tch-line); border-radius:10px;
+    color:var(--tch-text); font-size:.92rem; padding:10px; margin-bottom:10px;
+  }
+
+  /* Meta */
+  .project-meta{ margin:12px 0; padding-top:10px; border-top:1px dashed var(--tch-line); }
+  .deadline{ color:var(--tch-muted); font-size:.9rem; margin-bottom:8px; }
+  .overdue-badge{
+    display:inline-block; margin-left:6px; padding:2px 6px; border-radius:6px;
+    background: var(--tch-danger); color:#0a0f1a; font-size:.72rem; font-weight:800;
+  }
+
+  .progress-bar{
+    background:#0c1322; border:1px solid var(--tch-line);
+    height:10px; border-radius:999px; overflow:hidden; margin-bottom:6px;
+  }
+  .progress-fill{ background: linear-gradient(90deg, var(--tch-primary), var(--tch-primary-700)); height:100%; transition: width .3s; }
+  .progress-text{ font-size:.8rem; color:var(--tch-muted); }
+
+  .project-stats{ display:flex; gap:12px; margin:10px 0; font-size:.85rem; color:var(--tch-muted); flex-wrap:wrap; }
+  .project-stats span{ display:inline-flex; align-items:center; gap:6px; }
+
+  .project-actions{ display:flex; gap:8px; margin-top:8px; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* Empty state */
+  .empty-state{
+    grid-column:1 / -1; text-align:center; padding:60px 20px; color:var(--tch-muted);
+    background:var(--tch-card); border:1px dashed var(--tch-line); border-radius: var(--tch-radius);
+  }
+  .empty-state i{ display:block; font-size:42px; margin-bottom:10px; color:#94a3b8; }
+  .empty-state h3{ margin:6px 0 6px; color:var(--tch-text); }
+
+  /* Page footer / changelog */
+  .page-foot{
+    margin-top:6px; padding:8px; border:1px solid var(--tch-line);
+    background:var(--tch-card); border-radius: var(--tch-radius);
+  }
+  .page-foot details{ padding:6px 8px; border-radius:10px; border:1px dashed var(--tch-line); }
+  .page-foot summary{ cursor:pointer; font-weight:700; }
+  .page-foot code{ white-space:pre-wrap; display:block; margin-top:6px; font-size:.85rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="projects-container">
-    <div class="page-header">
-        <h1>TCH Projects</h1>
-        <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> New Project
-        </a>
+<div class="projects-container" id="tch-projects">
+  <!-- ====================== HEADER ======================= -->
+  <div class="page-header">
+    <h1 class="sr-only">TCH Projects</h1>
+    <div aria-hidden="true" style="font-weight:650;">TCH Projects</div>
+
+    <div class="page-actions">
+      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary" title="Create a new project">
+        <span aria-hidden="true">➕</span> New Project
+      </a>
+    </div>
+  </div>
+
+  <!-- =================== CONTROLS ======================== -->
+  <div class="controls">
+    <div class="controls-row" role="group" aria-label="Search and sort">
+      <input id="searchProjects" class="search-input" type="search" placeholder="Search projects…" autocomplete="off" />
+      <select id="sortProjects" class="select" aria-label="Sort projects">
+        <option value="updated_desc">Sort: Recently Updated</option>
+        <option value="deadline_asc">Sort: Earliest Deadline</option>
+        <option value="progress_desc">Sort: Highest Progress</option>
+        <option value="name_asc">Sort: Name (A–Z)</option>
+      </select>
     </div>
 
     <!-- Status Filter Tabs -->
-    <div class="filter-tabs">
-        <a href="{{ url_for('projects.tch_index', status='all', category=category_filter) }}" 
-           class="tab {% if status_filter == 'all' %}active{% endif %}">
-            All Projects
-        </a>
-        <a href="{{ url_for('projects.tch_index', status='planning', category=category_filter) }}" 
-           class="tab {% if status_filter == 'planning' %}active{% endif %}">
-            Planning
-            {% if status_counts.planning > 0 %}
-                <span class="badge">{{ status_counts.planning }}</span>
-            {% endif %}
-        </a>
-        <a href="{{ url_for('projects.tch_index', status='active', category=category_filter) }}" 
-           class="tab {% if status_filter == 'active' %}active{% endif %}">
-            Active
-            {% if status_counts.active > 0 %}
-                <span class="badge">{{ status_counts.active }}</span>
-            {% endif %}
-        </a>
-        <a href="{{ url_for('projects.tch_index', status='on_hold', category=category_filter) }}" 
-           class="tab {% if status_filter == 'on_hold' %}active{% endif %}">
-            On Hold
-            {% if status_counts.on_hold > 0 %}
-                <span class="badge">{{ status_counts.on_hold }}</span>
-            {% endif %}
-        </a>
-        <a href="{{ url_for('projects.tch_index', status='completed', category=category_filter) }}" 
-           class="tab {% if status_filter == 'completed' %}active{% endif %}">
-            Completed
-            {% if status_counts.completed > 0 %}
-                <span class="badge">{{ status_counts.completed }}</span>
-            {% endif %}
-        </a>
+    <div class="filter-tabs" role="tablist" aria-label="Status filter">
+      <a href="{{ url_for('projects.tch_index', status='all', category=category_filter) }}"
+         class="tab {% if status_filter == 'all' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'all' else 'false' }}">
+        All
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='planning', category=category_filter) }}"
+         class="tab {% if status_filter == 'planning' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'planning' else 'false' }}">
+        Planning{% if status_counts.planning > 0 %} <span class="badge">{{ status_counts.planning }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='active', category=category_filter) }}"
+         class="tab {% if status_filter == 'active' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'active' else 'false' }}">
+        Active{% if status_counts.active > 0 %} <span class="badge">{{ status_counts.active }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='on_hold', category=category_filter) }}"
+         class="tab {% if status_filter == 'on_hold' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'on_hold' else 'false' }}">
+        On Hold{% if status_counts.on_hold > 0 %} <span class="badge">{{ status_counts.on_hold }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='completed', category=category_filter) }}"
+         class="tab {% if status_filter == 'completed' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'completed' else 'false' }}">
+        Completed{% if status_counts.completed > 0 %} <span class="badge">{{ status_counts.completed }}</span>{% endif %}
+      </a>
     </div>
+  </div>
 
-    <!-- Category Filter Section -->
-    <div class="category-filter-section">
-        <h3>Filter by Category</h3>
-        <div class="category-filters">
-            <a href="{{ url_for('projects.tch_index', status=status_filter, category='all') }}" 
-               class="category-tag {% if category_filter == 'all' %}active{% endif %}">
-                All Categories
-            </a>
-            {% for cat in categories %}
-            <a href="{{ url_for('projects.tch_index', status=status_filter, category=cat) }}" 
-               class="category-tag {% if category_filter == cat %}active{% endif %}">
-                {{ cat }}
-                {% if category_counts[cat] > 0 %}
-                <span class="count">({{ category_counts[cat] }})</span>
-                {% endif %}
-            </a>
-            {% endfor %}
-        </div>
+  <!-- ============ CATEGORY FILTERS ============ -->
+  <div class="category-filter-section">
+    <h3>Filter by Category</h3>
+    <div class="category-filters" role="navigation" aria-label="Category filters">
+      <a href="{{ url_for('projects.tch_index', status=status_filter, category='all') }}"
+         class="category-tag {% if category_filter == 'all' %}active{% endif %}">
+        All Categories
+      </a>
+      {% for cat in categories %}
+      <a href="{{ url_for('projects.tch_index', status=status_filter, category=cat) }}"
+         class="category-tag {% if category_filter == cat %}active{% endif %}">
+        {{ cat }}
+        {% if category_counts[cat] > 0 %}
+          <span class="count">({{ category_counts[cat] }})</span>
+        {% endif %}
+      </a>
+      {% endfor %}
     </div>
+  </div>
 
-    <!-- Projects Grid -->
-    <div class="projects-grid">
-        {% for project in projects %}
-        <div class="project-card priority-{{ project.priority }}">
-            {% if project.priority == 'critical' %}
-                <div class="priority-indicator critical">CRITICAL</div>
-            {% elif project.priority == 'high' %}
-                <div class="priority-indicator high">HIGH</div>
+  <!-- =================== PROJECTS GRID =================== -->
+  <div class="projects-grid" id="projectsGrid">
+    {% for project in projects %}
+    <div class="project-card priority-{{ project.priority }}"
+         data-name="{{ project.name|lower }}"
+         data-deadline="{% if project.deadline %}{{ project.deadline.strftime('%Y-%m-%d') }}{% else %}9999-12-31{% endif %}"
+         data-progress="{{ project.progress|int }}"
+         data-updated="{% if project.updated_at %}{{ project.updated_at.isoformat() }}{% else %}1970-01-01T00:00:00{% endif %}">
+      {% if project.priority == 'critical' %}
+        <div class="priority-indicator critical">CRITICAL</div>
+      {% elif project.priority == 'high' %}
+        <div class="priority-indicator high">HIGH</div>
+      {% endif %}
+
+      <div class="project-header">
+        <h3><a href="{{ url_for('projects.tch_detail', id=project.id) }}">{{ project.name }}</a></h3>
+        <span class="status-badge status-{{ project.status }}">{{ project.status|upper }}</span>
+      </div>
+
+      <!-- Category Badge -->
+      <div class="project-category">
+        <span class="category-badge category-{{ project.category|lower|replace(' ', '-') }}">
+          <span aria-hidden="true">🏷️</span> {{ project.category }}
+        </span>
+      </div>
+
+      {% if project.goal %}
+      <div class="project-goal">
+        <strong>Goal:</strong> {{ project.goal|truncate(150) }}
+      </div>
+      {% endif %}
+
+      {% if project.description %}
+      <div class="project-desc">
+        <strong>Description:</strong> {{ project.description|truncate(200) }}
+      </div>
+      {% endif %}
+
+      <div class="project-meta">
+        {% if project.deadline %}
+          <div class="deadline">
+            <span aria-hidden="true">📅</span>
+            Due: {{ project.deadline.strftime('%b %d, %Y') }}
+            {% if project.deadline < datetime.now().date() and project.status != 'completed' %}
+              <span class="overdue-badge">OVERDUE</span>
             {% endif %}
-            
-            <div class="project-header">
-                <h3><a href="{{ url_for('projects.tch_detail', id=project.id) }}">{{ project.name }}</a></h3>
-                <span class="status-badge status-{{ project.status }}">{{ project.status|upper }}</span>
-            </div>
-            
-            <!-- Category Badge -->
-            <div class="project-category">
-                <span class="category-badge category-{{ project.category|lower|replace(' ', '-') }}">
-                    <i class="fas fa-tag"></i> {{ project.category }}
-                </span>
-            </div>
-            
-            {% if project.goal %}
-            <div class="project-goal">
-                <strong>Goal:</strong> {{ project.goal|truncate(150) }}
-            </div>
-            {% endif %}
-            
-            {% if project.description %}
-            <div class="project-description">
-                {{ project.description|truncate(200) }}
-            </div>
-            {% endif %}
-            
-            <div class="project-meta">
-                {% if project.deadline %}
-                <div class="deadline">
-                    <i class="far fa-calendar"></i> 
-                    Due: {{ project.deadline.strftime('%b %d, %Y') }}
-                    {% if project.deadline < datetime.now().date() and project.status != 'completed' %}
-                        <span class="overdue-badge">OVERDUE</span>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ project.progress }}%"></div>
-                </div>
-                <div class="progress-text">{{ project.progress }}% Complete</div>
-            </div>
-            
-            <div class="project-stats">
-                <span><i class="fas fa-tasks"></i> {{ project.tasks|length }} tasks</span>
-                <span><i class="fas fa-lightbulb"></i> {{ project.ideas|length }} ideas</span>
-                <span><i class="fas fa-flag"></i> {{ project.milestones|length }} milestones</span>
-            </div>
-            
-            <div class="project-actions">
-                <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn btn-sm btn-primary">View</a>
-                <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-sm btn-secondary">Edit</a>
-            </div>
+          </div>
+        {% endif %}
+
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ project.progress }}%"></div>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-folder-open"></i>
-            <h3>No projects found</h3>
-            <p>Start by creating your first project!</p>
-            <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary">Create Project</a>
-        </div>
-        {% endfor %}
+        <div class="progress-text">{{ project.progress }}% Complete</div>
+      </div>
+
+      <div class="project-stats">
+        <span><span aria-hidden="true">✅</span> {{ project.tasks|length }} tasks</span>
+        <span><span aria-hidden="true">💡</span> {{ project.ideas|length }} ideas</span>
+        <span><span aria-hidden="true">🏁</span> {{ project.milestones|length }} milestones</span>
+      </div>
+
+      <div class="project-actions">
+        <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn btn-sm btn-primary">View</a>
+        <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-sm">Edit</a>
+      </div>
     </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-folder-open" aria-hidden="true">📂</i>
+      <h3>No projects found</h3>
+      <p>Start by creating your first project!</p>
+      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary">Create Project</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- =================== PAGE FOOT / CHANGELOG =================== -->
+  <div class="page-foot">
+    <details>
+      <summary>Page Info & Changelog (TCH Projects)</summary>
+      <code>
+v1.0.1 — Description styled like Goal; priority ribbon offset & unclipped; status spacing tuned.
+v1.0.0 — Dark refactor, compact tabs & chips, client-side search/sort, accessible badges.
+      </code>
+    </details>
+  </div>
 </div>
+{% endblock %}
 
-<style>
-/* Page Header */
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Client-side helpers: search + sort (no backend changes required)
+   - Search filters by name (data-name)
+   - Sort by: recently updated, earliest deadline, progress, name
+============================================================================ */
 
-.page-header h1 {
-    margin: 0;
-    color: #2c3e50;
-}
+(function(){
+  const grid = document.getElementById('projectsGrid');
+  if (!grid) return;
+  const cards = Array.from(grid.children);
+  const searchEl = document.getElementById('searchProjects');
+  const sortEl = document.getElementById('sortProjects');
 
-/* Filter Tabs */
-.filter-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    padding: 15px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  function apply() {
+    const q = (searchEl?.value || '').trim().toLowerCase();
+    // filter
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name') || '';
+      const show = !q || name.includes(q);
+      card.style.display = show ? '' : 'none';
+    });
 
-.tab {
-    padding: 8px 16px;
-    border-radius: 6px;
-    text-decoration: none;
-    color: #5d6d7e;
-    transition: all 0.3s;
-    position: relative;
-}
+    // sort
+    const mode = sortEl?.value || 'updated_desc';
+    const visible = cards.filter(c => c.style.display !== 'none');
 
-.tab:hover {
-    background: #ecf0f1;
-}
+    visible.sort((a,b) => {
+      const by = {
+        updated_desc: () => (new Date(b.dataset.updated) - new Date(a.dataset.updated)),
+        deadline_asc: () => (a.dataset.deadline > b.dataset.deadline ? 1 : -1),
+        progress_desc: () => (parseInt(b.dataset.progress||'0',10) - parseInt(a.dataset.progress||'0',10)),
+        name_asc: () => (a.dataset.name > b.dataset.name ? 1 : -1),
+      }[mode] || (() => 0);
+      return by();
+    });
 
-.tab.active {
-    background: #3498db;
-    color: white;
-}
+    // reflow
+    visible.forEach(node => grid.appendChild(node));
+  }
 
-.tab .badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #e74c3c;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-/* Category Filters */
-.category-filter-section {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.category-filter-section h3 {
-    margin: 0 0 15px 0;
-    color: #2c3e50;
-    font-size: 16px;
-}
-
-.category-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.category-tag {
-    padding: 8px 16px;
-    background: #f0f0f0;
-    border-radius: 20px;
-    text-decoration: none;
-    color: #5d6d7e;
-    transition: all 0.3s;
-    font-size: 14px;
-}
-
-.category-tag:hover {
-    background: #e0e0e0;
-    transform: translateY(-1px);
-}
-
-.category-tag.active {
-    background: #3498db;
-    color: white;
-}
-
-.category-tag .count {
-    font-weight: bold;
-    margin-left: 4px;
-}
-
-/* Projects Grid */
-.projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-.project-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.project-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Priority Indicators */
-.priority-indicator {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 5px 10px;
-    border-radius: 0 8px 0 8px;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-.priority-indicator.critical {
-    background: #e74c3c;
-    color: white;
-}
-
-.priority-indicator.high {
-    background: #f39c12;
-    color: white;
-}
-
-.project-card.priority-critical {
-    border-left: 4px solid #e74c3c;
-}
-
-.project-card.priority-high {
-    border-left: 4px solid #f39c12;
-}
-
-/* Project Header */
-.project-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-}
-
-.project-header h3 {
-    margin: 0;
-    flex: 1;
-}
-
-.project-header h3 a {
-    color: #2c3e50;
-    text-decoration: none;
-}
-
-.project-header h3 a:hover {
-    color: #3498db;
-}
-
-/* Category Badge */
-.project-category {
-    margin-bottom: 15px;
-}
-
-.category-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-/* Category-specific colors */
-.category-marketing { background: #9b59b6; color: white; }
-.category-dc-work { background: #3498db; color: white; }
-.category-coding { background: #2ecc71; color: white; }
-.category-managerial { background: #e74c3c; color: white; }
-.category-sales { background: #f39c12; color: white; }
-.category-client-health { background: #1abc9c; color: white; }
-.category-operations { background: #34495e; color: white; }
-.category-research { background: #16a085; color: white; }
-.category-development { background: #27ae60; color: white; }
-.category-general { background: #95a5a6; color: white; }
-
-/* Status Badge */
-.status-badge {
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-planning { background: #95a5a6; color: white; }
-.status-active { background: #3498db; color: white; }
-.status-on_hold { background: #f39c12; color: white; }
-.status-completed { background: #27ae60; color: white; }
-.status-cancelled { background: #e74c3c; color: white; }
-
-/* Project Content */
-.project-goal {
-    color: #5d6d7e;
-    font-size: 14px;
-    margin-bottom: 10px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 4px;
-}
-
-.project-description {
-    color: #7f8c8d;
-    font-size: 14px;
-    margin-bottom: 15px;
-}
-
-/* Project Meta */
-.project-meta {
-    margin: 15px 0;
-    padding-top: 15px;
-    border-top: 1px solid #ecf0f1;
-}
-
-.deadline {
-    color: #5d6d7e;
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-
-.overdue-badge {
-    background: #e74c3c;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 11px;
-    margin-left: 5px;
-}
-
-/* Progress Bar */
-.progress-bar {
-    background: #ecf0f1;
-    height: 8px;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 5px;
-}
-
-.progress-fill {
-    background: linear-gradient(90deg, #3498db, #2980b9);
-    height: 100%;
-    transition: width 0.3s;
-}
-
-.progress-text {
-    font-size: 12px;
-    color: #7f8c8d;
-}
-
-/* Project Stats */
-.project-stats {
-    display: flex;
-    gap: 15px;
-    margin: 15px 0;
-    font-size: 13px;
-    color: #7f8c8d;
-}
-
-.project-stats span {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-/* Project Actions */
-.project-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-/* Empty State */
-.empty-state {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    color: #7f8c8d;
-}
-
-.empty-state i {
-    font-size: 64px;
-    margin-bottom: 20px;
-    color: #bdc3c7;
-}
-
-.empty-state h3 {
-    margin-bottom: 10px;
-    color: #5d6d7e;
-}
-
-/* Buttons */
-.btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    transition: all 0.3s;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #2980b9;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #7f8c8d;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-    font-size: 13px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .projects-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .filter-tabs {
-        flex-wrap: wrap;
-    }
-    
-    .category-filters {
-        flex-direction: column;
-    }
-}
-</style>
+  searchEl?.addEventListener('input', apply);
+  sortEl?.addEventListener('change', apply);
+  apply();
+})();
+</script>
 {% endblock %}

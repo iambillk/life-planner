@@ -1,217 +1,462 @@
+{# =============================================================================
+  FILE: edit_equipment.html
+  PURPOSE: Edit an existing equipment record with smart defaults, drafts, and UX
+  TEMPLATE VERSION: v1.2.3
+  LAST UPDATED: 2025-09-05
+
+  DELTA (v1.2.3)
+  - REFACTOR: Profile Photo section now mirrors Add page pattern (label-based drop area
+              with background preview + FileReader). Fixes "replace photo" behavior.
+  - KEEP: Ownership & Purchase fields (request.form.get(...) hydrators), local draft,
+          status badge, category-aware mileage/hours.
+
+  Previous (v1.2.2) ensured enctype="multipart/form-data" and field name "profile_photo".
+============================================================================= #}
+
 {% extends "base.html" %}
 {% block title %}Edit {{ equipment.name }}{% endblock %}
 {% block header %}Edit {{ equipment.name }}{% endblock %}
 
+{# ========================= PAGE CSS (scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --ee-bg: var(--bg, #0b0f1a);
+    --ee-card: var(--card, #0f1625);
+    --ee-sub: #0b1120;
+    --ee-line: var(--line, #1f2a3d);
+    --ee-text: var(--text, #e6eaf2);
+    --ee-muted: var(--text-muted, #9fb0c8);
+    --ee-primary: var(--primary, #6ea8ff);
+    --ee-success:#22c55e; --ee-warn:#f59e0b; --ee-danger:#ef4444;
+    --ee-radius: 14px; --ee-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .edit-equipment-container{ max-width: 900px; margin: 0 auto; padding: 16px; }
+  .equipment-form{
+    background: var(--ee-card); border:1px solid var(--ee-line);
+    border-radius: var(--ee-radius); box-shadow: var(--ee-shadow); padding: 16px;
+    color: var(--ee-text);
+  }
+
+  .form-section{ margin-bottom: 18px; background: var(--ee-sub); border:1px solid var(--ee-line); border-radius: 12px; }
+  .form-section > h3{
+    margin:0; padding:12px 14px; font-size:1rem; letter-spacing:.2px;
+    border-bottom:1px dashed var(--ee-line); color: var(--ee-muted);
+  }
+  .section-body{ padding: 14px; display: grid; gap: 14px; }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
+  .form-group label{ display:block; font-size:.85rem; color: var(--ee-muted); margin-bottom: 6px; }
+  .input, .select, textarea{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--ee-line);
+    background:#0c1322; color:var(--ee-text); font-size: .95rem;
+  }
+  textarea{ resize: vertical; min-height: 90px; }
+
+  .inline-help{ font-size:.75rem; color: var(--ee-muted); margin-top: 6px; }
+
+  .status-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .status-badge{
+    padding:6px 10px; border-radius:999px; font-weight:800; font-size:.75rem; letter-spacing:.06em;
+    text-transform:uppercase; background:#334155; color:#e2e8f0; border:1px solid var(--ee-line);
+  }
+  .status-active{ background: var(--ee-success); color:#0a0f1a; }
+  .status-storage{ background:#64748b; color:#0a0f1a; }
+  .status-maintenance{ background: var(--ee-warn); color:#0a0f1a; }
+  .status-needs_repair{ background:#e67e22; color:#0a0f1a; }
+  .status-retired{ background:#334155; color:#e2e8f0; }
+  .status-sold{ background: var(--ee-danger); color:#0a0f1a; }
+
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    margin-bottom: 10px;
+  }
+  .draft-pill{ font-size:.8rem; color: var(--ee-muted); }
+  .btn-link{ border:none; background:transparent; color: var(--ee-primary); cursor:pointer; padding: 4px 6px; }
+
+  .form-actions{
+    display:flex; gap:10px; justify-content:flex-end; padding-top: 10px; border-top:1px dashed var(--ee-line);
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px;
+    border:1px solid var(--ee-line); background:#0c1322; color: var(--ee-text); text-decoration:none; cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--ee-primary); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0b1120; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+
+  /* --- Profile photo (matches Add page pattern) --- */
+  .photo-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items:start; }
+  .photo-drop{
+    width:100%; height:220px; border-radius:12px; background:#0b1120;
+    border:2px dashed var(--ee-line); display:flex; align-items:center; justify-content:center;
+    color:#94a3b8; text-align:center; padding:8px; cursor:pointer;
+    background-size: cover; background-position:center;
+  }
+  .photo-drop.drag{ border-color: var(--ee-primary); background-color:#0b1120; }
+  .photo-input{ display:none; }
+  .photo-helper{ font-size:.8rem; color: var(--ee-muted); margin-top:6px; }
+  .photo-filename{ font-size:.8rem; color: var(--ee-muted); }
+
+  @media (max-width: 640px){
+    .photo-grid{ grid-template-columns: 1fr; }
+    .equipment-form{ padding: 12px; }
+  }
+</style>
+{% endblock %}
+
+{# ============================= PAGE CONTENT ============================= #}
 {% block content %}
 <div class="edit-equipment-container">
-    <form method="POST" action="{{ url_for('equipment.edit', id=equipment.id) }}" class="equipment-form">
-        <div class="form-section">
-            <h3>Basic Information</h3>
-            
-            <div class="form-group">
-                <label for="name">Equipment Name *</label>
-                <input type="text" id="name" name="name" value="{{ equipment.name }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="category">Category *</label>
-                <select id="category" name="category" required>
-                    {% for cat in categories %}
-                    <option value="{{ cat }}" {% if equipment.category == cat %}selected{% endif %}>{{ cat }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="make">Make</label>
-                    <input type="text" id="make" name="make" value="{{ equipment.make or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <input type="text" id="model" name="model" value="{{ equipment.model or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="year">Year</label>
-                    <input type="number" id="year" name="year" value="{{ equipment.year or '' }}" min="1900" max="2099">
-                </div>
-            </div>
+
+  {# ---------- Small toolbar: draft state + quick link back ---------- #}
+  <div class="toolbar">
+    <div class="draft-pill" id="draftStatus">Draft: not saved</div>
+    <div>
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back to Equipment</a>
+      <button type="button" class="btn btn-link" id="clearDraftBtn">Discard Draft</button>
+    </div>
+  </div>
+
+  {# NOTE: enctype ensures profile_photo is posted #}
+  <form method="POST"
+        action="{{ url_for('equipment.edit', id=equipment.id) }}"
+        class="equipment-form"
+        novalidate
+        enctype="multipart/form-data">
+
+    {# ==================== SECTION: BASIC INFORMATION ==================== #}
+    <div class="form-section">
+      <h3>Basic Information</h3>
+      <div class="section-body">
+        <div class="form-group">
+          <label for="name">Equipment Name *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="input"
+            value="{{ request.form.get('name', equipment.name) }}"
+            required>
         </div>
-        
-        <div class="form-section">
-            <h3>Current Status</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="status">Status</label>
-                    <select id="status" name="status">
-                        <option value="active" {% if equipment.status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="storage" {% if equipment.status == 'storage' %}selected{% endif %}>In Storage</option>
-                        <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>Under Maintenance</option>
-                        <option value="needs_repair" {% if equipment.status == 'needs_repair' %}selected{% endif %}>Needs Repair</option>
-                        <option value="retired" {% if equipment.status == 'retired' %}selected{% endif %}>Retired</option>
-                        <option value="sold" {% if equipment.status == 'sold' %}selected{% endif %}>Sold</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="location">Storage Location</label>
-                    <input type="text" id="location" name="location" value="{{ equipment.location or '' }}">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                {% if equipment.category == 'Auto' %}
-                <div class="form-group">
-                    <label for="mileage">Current Mileage</label>
-                    <input type="number" id="mileage" name="mileage" value="{{ equipment.mileage or '' }}">
-                </div>
-                {% else %}
-                <div class="form-group">
-                    <label for="hours">Current Hours</label>
-                    <input type="number" step="0.1" id="hours" name="hours" value="{{ equipment.hours or '' }}">
-                </div>
-                {% endif %}
-                
-                <div class="form-group">
-                    <label for="serial_number">Serial Number</label>
-                    <input type="text" id="serial_number" name="serial_number" value="{{ equipment.serial_number or '' }}">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" rows="3">{{ equipment.notes or '' }}</textarea>
-            </div>
+
+        <div class="form-group">
+          <label for="category">Category *</label>
+          <select id="category" name="category" class="select" required>
+            {% set selected_category = request.form.get('category', equipment.category) %}
+            {% for cat in categories %}
+              <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
         </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="make">Make</label>
+            <input type="text" id="make" name="make" class="input"
+                   value="{{ request.form.get('make', equipment.make or '') }}" placeholder="e.g., Honda">
+          </div>
+
+          <div class="form-group">
+            <label for="model">Model</label>
+            <input type="text" id="model" name="model" class="input"
+                   value="{{ request.form.get('model', equipment.model or '') }}" placeholder="e.g., HRX217">
+          </div>
+
+          <div class="form-group">
+            <label for="year">Year</label>
+            <input type="number" id="year" name="year" class="input" min="1900" max="2099"
+                   value="{{ request.form.get('year', equipment.year or '') }}" placeholder="e.g., 2022">
+          </div>
         </div>
-    </form>
+      </div>
+    </div>
+
+    {# ==================== SECTION: PROFILE PHOTO (refactored) ==================== #}
+    <div class="form-section">
+      <h3>Profile Photo</h3>
+      <div class="section-body">
+        <div class="photo-grid">
+          {# A single label-as-dropzone that shows current photo as background and previews new #}
+          <label for="profile_photo" class="photo-drop" id="photoDrop">
+            <span id="photoDropText">
+              {% if equipment.profile_photo %}
+                Click to replace photo
+              {% else %}
+                Drag & drop or click to upload<br>PNG/JPG
+              {% endif %}
+            </span>
+          </label>
+
+          <div class="form-group">
+            <input type="file" id="profile_photo" name="profile_photo" accept="image/*" class="photo-input">
+            <div class="photo-filename" id="photoFileName">
+              {% if equipment.profile_photo %}
+                Current: {{ equipment.profile_photo }}
+              {% else %}
+                No file selected
+              {% endif %}
+            </div>
+            <div class="photo-helper">Selecting a new image will replace the profile photo when you save.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ==================== SECTION: CURRENT STATUS ==================== #}
+    <div class="form-section">
+      <h3>Current Status</h3>
+      <div class="section-body">
+        <div class="status-row">
+          <div class="form-group" style="min-width:220px;">
+            <label for="status">Status</label>
+            {% set cur_status = request.form.get('status', equipment.status) %}
+            <select id="status" name="status" class="select">
+              <option value="active"        {% if cur_status == 'active' %}selected{% endif %}>Active</option>
+              <option value="storage"       {% if cur_status == 'storage' %}selected{% endif %}>In Storage</option>
+              <option value="maintenance"   {% if cur_status == 'maintenance' %}selected{% endif %}>Under Maintenance</option>
+              <option value="needs_repair"  {% if cur_status == 'needs_repair' %}selected{% endif %}>Needs Repair</option>
+              <option value="retired"       {% if cur_status == 'retired' %}selected{% endif %}>Retired</option>
+              <option value="sold"          {% if cur_status == 'sold' %}selected{% endif %}>Sold</option>
+            </select>
+          </div>
+          <span id="statusBadge" class="status-badge">Status</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="location">Storage Location</label>
+            <input type="text" id="location" name="location" class="input"
+                   value="{{ request.form.get('location', equipment.location or '') }}" placeholder="Garage, Shed...">
+          </div>
+
+          {# Mileage vs Hours — render both, show one; both post safely #}
+          <div class="form-group" id="mileageGroup">
+            <label for="mileage">Current Mileage</label>
+            <input type="number" id="mileage" name="mileage" class="input"
+                   value="{{ request.form.get('mileage', equipment.mileage or '') }}" placeholder="e.g., 82,150">
+            <div class="inline-help">Shown for Auto category</div>
+          </div>
+
+          <div class="form-group" id="hoursGroup">
+            <label for="hours">Current Hours</label>
+            <input type="number" step="0.1" id="hours" name="hours" class="input"
+                   value="{{ request.form.get('hours', equipment.hours or '') }}" placeholder="e.g., 142.5">
+            <div class="inline-help">Shown for non-Auto categories</div>
+          </div>
+
+          <div class="form-group">
+            <label for="serial_number">Serial Number</label>
+            <input type="text" id="serial_number" name="serial_number" class="input"
+                   value="{{ request.form.get('serial_number', equipment.serial_number or '') }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" class="input"
+                    placeholder="Any additional info...">{{ request.form.get('notes', equipment.notes or '') }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    {# ==================== SECTION: OWNERSHIP & PURCHASE ==================== #}
+    <div class="form-section">
+      <h3>Ownership & Purchase</h3>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="purchase_date">Purchase Date</label>
+            <input
+              type="date"
+              id="purchase_date"
+              name="purchase_date"
+              class="input"
+              value="{{
+                request.form.get(
+                  'purchase_date',
+                  (equipment.purchase_date.strftime('%Y-%m-%d') if equipment.purchase_date else '')
+                )
+              }}">
+          </div>
+
+          <div class="form-group">
+            <label for="purchase_price">Purchase Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              id="purchase_price"
+              name="purchase_price"
+              class="input"
+              placeholder="e.g., 3500.00"
+              value="{{ request.form.get('purchase_price', equipment.purchase_price or '') }}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ==================== ACTIONS ==================== #}
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
 </div>
+{% endblock %}
 
-<style>
-.edit-equipment-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
+{# ============================= PAGE SCRIPTS ============================= #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Edit Equipment — Client helpers
+   - Draft autosave (localStorage)
+   - Category-aware UI (mileage vs hours)
+   - Live status badge
+   - Photo dropzone + live background preview (Add-page pattern)
+   - Safe hydration (never overwrite with empty strings)
+============================================================================ */
 
-.equipment-form {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+(function(){
+  const form = document.querySelector('.equipment-form');
+  const draftKey = 'edit_equipment_{{ equipment.id }}';
 
-.form-section {
-    margin-bottom: 30px;
-}
+  const category = document.getElementById('category');
+  const statusSel = document.getElementById('status');
+  const statusBadge = document.getElementById('statusBadge');
+  const mileageGroup = document.getElementById('mileageGroup');
+  const hoursGroup = document.getElementById('hoursGroup');
+  const draftStatus = document.getElementById('draftStatus');
 
-.form-section h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
-}
+  /* ---------- UI: status badge ---------- */
+  function refreshStatusBadge(){
+    const val = statusSel.value || 'unknown';
+    statusBadge.textContent = val.replace('_',' ');
+    statusBadge.className = 'status-badge status-' + val;
+  }
 
-.form-group {
-    margin-bottom: 20px;
-}
+  /* ---------- UI: category toggles (Auto = mileage, else hours) ---------- */
+  function syncCategoryUI(){
+    const isAuto = (category.value === 'Auto');
+    mileageGroup.style.display = isAuto ? '' : 'none';
+    hoursGroup.style.display = isAuto ? 'none' : '';
+  }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
-}
+  /* ---------- DRAFT: serialize / hydrate / clear ---------- */
+  function serialize(){
+    const ids = [
+      'name','category','make','model','year','status','location',
+      'mileage','hours','serial_number','notes','purchase_date','purchase_price'
+    ];
+    const data = {};
+    ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+    return data;
+  }
+  function saveDraft(){
+    try{
+      localStorage.setItem(draftKey, JSON.stringify(serialize()));
+      if (draftStatus) draftStatus.textContent = 'Draft: saved locally';
+    }catch(e){}
+  }
+  function getDraft(){
+    try{ return JSON.parse(localStorage.getItem(draftKey) || 'null'); }catch(e){ return null; }
+  }
+  function hydrate(data){
+    if(!data) return;
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      if (el && v != null && v !== '') el.value = v; // never overwrite with blanks
+    };
+    set('name', data.name);
+    set('make', data.make);
+    set('model', data.model);
+    set('year', data.year);
+    set('location', data.location);
+    set('serial_number', data.serial_number);
+    set('notes', data.notes);
+    set('purchase_date', data.purchase_date);
+    set('purchase_price', data.purchase_price);
+    if(data.category) category.value = data.category;
+    if(data.status) statusSel.value = data.status;
+  }
+  function clearDraft(){
+    localStorage.removeItem(draftKey);
+    if (draftStatus) draftStatus.textContent = 'Draft: cleared';
+  }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+  /* ---------- Wire up base UI ---------- */
+  refreshStatusBadge();
+  syncCategoryUI();
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
+  hydrate(getDraft());
+  refreshStatusBadge();
+  syncCategoryUI();
 
-.form-group textarea {
-    resize: vertical;
-}
+  let t; form.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(saveDraft, 600); });
+  statusSel.addEventListener('change', refreshStatusBadge);
+  category.addEventListener('change', syncCategoryUI);
 
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
+  document.getElementById('clearDraftBtn').addEventListener('click', function(){
+    if(confirm('Discard local draft for this equipment?')) clearDraft();
+  });
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
-}
+  /* ---------- Photo: label-based dropzone + FileReader preview ---------- */
+  (function(){
+    const drop = document.getElementById('photoDrop');
+    const file = document.getElementById('profile_photo');
+    const fileNameHint = document.getElementById('photoFileName');
+    const dropText = document.getElementById('photoDropText');
 
-.btn {
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s;
-}
+    if(!drop || !file) return;
 
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
+    // Show current photo as background on load
+    {% if equipment.profile_photo %}
+      try {
+        const currentUrl = "{{ url_for('static', filename='equipment_photos/equipment_profiles/' + equipment.profile_photo) }}";
+        drop.style.backgroundImage = `url('${currentUrl}')`;
+        if (dropText) dropText.textContent = 'Click to replace photo';
+      } catch(_) {}
+    {% endif %}
 
-.btn-primary:hover {
-    background: #2980b9;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #7f8c8d;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-    .equipment-form {
-        padding: 20px;
+    function setPreviewFromFile(f){
+      if (!f || !f.type?.startsWith?.('image/')) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        drop.style.backgroundImage = `url('${ev.target.result}')`;
+        if (dropText) dropText.textContent = '';
+        if (fileNameHint) fileNameHint.textContent = f.name;
+      };
+      reader.readAsDataURL(f);
     }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-        text-align: center;
-    }
-}
-</style>
+
+    // Click to open input (label already points to input, but keep for robustness)
+    drop.addEventListener('click', () => file?.click());
+
+    // Drag & drop wiring
+    ['dragenter','dragover'].forEach(evt => {
+      drop.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); drop.classList.add('drag'); });
+    });
+    ['dragleave','drop'].forEach(evt => {
+      drop.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('drag'); });
+    });
+    drop.addEventListener('drop', (e) => {
+      const f = e.dataTransfer?.files?.[0];
+      if (f){
+        const dt = new DataTransfer();
+        dt.items.add(f);
+        file.files = dt.files;       // ensures the form submits the dropped file
+        setPreviewFromFile(f);
+      }
+    });
+
+    // File input change -> preview
+    file.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (f) setPreviewFromFile(f);
+    });
+  })();
+})();
+</script>
 {% endblock %}
