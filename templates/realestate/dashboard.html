@@ -1,661 +1,368 @@
-{# ===================================================================
-   templates/realestate/dashboard.html
-   Real Estate Management Dashboard - Hybrid Card + Detail View
-   Version: 3.0.0
-   Created: 2025-01-03
-   
-   FEATURES:
-   - Property cards for overview
-   - Click card to see detailed view with all original features
-   - Overdue/upcoming tasks for selected property
-   - Quick add buttons
-   - Recent maintenance
-   - Cost tracking
-   
-   CHANGELOG:
-   v3.0.0 (2025-01-03)
-   - Hybrid approach: cards + detailed view
-   - Brought back all original dashboard features
-   - Property cards act as selectors
-   - Full detail panel with quick actions when property selected
-   
-   v2.0.0 (2025-01-03)
-   - Card-based layout
-   
-   v1.0.0 (2025-01-03)
-   - Original dropdown-based dashboard
-=================================================================== #}
+{# =============================================================================
+  FILE: templates/realestate/properties_dashboard.html
+  PURPOSE: High-level dashboard for properties (search, filters, categories, grid)
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Sticky top bar: quick actions + global search/sort + anchor chips + density toggle
+  - Client-side filtering & sorting with graceful fallback to your existing `q` GET param
+  - CSV export of CURRENTLY VISIBLE properties
+  - Category chips by Property Type (with counts)
+  - Responsive property grid with cache-busted thumbs and quick actions
+  - Strong comments; page-scoped dark theme vars
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark restyle + sticky controls bar
+  - NEW: Global search/sort, density toggle, anchor chips
+  - NEW: Category chip panel with counts
+  - NEW: CSV export of filtered results
+  - IMP: Property cards with better metadata and actions
+============================================================================= #}
 
 {% extends "base.html" %}
-{% block title %}Property Management{% endblock %}
-{% block header %}Property Management Center{% endblock %}
+{% block title %}Properties{% endblock %}
+{% set active = 'realestate' %}
+{% block header %}Properties{% endblock %}
 
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
 {% block extra_css %}
 <style>
-  /* ==================== Real Estate Dashboard Styles ==================== */
-  :root {
-    --re-bg: var(--bg, #0b0f1a);
-    --re-panel: var(--panel, #121a2a);
-    --re-card: var(--card, #0f1625);
-    --re-hover: #1a2235;
-    --re-line: var(--line, #1f2a3d);
-    --re-text: var(--text, #e6eaf2);
-    --re-muted: var(--text-muted, #9fb0c8);
-    --re-primary: var(--primary, #6ea8ff);
-    --re-success: var(--success, #22c55e);
-    --re-warning: var(--warning, #f59e0b);
-    --re-danger: var(--danger, #ef4444);
-    --re-info: #38bdf8;
-    --re-radius: 12px;
-    --re-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  :root{
+    --pd-bg: var(--bg, #0b0f1a);
+    --pd-panel: var(--panel, #121a2a);
+    --pd-card: var(--card, #0f1625);
+    --pd-sub: #0c1322;
+    --pd-line: var(--line, #1f2a3d);
+    --pd-text: var(--text, #e6eaf2);
+    --pd-muted: var(--text-muted, #9fb0c8);
+    --pd-primary: var(--primary, #6ea8ff);
+    --pd-shadow: 0 8px 24px rgba(0,0,0,.35);
+    --pd-radius: var(--radius, 14px);
+    --pd-radius-sm: var(--radius-sm, 10px);
   }
 
-  /* ========== Container ========== */
-  .property-dashboard {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 1rem;
+  .prop-dashboard{ max-width: 1200px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+
+  /* ================== Sticky top controls ================== */
+  .sticky-bar{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--pd-line); border-radius: var(--pd-radius); padding: 12px;
+    box-shadow: var(--pd-shadow); backdrop-filter: blur(6px);
+  }
+  .bar-row{ display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; }
+  .quick-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--pd-line);
+    background: var(--pd-card); color: var(--pd-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color:var(--pd-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background: transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  .inline-controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .search-input, .select{
+    background:#0b1120; color: var(--pd-text); border:1px solid var(--pd-line);
+    border-radius:10px; padding:8px 12px; outline:none; font-size:.95rem;
+  }
+  .search-input{ min-width: 260px; }
+  .select{ min-width: 220px; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; border:1px solid var(--pd-line);
+    background: var(--pd-card); color: var(--pd-muted); font-size:.9rem; text-decoration:none;
+  }
+  .chip.active{ color: var(--pd-text); background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
+  .toggle-btn{
+    border:1px solid var(--pd-line); background:#0c1322; color:var(--pd-muted);
+    border-radius:10px; padding:6px 10px; cursor:pointer;
+  }
+  .toggle-btn.active{ color:var(--pd-text); border-color: var(--pd-primary); background: rgba(110,168,255,.16); }
+
+  /* ================== Category chips ================== */
+  .categories{
+    background: var(--pd-card); border:1px solid var(--pd-line);
+    border-radius: var(--pd-radius); padding: 12px; box-shadow: var(--pd-shadow);
+  }
+  .category-grid{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .category-chip{
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+    padding:8px 12px; border-radius:999px; border:1px solid var(--pd-line);
+    background:#0c1322; color: var(--pd-text);
+  }
+  .category-chip .count{ background:#0b2a38; color:#cbeafe; padding:2px 8px; border-radius:999px; font-weight:800; font-size:.8rem; }
+
+  /* ================== Property grid ================== */
+  .wrap{
+    background: var(--pd-card); border:1px solid var(--pd-line);
+    border-radius: var(--pd-radius); padding: 12px; box-shadow: var(--pd-shadow);
+  }
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:12px; }
+  .card{
+    background:#0c1322; border:1px solid var(--pd-line); border-radius:12px; overflow:hidden;
+    transition: transform .1s ease, border-color .2s ease; display:flex; flex-direction:column;
+  }
+  .card:hover{ transform: translateY(-1px); border-color: var(--pd-primary); }
+  .thumb{ width:100%; height:140px; object-fit:cover; background:#0b1120; border-bottom:1px solid var(--pd-line); }
+  .thumb-empty{ height:140px; display:flex; align-items:center; justify-content:center; font-size:2.2rem; color:#94a3b8; border-bottom:1px solid var(--pd-line); }
+  .body{ padding:10px; display:grid; gap:6px; }
+  .body h4{ margin:0; font-size:1rem; }
+  .meta{ color:var(--pd-muted); font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--pd-line); background:rgba(255,255,255,.03); font-size:.82rem; }
+  .actions{ display:flex; gap:8px; padding:10px; border-top:1px solid var(--pd-line); }
+
+  .empty{
+    text-align:center; padding:40px 16px; background:#0c1322; border:1px dashed var(--pd-line); border-radius: var(--pd-radius);
+    color: var(--pd-muted);
   }
 
-  /* ========== Dashboard Header ========== */
-  .dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
+  /* Density toggle */
+  .dense .card .body{ padding:8px; }
+  .dense .actions{ padding:8px; }
 
-  .dashboard-title {
-    color: var(--re-text);
-    font-size: 1.8rem;
-    font-weight: 600;
-  }
-
-  .btn-add-property {
-    background: var(--re-primary);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .btn-add-property:hover {
-    background: var(--primary-700);
-    transform: translateY(-1px);
-  }
-
-  /* ========== Property Cards Grid (Selectors) ========== */
-  .property-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .property-card {
-    background: var(--re-panel);
-    border-radius: var(--re-radius);
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: 2px solid transparent;
-    text-align: center;
-  }
-
-  .property-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--re-shadow);
-  }
-
-  .property-card.selected {
-    border-color: var(--re-primary);
-    background: var(--re-card);
-  }
-
-  .property-card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .property-card-name {
-    color: var(--re-text);
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-  }
-
-  .property-card-meta {
-    color: var(--re-muted);
-    font-size: 0.85rem;
-  }
-
-  .property-card-badges {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  .mini-badge {
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
-  }
-
-  .mini-badge.overdue {
-    background: var(--re-danger);
-  }
-
-  .mini-badge.upcoming {
-    background: var(--re-warning);
-  }
-
-  /* ========== Selected Property Detail View (Original Dashboard) ========== */
-  .property-detail-view {
-    display: none;
-  }
-
-  .property-detail-view.active {
-    display: block;
-  }
-
-  /* ========== Alert Sections ========== */
-  .alert-section {
-    background: var(--re-panel);
-    border-radius: var(--re-radius);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--re-shadow);
-  }
-
-  .alert-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: var(--re-text);
-  }
-
-  .alert-header .badge {
-    background: var(--re-danger);
-    color: white;
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.9rem;
-  }
-
-  .alert-header.upcoming .badge {
-    background: var(--re-warning);
-  }
-
-  .alert-header.recent .badge {
-    background: var(--re-success);
-  }
-
-  /* ========== Task Cards ========== */
-  .task-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .task-card {
-    background: var(--re-card);
-    border-radius: 10px;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-left: 4px solid transparent;
-    transition: all 0.2s;
-  }
-
-  .task-card:hover {
-    background: var(--re-hover);
-    transform: translateX(2px);
-  }
-
-  .task-card.overdue {
-    border-left-color: var(--re-danger);
-  }
-
-  .task-card.upcoming {
-    border-left-color: var(--re-warning);
-  }
-
-  .task-card.completed {
-    border-left-color: var(--re-success);
-  }
-
-  .task-info {
-    flex: 1;
-  }
-
-  .task-title {
-    color: var(--re-text);
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-  }
-
-  .task-meta {
-    color: var(--re-muted);
-    font-size: 0.85rem;
-  }
-
-  .task-action {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .btn-complete {
-    background: var(--re-success);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-  }
-
-  .btn-complete:hover {
-    background: #1ea850;
-    transform: scale(1.05);
-  }
-
-  /* ========== Quick Add Section ========== */
-  .quick-add-section {
-    background: var(--re-panel);
-    border-radius: var(--re-radius);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--re-shadow);
-  }
-
-  .quick-add-section h3 {
-    color: var(--re-text);
-    margin-bottom: 1rem;
-  }
-
-  .quick-add-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .quick-add-btn {
-    background: var(--re-card);
-    border: 2px solid var(--re-line);
-    color: var(--re-text);
-    padding: 1rem;
-    border-radius: 10px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-    font-weight: 500;
-    text-decoration: none;
-    display: block;
-  }
-
-  .quick-add-btn:hover {
-    background: var(--re-hover);
-    border-color: var(--re-primary);
-    transform: translateY(-2px);
-  }
-
-  .quick-add-btn .icon {
-    font-size: 1.5rem;
-    margin-bottom: 0.25rem;
-    display: block;
-  }
-
-  /* ========== Cost Summary ========== */
-  .cost-summary {
-    background: var(--re-panel);
-    border-radius: var(--re-radius);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--re-shadow);
-  }
-
-  .cost-summary h3 {
-    color: var(--re-text);
-    margin-bottom: 1rem;
-  }
-
-  .cost-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-
-  .cost-card {
-    background: var(--re-card);
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-  }
-
-  .cost-label {
-    color: var(--re-muted);
-    font-size: 0.85rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .cost-amount {
-    color: var(--re-text);
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  /* ========== Empty State ========== */
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: var(--re-muted);
-  }
-
-  .empty-state .icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-
-  /* ========== Mobile Responsive ========== */
-  @media (max-width: 768px) {
-    .property-dashboard {
-      padding: 0.5rem;
-    }
-
-    .property-cards {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .quick-add-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .task-card {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-
-    .task-action {
-      width: 100%;
-    }
-
-    .btn-complete {
-      flex: 1;
-    }
-  }
+  @media (max-width: 820px){ .bar-row{ grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
+{# ============================== CONTENT =================================== #}
 {% block content %}
-<div class="property-dashboard">
-  
-  {# ========== Dashboard Header ========== #}
-  <div class="dashboard-header">
-    <h1 class="dashboard-title">Property Management Center</h1>
-    <a href="{{ url_for('realestate.add_property') }}" class="btn-add-property">
-      <span>➕</span>
-      Add Property
-    </a>
+<div class="prop-dashboard" id="pdRoot">
+
+  {# =================== STICKY BAR (quick actions + global controls) =================== #}
+  <div class="sticky-bar">
+    <div class="bar-row">
+      <div class="quick-actions">
+        <a href="{{ url_for('realestate.add_property') }}" class="btn btn-primary">➕ New Property</a>
+        <a href="{{ url_for('realestate.dashboard') }}" class="btn btn-secondary">📋 View All</a>
+        <button id="densityToggle" class="btn btn-outline">↕️ Density</button>
+      </div>
+
+      {# Keep your server search contract (q param) while also filtering client-side #}
+      <form method="get" action="{{ url_for('realestate.dashboard') }}" class="inline-controls" aria-label="Global filters">
+        <input id="globalSearch" class="search-input" type="search" name="q" value="{{ q or '' }}"
+               placeholder="Quick search (name, city, address)…" autocomplete="off">
+        <select id="globalSort" class="select" aria-label="Global sort">
+          <option value="name_asc">Sort: Name (A–Z)</option>
+          <option value="city_asc">Sort: City (A–Z)</option>
+          <option value="updated_desc">Sort: Recently Updated</option>
+        </select>
+        {% if q %}<a class="btn btn-outline btn-sm" href="{{ url_for('realestate.dashboard') }}">Clear</a>{% endif %}
+        <button class="btn btn-primary" type="submit">Search</button>
+      </form>
+    </div>
+
+    <div class="chips" role="navigation" aria-label="Jump links">
+      <a href="#categoriesSec" class="chip">🏷️ Categories</a>
+      <a href="#allPropsSec" class="chip">🏠 All Properties</a>
+      {% if q %}<span class="chip active">Filter: “{{ q }}”</span>{% endif %}
+    </div>
   </div>
 
-  {% if properties %}
-    
-    {# ========== Property Cards (Selectors) ========== #}
-    <div class="property-cards">
-      {% for prop in properties %}
-      <div class="property-card {% if selected_property and selected_property.id == prop.id %}selected{% endif %}"
-           onclick="selectProperty({{ prop.id }})">
-        <div class="property-card-icon">
-          {% if prop.is_primary_residence %}⭐{% else %}🏠{% endif %}
-        </div>
-        <div class="property-card-name">{{ prop.name }}</div>
-        <div class="property-card-meta">{{ prop.property_type|capitalize }}</div>
-        <div class="property-card-badges">
-          {% if prop.overdue_maintenance_count > 0 %}
-            <span class="mini-badge overdue">{{ prop.overdue_maintenance_count }} overdue</span>
-          {% endif %}
-          {% if prop.upcoming_maintenance_count > 0 %}
-            <span class="mini-badge upcoming">{{ prop.upcoming_maintenance_count }} soon</span>
-          {% endif %}
-        </div>
-      </div>
+  {# =================== CATEGORIES (by property_type) =================== #}
+  <div class="categories" id="categoriesSec">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <h3 style="margin:0;">🏷️ Properties by Type</h3>
+      <button id="exportCsv" class="btn btn-outline btn-sm">⬇️ Export CSV (Visible)</button>
+    </div>
+    <div class="category-grid" role="navigation" aria-label="Type filters">
+      {% set type_list = properties|map(attribute='property_type')|reject('equalto', None)|unique|list %}
+      {% for t in type_list %}
+        <a href="#allPropsSec" class="category-chip cat-filter" data-type="{{ t|lower }}">
+          <span>Type: {{ t }}</span>
+          <span class="count">{{ properties|selectattr('property_type', 'equalto', t)|list|length }}</span>
+        </a>
       {% endfor %}
-    </div>
-
-    {# ========== Selected Property Detail View ========== #}
-    {% if selected_property %}
-    <div class="property-detail-view active">
-      
-      {# ========== Overdue Maintenance ========== #}
-      {% if overdue_tasks %}
-      <div class="alert-section">
-        <div class="alert-header overdue">
-          ⚠️ Overdue Maintenance
-          <span class="badge">{{ overdue_tasks|length }}</span>
-        </div>
-        <div class="task-list">
-          {% for task in overdue_tasks[:5] %}
-          <div class="task-card overdue">
-            <div class="task-info">
-              <div class="task-title">{{ task.task }}</div>
-              <div class="task-meta">
-                {{ task.category }} • 
-                {{ (datetime.utcnow().date() - task.next_due_date).days }} days overdue
-              </div>
-            </div>
-            <div class="task-action">
-              <button class="btn-complete" onclick="quickComplete({{ task.id }})">
-                Complete
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {# ========== Upcoming Maintenance ========== #}
-      {% if upcoming_tasks %}
-      <div class="alert-section">
-        <div class="alert-header upcoming">
-          📅 Upcoming This Month
-          <span class="badge">{{ upcoming_tasks|length }}</span>
-        </div>
-        <div class="task-list">
-          {% for task in upcoming_tasks[:5] %}
-          <div class="task-card upcoming">
-            <div class="task-info">
-              <div class="task-title">{{ task.task }}</div>
-              <div class="task-meta">
-                {{ task.category }} • 
-                Due in {{ (task.next_due_date - datetime.utcnow().date()).days }} days
-              </div>
-            </div>
-            <div class="task-action">
-              <button class="btn-complete" onclick="quickComplete({{ task.id }})">
-                Complete
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {# ========== Quick Add Tasks ========== #}
-      <div class="quick-add-section">
-        <h3>Quick Add Task</h3>
-        <div class="quick-add-grid">
-          {% for task in quick_tasks %}
-          <button class="quick-add-btn" 
-                  onclick="quickAddTask('{{ task.category }}', '{{ task.task }}')">
-            <span class="icon">
-              {% if task.category == 'Lawn & Yard' %}🌱
-              {% elif task.category == 'HVAC' %}❄️
-              {% elif task.category == 'Plumbing' %}🚿
-              {% elif task.category == 'Generator' %}⚡
-              {% elif task.category == 'Roof & Gutters' %}🏠
-              {% else %}🔧{% endif %}
-            </span>
-            {{ task.task }}
-          </button>
-          {% endfor %}
-          <a href="{{ url_for('realestate.add_maintenance', property_id=selected_property.id) }}" 
-             class="quick-add-btn">
-            <span class="icon">➕</span>
-            Custom Task
-          </a>
-        </div>
-      </div>
-
-      {# ========== Recent Maintenance ========== #}
-      {% if recent_maintenance %}
-      <div class="alert-section">
-        <div class="alert-header recent">
-          ✅ Recently Completed
-          <span class="badge">{{ recent_maintenance|length }}</span>
-        </div>
-        <div class="task-list">
-          {% for task in recent_maintenance[:5] %}
-          <div class="task-card completed">
-            <div class="task-info">
-              <div class="task-title">{{ task.task }}</div>
-              <div class="task-meta">
-                {{ task.category }} • 
-                {{ task.date_completed.strftime('%m/%d/%Y') }}
-                {% if task.cost %} • ${{ "%.2f"|format(task.cost) }}{% endif %}
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% if selected_property %}
-        <div style="margin-top: 1rem; text-align: center;">
-          <a href="{{ url_for('realestate.property_detail', id=selected_property.id) }}" 
-             style="color: var(--re-primary); text-decoration: none;">
-            View Full History →
-          </a>
-        </div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {# ========== Cost Summary ========== #}
-      <div class="cost-summary">
-        <h3>{{ datetime.utcnow().year }} Spending - {{ selected_property.name }}</h3>
-        <div class="cost-grid">
-          <div class="cost-card">
-            <div class="cost-label">YTD Total</div>
-            <div class="cost-amount">
-              ${{ "%.0f"|format(monthly_costs.values()|sum) }}
-            </div>
-          </div>
-          <div class="cost-card">
-            <div class="cost-label">Monthly Avg</div>
-            <div class="cost-amount">
-              ${{ "%.0f"|format(monthly_costs.values()|sum / (datetime.utcnow().month if monthly_costs else 1)) }}
-            </div>
-          </div>
-          <div class="cost-card">
-            <div class="cost-label">This Month</div>
-            <div class="cost-amount">
-              ${{ "%.0f"|format(monthly_costs.get(datetime.utcnow().month, 0)) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# ========== Quick Links ========== #}
-      <div class="quick-add-section">
-        <h3>Quick Links</h3>
-        <div class="quick-add-grid">
-          <a href="{{ url_for('realestate.property_detail', id=selected_property.id) }}" 
-             class="quick-add-btn">
-            <span class="icon">🏠</span>
-            Property Details
-          </a>
-          <a href="{{ url_for('realestate.add_maintenance', property_id=selected_property.id) }}" 
-             class="quick-add-btn">
-            <span class="icon">➕</span>
-            Add Maintenance
-          </a>
-          {# These will be added as templates are created
-          <a href="#" class="quick-add-btn">
-            <span class="icon">📞</span>
-            Vendors
-          </a>
-          <a href="#" class="quick-add-btn">
-            <span class="icon">📊</span>
-            Cost Analysis
-          </a>
-          #}
-        </div>
-      </div>
-
-    </div>
-    {% else %}
-      <div class="empty-state">
-        <div class="icon">👆</div>
-        <h3>Select a property above to view details</h3>
-      </div>
-    {% endif %}
-
-  {% else %}
-    {# ========== No Properties Yet ========== #}
-    <div class="empty-state">
-      <div class="icon">🏠</div>
-      <h2>Welcome to Property Management</h2>
-      <p>Start by adding your first property to track maintenance, vendors, and costs.</p>
-      <br>
-      <a href="{{ url_for('realestate.add_property') }}" class="btn-add-property">
-        <span>➕</span>
-        Add Your First Property
+      <a href="#allPropsSec" class="category-chip cat-filter" data-type="__all">
+        <span>All</span>
+        <span class="count">{{ properties|length }}</span>
       </a>
     </div>
-  {% endif %}
+  </div>
 
-</div>
+  {# =================== ALL PROPERTIES GRID =================== #}
+  <div class="wrap" id="allPropsSec">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <h3 style="margin:0;">🏠 All Properties</h3>
+      <div class="inline-controls">
+        <input id="propSearch" class="search-input" placeholder="Search properties…" aria-label="Search properties">
+        <select id="propSort" class="select" aria-label="Sort properties">
+          <option value="name_asc">Sort: Name (A–Z)</option>
+          <option value="city_asc">Sort: City (A–Z)</option>
+          <option value="updated_desc">Sort: Recently Updated</option>
+        </select>
+      </div>
+    </div>
 
+    {% if properties %}
+    <div class="grid" id="propGrid">
+      {% for p in properties %}
+        <div class="card"
+             data-name="{{ (p.name ~ ' ' ~ (p.address or '') ~ ' ' ~ (p.city or '') ~ ' ' ~ (p.state or '') ~ ' ' ~ (p.zip_code or ''))|lower }}"
+             data-city="{{ (p.city or '')|lower }}"
+             data-type="{{ (p.property_type or '')|lower }}"
+             data-updated="{% if p.updated_at %}{{ p.updated_at.isoformat() }}{% else %}1970-01-01T00:00:00{% endif %}">
+          {% if p.profile_photo %}
+            <img class="thumb"
+                 src="{{ url_for('static', filename='equipment_photos/property_profiles/' ~ p.profile_photo,
+                                  v=(p.updated_at.timestamp()|int if p.updated_at else 0)) }}"
+                 alt="{{ p.name }}">
+          {% else %}
+            <div class="thumb-empty">🏠</div>
+          {% endif %}
+
+          <div class="body">
+            <h4>
+              <a href="{{ url_for('realestate.property_detail', id=p.id) }}" style="color:var(--pd-text); text-decoration:none;">
+                {{ p.name }}
+              </a>
+            </h4>
+            <div class="tags">
+              {% if p.property_type %}<span class="tag">Type: {{ p.property_type }}</span>{% endif %}
+              {% if p.city or p.state %}<span class="tag">{{ p.city or '' }} {{ p.state or '' }}</span>{% endif %}
+            </div>
+            <div class="meta">{{ p.address or '' }}{% if p.city %} · {{ p.city }}{% endif %}{% if p.state %} {{ p.state }}{% endif %}{% if p.zip_code %} {{ p.zip_code }}{% endif %}</div>
+          </div>
+
+          <div class="actions">
+            <a class="btn btn-sm" href="{{ url_for('realestate.property_detail', id=p.id) }}">View</a>
+            <a class="btn btn-sm btn-primary" href="{{ url_for('realestate.edit_property', id=p.id) }}">Edit</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty">
+        <div style="font-size:42px; margin-bottom:6px;">📦</div>
+        No properties yet.
+        <a class="btn btn-primary btn-sm" href="{{ url_for('realestate.add_property') }}" style="margin-left:6px;">Add Property</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# =================== PAGE FOOT / CHANGELOG =================== #}
+  <div class="wrap" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--pd-muted);">
+v1.0.0 — Dark refactor; sticky controls; category chips; client search/sort; CSV export of visible cards.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /prop-dashboard -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
 <script>
-  // Select a property and reload with it selected
-  function selectProperty(propertyId) {
-    window.location.href = '{{ url_for("realestate.dashboard") }}?property_id=' + propertyId;
+/* ============================================================================
+   Utilities (sorting, CSV, visibility)
+============================================================================ */
+function sortNodes(nodes, compare){ return nodes.sort(compare); }
+function visible(nodes){ return nodes.filter(n => n.style.display !== 'none'); }
+
+function exportCardsToCSV(nodes, fields){
+  const header = fields.map(f => `"${f.label.replace(/"/g,'""')}"`).join(',');
+  const rows = [header];
+  nodes.forEach(n => {
+    const get = f => f.get ? (f.get(n) || '') : (n.dataset[f.key] || '');
+    const cols = fields.map(f => `"${String(get(f)).replace(/"/g,'""')}"`);
+    rows.push(cols.join(','));
+  });
+  const csv = rows.join('\\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'properties.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ============================================================================
+   Wire global & per-grid controls
+============================================================================ */
+(function(){
+  const root = document.getElementById('pdRoot');
+  const dens = document.getElementById('densityToggle');
+  const gSearch = document.getElementById('globalSearch');
+  const gSort = document.getElementById('globalSort');
+  const catFilters = Array.from(document.querySelectorAll('.cat-filter'));
+  const exportBtn = document.getElementById('exportCsv');
+
+  const grid = document.getElementById('propGrid');
+  if (!grid) return;
+  const cards = Array.from(grid.children);
+
+  const pSearch = document.getElementById('propSearch');
+  const pSort = document.getElementById('propSort');
+
+  // Density toggle
+  dens?.addEventListener('click', ()=> root.classList.toggle('dense'));
+
+  // Category filter (by property_type)
+  let activeType = '__all';
+  catFilters.forEach(chip => chip.addEventListener('click', (e)=>{
+    activeType = chip.dataset.type || '__all';
+    apply();
+  }));
+
+  // Global search nudges the grid search
+  gSearch?.addEventListener('input', ()=>{
+    if (pSearch){ pSearch.value = gSearch.value; pSearch.dispatchEvent(new Event('input')); }
+  });
+
+  // Global sort maps to grid sort
+  gSort?.addEventListener('change', ()=>{
+    const map = {
+      name_asc: 'name_asc',
+      city_asc: 'city_asc',
+      updated_desc: 'updated_desc',
+    };
+    pSort.value = map[gSort.value] || 'name_asc';
+    pSort.dispatchEvent(new Event('change'));
+  });
+
+  // Grid search + sort
+  pSearch?.addEventListener('input', apply);
+  pSort?.addEventListener('change', apply);
+
+  function apply(){
+    const q = (pSearch?.value || '').trim().toLowerCase();
+    cards.forEach(c => {
+      const byText = !q || (c.dataset.name||'').includes(q);
+      const byType = (activeType === '__all') || (c.dataset.type === (activeType||''));
+      c.style.display = (byText && byType) ? '' : 'none';
+    });
+
+    const key = pSort?.value || 'name_asc';
+    const cmp = {
+      name_asc:   (a,b)=> ((a.dataset.name||'') > (b.dataset.name||'') ? 1 : -1),
+      city_asc:   (a,b)=> ((a.dataset.city||'') > (b.dataset.city||'') ? 1 : -1),
+      updated_desc:(a,b)=> (new Date(b.dataset.updated) - new Date(a.dataset.updated)),
+    }[key] || (()=>0);
+
+    sortNodes(visible(cards), cmp).forEach(n => grid.appendChild(n));
   }
 
-  // Quick complete a recurring task
-  function quickComplete(taskId) {
-    if (confirm('Mark this task as completed today?')) {
-      // TODO: Implement AJAX endpoint to mark complete and recalculate next due
-      alert('Task completed! (AJAX implementation needed)');
-    }
-  }
+  // Initial paint
+  apply();
 
-  // Quick add a common task
-  function quickAddTask(category, task) {
-    const propertyId = {{ selected_property.id if selected_property else 'null' }};
-    if (propertyId) {
-      // For now, go to the add maintenance form with pre-filled values
-      window.location.href = `{{ url_for("realestate.add_maintenance", property_id=0) }}`.replace('0', propertyId) + 
-                             `?category=${encodeURIComponent(category)}&task=${encodeURIComponent(task)}`;
-    }
-  }
+  // Export currently visible cards
+  exportBtn?.addEventListener('click', ()=>{
+    const vis = visible(cards);
+    exportCardsToCSV(vis, [
+      { label:'Name', get:n => n.querySelector('h4 a')?.textContent?.trim() || '' },
+      { label:'Type', get:n => n.querySelector('.tag')?.textContent?.replace(/^Type:\s*/, '') || '' },
+      { label:'City/State', get:n => (n.querySelector('.tags .tag:nth-child(2)')?.textContent || '').trim() },
+      { label:'Address', get:n => n.querySelector('.meta')?.textContent?.trim() || '' },
+    ]);
+  });
+})();
 </script>
 {% endblock %}

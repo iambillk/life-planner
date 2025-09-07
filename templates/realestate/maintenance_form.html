@@ -1,0 +1,391 @@
+{# =============================================================================
+  FILE: templates/realestate/maintenance.html
+  PURPOSE: Real Estate — Add Maintenance record for a Property
+  TEMPLATE VERSION: v2.1.0
+  LAST UPDATED: 2025-09-05
+
+  ── Changelog ──────────────────────────────────────────────────────────────────
+  v2.1.0
+  - FIX: "Categorys" → "Category".
+  - NEW: Per-photo captions (photo_captions[]), preserved while editing previews.
+  - ADD: Local .kbtn styles for consistent buttons on this page.
+
+  v2.0.0
+  - Category selector; drag-drop with live previews; sticky action bar; dark UI.
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Add Maintenance{% endblock %}
+{% set active = 'realestate' %}
+{% block header %}Add Maintenance for {{ property.name }}{% endblock %}
+
+{% block content %}
+<form method="POST"
+      enctype="multipart/form-data"
+      class="kcard maint-form"
+      style="display:grid;gap:14px;max-width:980px;">
+
+  {# ============================== HEADER BAR ============================== #}
+  <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <h2 class="kcard-title" style="margin:0;">New Maintenance Record</h2>
+      <span class="kchip">Property: <strong>{{ property.name }}</strong></span>
+      {% if property.city or property.state %}
+        <span class="kchip">Location: <strong>{{ (property.city ~ ', ' if property.city) ~ (property.state or '') }}</strong></span>
+      {% endif %}
+    </div>
+    <div class="kcard-actions" style="display:flex;gap:8px;">
+      <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.property_detail', id=property.id) }}">← Back</a>
+    </div>
+  </div>
+
+  {# ============================== SERVICE INFO ============================ #}
+  <section class="ksection">
+    <h3 class="ksection-title">Service Info</h3>
+
+    <div class="grid-2">
+      <div class="kfield">
+        <label for="category">Category <span class="req">*</span></label>
+        <select id="category" name="category" required>
+          <option value="">Select…</option>
+          <option>HVAC</option>
+          <option>Plumbing</option>
+          <option>Electrical</option>
+          <option>Exterior</option>
+          <option>Interior</option>
+          <option>Appliances</option>
+          <option>Yard</option>
+          <option>Roof</option>
+          <option>Other</option>
+        </select>
+        <div class="khint">Choose the closest fit—used for reporting & filters.</div>
+      </div>
+
+      <div class="kfield">
+        <label for="task">Task <span class="req">*</span></label>
+        <input type="text" id="task" name="task" required placeholder="e.g., Replace kitchen faucet">
+        <div class="khint">Short, action-oriented title.</div>
+      </div>
+    </div>
+
+    <div class="kfield">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="4" placeholder="What was done, parts used, warranty notes…"></textarea>
+    </div>
+
+    <div class="grid-3">
+      <div class="kfield">
+        <label for="date_completed">Date Completed <span class="req">*</span></label>
+        <input type="date" id="date_completed" name="date_completed" required>
+      </div>
+
+      <div class="kfield">
+        <label for="performed_by">Performed By</label>
+        <input type="text" id="performed_by" name="performed_by" placeholder="Self or Vendor name">
+      </div>
+
+      <div class="kfield">
+        <label for="cost">Cost</label>
+        <input type="number" step="0.01" id="cost" name="cost" inputmode="decimal" placeholder="0.00">
+        <div class="khint">Leave blank if N/A (stored as USD).</div>
+      </div>
+    </div>
+  </section>
+
+  {# ============================== FILES =================================== #}
+  <section class="ksection">
+    <h3 class="ksection-title">Photos & Receipt</h3>
+
+    <!-- Work Photos (multi) -->
+    <div class="kfield">
+      <label>Work Photos (multiple)</label>
+      <div id="dz-photos" class="dropzone" tabindex="0" aria-label="Upload photos by clicking or dragging files here">
+        <div class="dz-inner">
+          <div class="dz-icon">🖼️</div>
+          <div class="dz-text">
+            <strong>Choose or drag work photos</strong>
+            <span>JPG, PNG, HEIC</span>
+          </div>
+          <label class="kbtn" for="photos">Choose Files</label>
+        </div>
+        <!-- Native input preserved for backend -->
+        <input type="file" id="photos" name="photos" multiple accept="image/*" style="display:none;">
+      </div>
+      <div class="khint">Saved under <code>static/equipment_photos/maintenance_photos/YYYY/MM/</code></div>
+      <div id="preview-photos" class="preview-grid" hidden></div>
+    </div>
+
+    <!-- Receipt (single image or PDF) -->
+    <div class="kfield">
+      <label>Receipt (image or PDF)</label>
+      <div id="dz-receipt" class="dropzone" tabindex="0" aria-label="Upload a receipt by clicking or dragging a file here">
+        <div class="dz-inner">
+          <div class="dz-icon">📄</div>
+          <div class="dz-text">
+            <strong>Choose or drag receipt</strong>
+            <span>PNG, JPG, or PDF</span>
+          </div>
+          <label class="kbtn" for="receipt">Choose File</label>
+        </div>
+        <!-- Native input preserved for backend -->
+        <input type="file" id="receipt" name="receipt" accept="image/*,.pdf" style="display:none;">
+      </div>
+      <div class="khint">Stored with maintenance photos and tagged as a receipt.</div>
+      <div id="preview-receipt" class="preview-grid one" hidden></div>
+    </div>
+  </section>
+
+  {# ============================== ACTION BAR ============================== #}
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <div class="keys-hint">Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> to Save</div>
+      <div class="actions">
+        <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="kbtn">Cancel</a>
+        <button type="submit" class="kbtn kbtn-primary">Save Maintenance</button>
+      </div>
+    </div>
+  </div>
+
+  {# ============================== META / CHANGELOG ======================== #}
+  <details class="kaccordion">
+    <summary>Form Info & Changelog</summary>
+    <div class="kcard-body">
+      <ul>
+        <li><strong>Template:</strong> maintenance.html — v2.1.0</li>
+        <li><strong>Last Updated:</strong> 2025-09-05</li>
+        <li><strong>Behavior:</strong> Drag-drop & previews are cosmetic; server receives the same <code>photos</code> and <code>receipt</code>. New optional field: <code>photo_captions[]</code>.</li>
+      </ul>
+    </div>
+  </details>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ---------- Local button kit (consistent across pages) ---------- */
+  .kbtn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--line); background:rgba(255,255,255,.03);
+    color:var(--text); text-decoration:none; line-height:1;
+    transition:border-color .15s ease, background .15s ease, transform .06s ease;
+  }
+  .kbtn:hover{ border-color:var(--primary); transform:translateY(-1px); }
+  .kbtn-ghost{ background:transparent; }
+  .kbtn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+
+  .kcard-head{padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .ksection{display:grid;gap:12px}
+  .ksection-title{font-weight:700;margin:6px 0}
+  .kchip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 8px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(255,255,255,0.04);font-size:.9rem
+  }
+  .kfield label{display:block;margin-bottom:6px;color:var(--text-muted)}
+  .kfield select,
+  .kfield input[type="text"],
+  .kfield input[type="date"],
+  .kfield input[type="number"],
+  .kfield textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,0.02);color:var(--text)
+  }
+  .kfield textarea{resize:vertical;min-height:120px}
+
+  .grid-2{display:grid;gap:12px;grid-template-columns:repeat(2, minmax(0,1fr));}
+  .grid-3{display:grid;gap:12px;grid-template-columns:repeat(3, minmax(0,1fr));}
+  @media (max-width: 960px){
+    .grid-2{grid-template-columns:1fr;}
+    .grid-3{grid-template-columns:1fr;}
+  }
+
+  .dropzone{
+    border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,0.02);
+    padding:18px;outline:none
+  }
+  .dropzone:focus{box-shadow:0 0 0 2px rgba(255,255,255,0.06) inset}
+  .dz-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .dz-icon{font-size:28px;opacity:.7}
+  .dz-text{display:flex;flex-direction:column;gap:2px;color:var(--text-muted)}
+  .dz-text strong{color:var(--text);font-weight:700}
+
+  .preview-grid{
+    margin-top:10px;
+    display:grid;gap:10px;
+    grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
+  }
+  .preview-grid.one{grid-template-columns:repeat(1, minmax(220px,1fr));}
+  .preview{
+    position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:rgba(255,255,255,0.02);
+  }
+  .preview img{display:block;width:100%;height:100%;object-fit:cover}
+  .preview .badge{
+    position:absolute;left:8px;top:8px;font-size:.75rem;border:1px solid var(--line);
+    border-radius:999px;padding:2px 6px;background:rgba(0,0,0,.45);backdrop-filter:blur(2px)
+  }
+  .preview .remove{
+    position:absolute;right:8px;top:8px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(0,0,0,.45);backdrop-filter:blur(2px);padding:4px 7px;cursor:pointer
+  }
+  .preview .cap{
+    width:100%; box-sizing:border-box;
+    position:absolute; left:0; bottom:0;
+    padding:6px 8px; border:0; outline:none;
+    background:rgba(0,0,0,.45); color:var(--text); font-size:.85rem;
+    backdrop-filter: blur(2px);
+  }
+
+  .actionbar{position:sticky;bottom:0;z-index:5;margin-top:4px;}
+  .actionbar-inner{
+    border:1px solid var(--line);border-radius:12px;background:rgba(10,15,26,.75);
+    backdrop-filter:blur(6px);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px
+  }
+  .keys-hint{color:var(--text-muted);font-size:.9rem}
+  kbd{border:1px solid var(--line);border-bottom-color:rgba(255,255,255,0.25);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:rgba(255,255,255,0.06)}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // ----- Elements
+    const form = document.querySelector('.maint-form');
+
+    // Work photos
+    const inputPhotos = document.getElementById('photos');
+    const dzPhotos = document.getElementById('dz-photos');
+    const gridPhotos = document.getElementById('preview-photos');
+
+    // Receipt
+    const inputReceipt = document.getElementById('receipt');
+    const dzReceipt = document.getElementById('dz-receipt');
+    const gridReceipt = document.getElementById('preview-receipt');
+
+    // Cache captions by a stable key so they persist while adding/removing files
+    const captionCache = new Map(); // key: name|size -> caption string
+    const keyFor = (f) => `${f.name}|${f.size}`;
+
+    // ----- Keyboard shortcut: Ctrl/Cmd + Enter to submit
+    form.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') form.requestSubmit();
+    });
+
+    // ----- Helpers
+    function prevent(e){ e.preventDefault(); e.stopPropagation(); }
+    function addDragHandlers(zone){
+      ['dragenter','dragover'].forEach(evt => zone.addEventListener(evt, (e)=>{ prevent(e); zone.classList.add('is-drag'); }));
+      ['dragleave','drop'].forEach(evt => zone.addEventListener(evt, (e)=>{ prevent(e); zone.classList.remove('is-drag'); }));
+    }
+    function buildFileList(exist, add){
+      const dt = new DataTransfer();
+      exist.forEach(f => dt.items.add(f));
+      add.forEach(f => dt.items.add(f));
+      return dt.files;
+    }
+
+    // ----- Photos DnD + previews
+    addDragHandlers(dzPhotos);
+    dzPhotos.addEventListener('drop', (e)=>{
+      const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      inputPhotos.files = buildFileList(Array.from(inputPhotos.files || []), files);
+      renderPhotoPreviews();
+    });
+    dzPhotos.addEventListener('click', (e)=>{ if (e.target.tagName !== 'LABEL') inputPhotos.click(); });
+    inputPhotos.addEventListener('change', renderPhotoPreviews);
+
+    function renderPhotoPreviews(){
+      const files = Array.from(inputPhotos.files || []);
+      gridPhotos.innerHTML = '';
+      if (!files.length){ gridPhotos.hidden = true; return; }
+      gridPhotos.hidden = false;
+
+      files.forEach((file, idx) => {
+        const card = document.createElement('div');
+        card.className = 'preview';
+
+        // remove button
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+        remove.textContent = '✕';
+        remove.addEventListener('click', ()=> removeFromInput(inputPhotos, idx, renderPhotoPreviews));
+        card.appendChild(remove);
+
+        // image
+        const img = document.createElement('img');
+        img.alt = file.name;
+        const reader = new FileReader();
+        reader.onload = e => img.src = e.target.result;
+        reader.readAsDataURL(file);
+        card.appendChild(img);
+
+        // caption (synced to captionCache; name "photo_captions[]" to align with photos[])
+        const caption = document.createElement('input');
+        caption.type = 'text';
+        caption.name = 'photo_captions[]';
+        caption.placeholder = 'Caption (optional)';
+        caption.className = 'cap';
+        caption.value = captionCache.get(keyFor(file)) || '';
+        caption.addEventListener('input', () => captionCache.set(keyFor(file), caption.value));
+        card.appendChild(caption);
+
+        gridPhotos.appendChild(card);
+      });
+    }
+
+    // ----- Receipt DnD + preview (single)
+    addDragHandlers(dzReceipt);
+    dzReceipt.addEventListener('drop', (e)=>{
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      inputReceipt.files = files.slice(0, 1);
+      renderReceiptPreview();
+    });
+    dzReceipt.addEventListener('click', (e)=>{ if (e.target.tagName !== 'LABEL') inputReceipt.click(); });
+    inputReceipt.addEventListener('change', renderReceiptPreview);
+
+    function renderReceiptPreview(){
+      const file = (inputReceipt.files || [])[0];
+      gridReceipt.innerHTML = '';
+      if (!file){ gridReceipt.hidden = true; return; }
+      gridReceipt.hidden = false;
+
+      const card = document.createElement('div');
+      card.className = 'preview';
+
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+      remove.textContent = '✕';
+      remove.addEventListener('click', ()=> { inputReceipt.value=''; renderReceiptPreview(); });
+      card.appendChild(remove);
+
+      if (file.name.toLowerCase().endsWith('.pdf')){
+        const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = 'PDF';
+        card.appendChild(badge);
+        const tile = document.createElement('div');
+        tile.style.height = '120px'; tile.style.display='flex'; tile.style.alignItems='center';
+        tile.style.justifyContent='center'; tile.style.opacity='.75';
+        tile.textContent = '📄 ' + file.name;
+        card.appendChild(tile);
+      } else {
+        const img = document.createElement('img'); img.alt = file.name;
+        const reader = new FileReader(); reader.onload = e => img.src = e.target.result; reader.readAsDataURL(file);
+        card.appendChild(img);
+      }
+
+      gridReceipt.appendChild(card);
+    }
+
+    // ----- Remove helper (for multi-inputs)
+    function removeFromInput(inputEl, index, rerender){
+      const files = Array.from(inputEl.files || []);
+      const dt = new DataTransfer();
+      files.forEach((f,i)=>{ if(i!==index) dt.items.add(f); });
+      inputEl.files = dt.files;
+      rerender();
+    }
+  })();
+</script>
+{% endblock %}

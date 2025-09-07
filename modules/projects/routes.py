@@ -196,10 +196,46 @@ def edit_tch(id):
         if project.status == 'completed' and not project.completed_date:
             project.completed_date = datetime.utcnow().date()
         
+        # ADD THIS SECTION: Handle file uploads (same pattern as add_tch)
+        uploaded_files = []
+        if 'attachments' in request.files:
+            files = request.files.getlist('attachments')
+            
+            # Create project folder if it doesn't exist
+            upload_folder = os.path.join('static', 'project_files', 'tch', str(project.id))
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            for file in files:
+                if file and file.filename:
+                    # Secure the filename
+                    filename = secure_filename(file.filename)
+                    # Make it unique
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    unique_filename = f"{timestamp}_{filename}"
+                    
+                    # Save the file
+                    filepath = os.path.join(upload_folder, unique_filename)
+                    file.save(filepath)
+                    
+                    # Create database record
+                    attachment = ProjectFile(
+                        project_id=project.id,
+                        project_type='tch',
+                        filename=unique_filename,
+                        original_name=filename
+                    )
+                    db.session.add(attachment)
+                    uploaded_files.append(filename)
+        
         project.updated_at = datetime.utcnow()
         db.session.commit()
         
-        flash('Project updated successfully!', 'success')
+        # Update flash message to indicate if files were added
+        if uploaded_files:
+            flash(f'Project updated with {len(uploaded_files)} new files!', 'success')
+        else:
+            flash('Project updated successfully!', 'success')
+            
         return redirect(url_for('projects.tch_detail', id=id))
     
     return render_template('tch_edit_project.html', 

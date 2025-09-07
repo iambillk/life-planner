@@ -1,683 +1,293 @@
-{# ===================================================================
-   templates/realestate/maintenance_form.html
-   Property Maintenance Add/Edit Form - Mobile-Optimized
-   Version: 1.0.0
-   Created: 2025-01-03
-   
-   FEATURES:
-   - Mobile-first responsive design
-   - Quick-select buttons for common tasks
-   - Recurring task setup
-   - Cost tracking with categories
-   - Photo upload support
-   - Auto-calculate next due date
-   
-   CHANGELOG:
-   v1.0.0 (2025-01-03)
-   - Initial creation
-   - Mobile-optimized form layout
-   - Quick task selection
-   - Recurring task support
-=================================================================== #}
+{# =============================================================================
+  FILE: templates/realestate/maintenance.html
+  PURPOSE: Real Estate — Add Maintenance record for a Property
+  TEMPLATE VERSION: v1.2.0
+  LAST UPDATED: 2025-09-05
+
+  ── Changelog ──────────────────────────────────────────────────────────────────
+  v1.2.0
+  - Killer UX pass: drag-and-drop multi-photo upload with live previews + remove
+  - Sticky action bar (Save / Cancel) with keyboard hints
+  - Inline validation cues and subtle helper text on key fields
+  - Sectioned form layout in a compact kcard style, fully responsive
+
+  v1.1.0
+  - Matched equipment_detail visual language (chips, paddings, card header)
+  - Grouped date/performed_by/cost into a 3-column row (responsive)
+  - Added “Form Info & Tips” accordion
+
+  v1.0.0
+  - Initial refactor from plain form to dark themed kcard layout
+
+  Notes:
+  - Field names preserved: task, description, date_completed, performed_by, cost, photos[]
+  - Requires no backend changes; purely template+JS polish
+============================================================================= #}
 
 {% extends "base.html" %}
-{% block title %}{% if maintenance %}Edit{% else %}Add{% endif %} Maintenance - {{ property.name }}{% endblock %}
-{% block header %}{% if maintenance %}Edit{% else %}Add{% endif %} Maintenance{% endblock %}
-
-{% block extra_css %}
-<style>
-  /* ==================== Maintenance Form Styles ==================== */
-  :root {
-    --mf-bg: var(--bg, #0b0f1a);
-    --mf-panel: var(--panel, #121a2a);
-    --mf-card: var(--card, #0f1625);
-    --mf-hover: #1a2235;
-    --mf-line: var(--line, #1f2a3d);
-    --mf-text: var(--text, #e6eaf2);
-    --mf-muted: var(--text-muted, #9fb0c8);
-    --mf-primary: var(--primary, #6ea8ff);
-    --mf-success: var(--success, #22c55e);
-    --mf-warning: var(--warning, #f59e0b);
-    --mf-danger: var(--danger, #ef4444);
-    --mf-radius: 10px;
-    --mf-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  }
-
-  .maintenance-form-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1rem;
-  }
-
-  /* ========== Property Header ========== */
-  .property-header {
-    background: var(--mf-panel);
-    border-radius: var(--mf-radius);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--mf-shadow);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .property-icon {
-    font-size: 2rem;
-  }
-
-  .property-info h2 {
-    color: var(--mf-text);
-    margin: 0;
-    font-size: 1.3rem;
-  }
-
-  .property-meta {
-    color: var(--mf-muted);
-    font-size: 0.9rem;
-  }
-
-  /* ========== Form Sections ========== */
-  .form-section {
-    background: var(--mf-panel);
-    border-radius: var(--mf-radius);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--mf-shadow);
-  }
-
-  .form-section h3 {
-    color: var(--mf-text);
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  /* ========== Quick Task Selection ========== */
-  .quick-tasks {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .quick-task-btn {
-    background: var(--mf-card);
-    border: 2px solid var(--mf-line);
-    color: var(--mf-text);
-    padding: 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    font-size: 0.9rem;
-  }
-
-  .quick-task-btn:hover {
-    background: var(--mf-hover);
-    border-color: var(--mf-primary);
-  }
-
-  .quick-task-btn.selected {
-    background: var(--mf-primary);
-    border-color: var(--mf-primary);
-    color: white;
-  }
-
-  .quick-task-btn .icon {
-    display: block;
-    font-size: 1.5rem;
-    margin-bottom: 0.25rem;
-  }
-
-  /* ========== Form Controls ========== */
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .form-group label {
-    display: block;
-    color: var(--mf-text);
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-  }
-
-  .form-group label .required {
-    color: var(--mf-danger);
-  }
-
-  .form-control {
-    width: 100%;
-    background: var(--mf-card);
-    color: var(--mf-text);
-    border: 1px solid var(--mf-line);
-    border-radius: 6px;
-    padding: 0.75rem;
-    font-size: 1rem;
-    transition: all 0.2s;
-  }
-
-  .form-control:focus {
-    outline: none;
-    border-color: var(--mf-primary);
-    box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
-  }
-
-  select.form-control {
-    cursor: pointer;
-  }
-
-  textarea.form-control {
-    min-height: 100px;
-    resize: vertical;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  /* ========== Category Pills ========== */
-  .category-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .category-pill {
-    background: var(--mf-card);
-    color: var(--mf-text);
-    border: 1px solid var(--mf-line);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-  }
-
-  .category-pill:hover {
-    background: var(--mf-hover);
-    border-color: var(--mf-primary);
-  }
-
-  .category-pill.selected {
-    background: var(--mf-primary);
-    border-color: var(--mf-primary);
-    color: white;
-  }
-
-  /* ========== Recurring Section ========== */
-  .recurring-section {
-    background: var(--mf-card);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-top: 1rem;
-  }
-
-  .form-check {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .form-check input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-  }
-
-  .form-check label {
-    margin: 0;
-    cursor: pointer;
-    user-select: none;
-    color: var(--mf-text);
-  }
-
-  .interval-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  .interval-btn {
-    background: var(--mf-card);
-    color: var(--mf-text);
-    border: 1px solid var(--mf-line);
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-  }
-
-  .interval-btn:hover {
-    background: var(--mf-hover);
-    border-color: var(--mf-primary);
-  }
-
-  /* ========== Cost Section ========== */
-  .cost-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  /* ========== Photo Upload ========== */
-  .photo-upload-area {
-    background: var(--mf-card);
-    border: 2px dashed var(--mf-line);
-    border-radius: 8px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .photo-upload-area:hover {
-    border-color: var(--mf-primary);
-    background: var(--mf-hover);
-  }
-
-  .photo-upload-area .icon {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.5;
-  }
-
-  .photo-upload-area .text {
-    color: var(--mf-muted);
-  }
-
-  /* ========== Form Actions ========== */
-  .form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    position: sticky;
-    bottom: 0;
-    background: var(--mf-bg);
-    padding: 1rem 0;
-    margin-top: 2rem;
-  }
-
-  .btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    text-decoration: none;
-  }
-
-  .btn-primary {
-    background: var(--mf-primary);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: var(--primary-700);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--mf-muted);
-    border: 1px solid var(--mf-line);
-  }
-
-  .btn-secondary:hover {
-    background: var(--mf-card);
-    color: var(--mf-text);
-  }
-
-  /* ========== Help Text ========== */
-  .help-text {
-    font-size: 0.85rem;
-    color: var(--mf-muted);
-    margin-top: 0.25rem;
-  }
-
-  /* ========== Mobile Responsive ========== */
-  @media (max-width: 768px) {
-    .maintenance-form-container {
-      padding: 0.5rem;
-    }
-
-    .form-section {
-      padding: 1rem;
-    }
-
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .quick-tasks {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .cost-inputs {
-      grid-template-columns: 1fr;
-    }
-
-    .form-actions {
-      flex-direction: column;
-    }
-
-    .btn {
-      width: 100%;
-    }
-  }
-
-  /* ========== Success Message ========== */
-  .success-message {
-    background: var(--mf-success);
-    color: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-</style>
-{% endblock %}
+{% block title %}Add Maintenance{% endblock %}
+{% set active = 'realestate' %}
+{% block header %}Add Maintenance for {{ property.name }}{% endblock %}
 
 {% block content %}
-<div class="maintenance-form-container">
-  
-  {# ========== Property Header ========== #}
-  <div class="property-header">
-    <div class="property-icon">🏠</div>
-    <div class="property-info">
-      <h2>{{ property.name }}</h2>
-      <div class="property-meta">
-        {% if property.address %}{{ property.address }} • {% endif %}
-        {{ property.property_type|capitalize }}
+<form method="POST"
+      enctype="multipart/form-data"
+      class="kcard maint-form"
+      style="display:grid;gap:14px;max-width:980px;">
+
+  {# ============================ CARD HEADER =============================== #}
+  <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <h2 class="kcard-title" style="margin:0;">New Maintenance Record</h2>
+      <span class="kchip">Property: <strong>{{ property.name }}</strong></span>
+      {% if property.city or property.state %}
+        <span class="kchip">Location: <strong>{{ (property.city ~ ', ' if property.city) ~ (property.state or '') }}</strong></span>
+      {% endif %}
+    </div>
+    <div class="kcard-actions" style="display:flex;gap:8px;">
+      <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.property_detail', id=property.id) }}">← Back to Detail</a>
+    </div>
+  </div>
+
+  {# ============================ REQUIRED FIELDS =========================== #}
+  <section class="ksection">
+    <h3 class="ksection-title">Service Info</h3>
+
+    <div class="kfield">
+      <label for="task">Task <span class="req">*</span></label>
+      <input type="text" id="task" name="task" required placeholder="e.g., Roof inspection, HVAC tune-up">
+      <div class="khint">Keep it concise and actionable.</div>
+    </div>
+
+    <div class="kfield">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="4" placeholder="What was done, parts used, warranty notes…"></textarea>
+    </div>
+
+    <div class="grid-3">
+      <div class="kfield">
+        <label for="date_completed">Date Completed <span class="req">*</span></label>
+        <input type="date" id="date_completed" name="date_completed" required>
+        <div class="khint">Future dates are allowed if pre-scheduled completion.</div>
+      </div>
+
+      <div class="kfield">
+        <label for="performed_by">Performed By</label>
+        <input type="text" id="performed_by" name="performed_by" placeholder="Vendor or person">
+        <div class="khint">Match a Vendor name when possible.</div>
+      </div>
+
+      <div class="kfield">
+        <label for="cost">Cost</label>
+        <input type="number" step="0.01" id="cost" name="cost" inputmode="decimal" placeholder="0.00">
+        <div class="khint">Leave blank if not applicable. Shown as USD.</div>
+      </div>
+    </div>
+  </section>
+
+  {# ============================ PHOTO UPLOAD ============================== #}
+  <section class="ksection">
+    <h3 class="ksection-title">Photos & Receipts</h3>
+
+    <!-- Dropzone-like area (no backend changes; still uses #photos input) -->
+    <div id="dropzone" class="dropzone" tabindex="0" aria-label="Upload photos by clicking or dragging files here">
+      <div class="dz-inner">
+        <div class="dz-icon">🖼️</div>
+        <div class="dz-text">
+          <strong>Choose or drag files</strong>
+          <span>JPG, PNG, HEIC, PDF (receipts)</span>
+        </div>
+        <label class="kbtn" for="photos">Choose Files</label>
+      </div>
+      <input type="file" id="photos" name="photos" multiple accept="image/*,.pdf" style="display:none;">
+    </div>
+
+    <!-- Live previews (client-side only; does not alter backend payload) -->
+    <div id="preview-grid" class="preview-grid" hidden></div>
+
+    <div class="khint">You can add multiple files. PDFs appear with a document badge.</div>
+  </section>
+
+  {# ============================ STICKY ACTION BAR ======================== #}
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <div class="keys-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to Save</div>
+      <div class="actions">
+        <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="kbtn">Cancel</a>
+        <button type="submit" class="kbtn kbtn-primary">Save Maintenance</button>
       </div>
     </div>
   </div>
 
-  <form method="POST" enctype="multipart/form-data">
-    
-    {# ========== Quick Task Selection ========== #}
-    <div class="form-section">
-      <h3>🔧 Select Task Type</h3>
-      
-      {% if frequent_tasks %}
-      <p style="color: var(--mf-muted); margin-bottom: 1rem;">Recent tasks:</p>
-      <div class="quick-tasks">
-        {% for template in frequent_tasks[:6] %}
-        <button type="button" class="quick-task-btn" 
-                data-category="{{ template.category }}"
-                data-task="{{ template.task_name }}"
-                data-interval="{{ template.default_interval_days }}"
-                onclick="selectQuickTask(this)">
-          <span class="icon">
-            {% if 'Lawn' in template.category %}🌱
-            {% elif 'HVAC' in template.category %}❄️
-            {% elif 'Plumbing' in template.category %}🚿
-            {% elif 'Generator' in template.category %}⚡
-            {% elif 'Roof' in template.category %}🏠
-            {% else %}🔧{% endif %}
-          </span>
-          {{ template.task_name }}
-        </button>
-        {% endfor %}
-      </div>
-      {% endif %}
-      
-      <div class="form-group" style="margin-top: 1.5rem;">
-        <label>Category <span class="required">*</span></label>
-        <div class="category-pills">
-          {% for category in categories %}
-          <button type="button" class="category-pill" 
-                  onclick="selectCategory(this, '{{ category }}')"
-                  data-category="{{ category }}">
-            {{ category }}
-          </button>
-          {% endfor %}
-        </div>
-        <input type="hidden" name="category" id="category" required
-               value="{{ maintenance.category if maintenance else '' }}">
-      </div>
-
-      <div class="form-group">
-        <label>Task <span class="required">*</span></label>
-        <input type="text" name="task" id="task" class="form-control" 
-               value="{{ maintenance.task if maintenance else '' }}"
-               placeholder="e.g., Changed AC Filter, Mowed Lawn" required>
-      </div>
-
-      <div class="form-group">
-        <label>Description</label>
-        <textarea name="description" class="form-control" 
-                  placeholder="Additional details about the work performed...">{{ maintenance.description if maintenance else '' }}</textarea>
-      </div>
+  {# ============================ INFO & CHANGELOG ========================= #}
+  <details class="kaccordion">
+    <summary>Form Info & Changelog</summary>
+    <div class="kcard-body">
+      <ul>
+        <li><strong>Template:</strong> maintenance.html — v1.2.0</li>
+        <li><strong>Last Updated:</strong> 2025-09-05</li>
+        <li><strong>Behavior:</strong> Drag-and-drop previews are cosmetic; server receives the same <code>photos</code> files.</li>
+      </ul>
     </div>
+  </details>
+</form>
+{% endblock %}
 
-    {# ========== When & Who ========== #}
-    <div class="form-section">
-      <h3>📅 When & Who</h3>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label>Date Completed <span class="required">*</span></label>
-          <input type="date" name="date_completed" class="form-control" 
-                 value="{{ maintenance.date_completed.strftime('%Y-%m-%d') if maintenance else datetime.utcnow().strftime('%Y-%m-%d') }}"
-                 required>
-        </div>
+{% block extra_css %}
+<style>
+  .kcard-head{padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .ksection{display:grid;gap:12px}
+  .ksection-title{font-weight:700;margin:6px 0}
+  .kfield label{display:block;margin-bottom:6px;color:var(--text-muted)}
+  .kfield input[type="text"],
+  .kfield input[type="date"],
+  .kfield input[type="number"],
+  .kfield textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,0.02);color:var(--text)
+  }
+  .kfield textarea{resize:vertical;min-height:120px}
+  .grid-3{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+  }
+  @media (max-width: 960px){ .grid-3{ grid-template-columns:1fr; } }
 
-        <div class="form-group">
-          <label>Performed By</label>
-          <select name="performed_by" class="form-control">
-            {% for option in performed_by_options %}
-              <option value="{{ option }}"
-                      {% if maintenance and maintenance.performed_by == option %}selected
-                      {% elif not maintenance and option == 'Self' %}selected{% endif %}>
-                {{ option }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
+  .dropzone{
+    border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,0.02);
+    padding:18px;outline:none
+  }
+  .dropzone:focus{box-shadow:0 0 0 2px rgba(255,255,255,0.06) inset}
+  .dz-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .dz-icon{font-size:28px;opacity:.7}
+  .dz-text{display:flex;flex-direction:column;gap:2px;color:var(--text-muted)}
+  .dz-text strong{color:var(--text);font-weight:700}
 
-      {# Vendor selection if available #}
-      {% if vendors %}
-      <div class="form-group">
-        <label>Or Select Vendor</label>
-        <select name="vendor_id" class="form-control" onchange="updatePerformedBy(this)">
-          <option value="">-- Select Vendor --</option>
-          {% for vendor in vendors %}
-            <option value="{{ vendor.id }}"
-                    {% if maintenance and maintenance.vendor_id == vendor.id %}selected{% endif %}>
-              {{ vendor.company_name }} ({{ vendor.service_type }})
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-      {% endif %}
-    </div>
+  .preview-grid{
+    margin-top:10px;
+    display:grid;gap:10px;
+    grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
+  }
+  .preview{
+    position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:rgba(255,255,255,0.02);
+  }
+  .preview img{display:block;width:100%;height:100%;object-fit:cover}
+  .preview .badge{
+    position:absolute;left:8px;top:8px;font-size:.75rem;border:1px solid var(--line);
+    border-radius:999px;padding:2px 6px;background:rgba(0,0,0,.45);backdrop-filter:blur(2px)
+  }
+  .preview .remove{
+    position:absolute;right:8px;top:8px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(0,0,0,.45);backdrop-filter:blur(2px);padding:4px 7px;cursor:pointer
+  }
 
-    {# ========== Recurring Task Setup ========== #}
-    <div class="form-section">
-      <h3>🔄 Recurring Task</h3>
-      
-      <div class="form-check">
-        <input type="checkbox" id="is_recurring" name="is_recurring"
-               {% if maintenance and maintenance.is_recurring %}checked{% endif %}
-               onchange="toggleRecurring(this)">
-        <label for="is_recurring">This is a recurring task</label>
-      </div>
+  .actionbar{
+    position:sticky;bottom:0;z-index:5;margin-top:4px;
+  }
+  .actionbar-inner{
+    border:1px solid var(--line);border-radius:12px;background:rgba(10,15,26,.75);
+    backdrop-filter:blur(6px);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px
+  }
+  .keys-hint{color:var(--text-muted);font-size:.9rem}
+  kbd{border:1px solid var(--line);border-bottom-color:rgba(255,255,255,0.25);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:rgba(255,255,255,0.06)}
+</style>
+{% endblock %}
 
-      <div class="recurring-section" id="recurring-options" 
-           style="{% if not maintenance or not maintenance.is_recurring %}display: none;{% endif %}">
-        <div class="form-group">
-          <label>Repeat Every (days)</label>
-          <input type="number" name="interval_days" id="interval_days" class="form-control"
-                 value="{{ maintenance.interval_days if maintenance else '' }}"
-                 placeholder="e.g., 30 for monthly">
-          <div class="interval-buttons">
-            <button type="button" class="interval-btn" onclick="setInterval(7)">Weekly</button>
-            <button type="button" class="interval-btn" onclick="setInterval(30)">Monthly</button>
-            <button type="button" class="interval-btn" onclick="setInterval(90)">Quarterly</button>
-            <button type="button" class="interval-btn" onclick="setInterval(365)">Yearly</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {# ========== Cost & Supplies ========== #}
-    <div class="form-section">
-      <h3>💰 Cost & Supplies</h3>
-      
-      <div class="cost-inputs">
-        <div class="form-group">
-          <label>Cost</label>
-          <input type="number" name="cost" class="form-control" step="0.01"
-                 value="{{ maintenance.cost if maintenance else '' }}"
-                 placeholder="0.00">
-        </div>
-
-        <div class="form-group">
-          <label>Cost Category</label>
-          <select name="cost_category" class="form-control">
-            <option value="">-- Select --</option>
-            {% for category in cost_categories %}
-              <option value="{{ category }}"
-                      {% if maintenance and maintenance.cost_category == category %}selected{% endif %}>
-                {{ category }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Supplies Used</label>
-        <input type="text" name="supplies_used" class="form-control"
-               value="{{ maintenance.supplies_used if maintenance else '' }}"
-               placeholder="e.g., 20x25x1 Filter, 40 lbs Salt">
-      </div>
-    </div>
-
-    {# ========== Photos ========== #}
-    <div class="form-section">
-      <h3>📷 Photos</h3>
-      
-      <div class="photo-upload-area" onclick="document.getElementById('photos').click()">
-        <div class="icon">📷</div>
-        <div class="text">Click to upload photos</div>
-        <div class="help-text">JPG, PNG up to 10MB</div>
-      </div>
-      <input type="file" id="photos" name="photos" multiple accept="image/*" style="display: none;">
-    </div>
-
-    {# ========== Notes ========== #}
-    <div class="form-section">
-      <h3>📝 Notes</h3>
-      
-      <div class="form-group">
-        <textarea name="notes" class="form-control" rows="3"
-                  placeholder="Any additional notes...">{{ maintenance.notes if maintenance else '' }}</textarea>
-      </div>
-    </div>
-
-    {# ========== Form Actions ========== #}
-    <div class="form-actions">
-      <a href="{{ url_for('realestate.property_detail', id=property.id) }}" 
-         class="btn btn-secondary">Cancel</a>
-      <button type="submit" class="btn btn-primary">
-        {% if maintenance %}Save Changes{% else %}Add Maintenance{% endif %}
-      </button>
-    </div>
-
-  </form>
-</div>
-
+{% block extra_js %}
 <script>
-  // Quick task selection
-  function selectQuickTask(btn) {
-    // Remove previous selection
-    document.querySelectorAll('.quick-task-btn').forEach(b => {
-      b.classList.remove('selected');
+  (function(){
+    const form = document.querySelector('.maint-form');
+    const input = document.getElementById('photos');
+    const drop = document.getElementById('dropzone');
+    const grid = document.getElementById('preview-grid');
+
+    // Keyboard: Ctrl+Enter submits
+    form.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') form.requestSubmit();
     });
-    
-    // Mark as selected
-    btn.classList.add('selected');
-    
-    // Fill in the form
-    const category = btn.dataset.category;
-    const task = btn.dataset.task;
-    const interval = btn.dataset.interval;
-    
-    document.getElementById('category').value = category;
-    document.getElementById('task').value = task;
-    
-    // Update category pills
-    document.querySelectorAll('.category-pill').forEach(pill => {
-      if (pill.dataset.category === category) {
-        pill.classList.add('selected');
-      } else {
-        pill.classList.remove('selected');
-      }
+
+    // Drag & Drop handlers
+    ['dragenter','dragover'].forEach(evt =>
+      drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.add('is-drag'); })
+    );
+    ['dragleave','drop'].forEach(evt =>
+      drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.remove('is-drag'); })
+    );
+    drop.addEventListener('drop', (e)=>{
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      // Append dropped files to the input's FileList using DataTransfer
+      const dt = new DataTransfer();
+      Array.from(input.files || []).forEach(f => dt.items.add(f));
+      files.forEach(f => dt.items.add(f));
+      input.files = dt.files;
+      renderPreviews();
     });
-    
-    // Set recurring if interval exists
-    if (interval && interval !== 'null') {
-      document.getElementById('is_recurring').checked = true;
-      document.getElementById('recurring-options').style.display = 'block';
-      document.getElementById('interval_days').value = interval;
+
+    // Click on dropzone triggers native picker if clicking the backdrop
+    drop.addEventListener('click', (e)=>{
+      // Only click if not clicking the "Choose Files" label
+      if (!(e.target && e.target.tagName === 'LABEL')) input.click();
+    });
+
+    input.addEventListener('change', renderPreviews);
+
+    function renderPreviews(){
+      const files = Array.from(input.files || []);
+      grid.innerHTML = '';
+      if (!files.length){ grid.hidden = true; return; }
+      grid.hidden = false;
+
+      files.forEach((file, idx) => {
+        const card = document.createElement('div');
+        card.className = 'preview';
+
+        // Remove button (adjusts the FileList)
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'remove';
+        remove.title = 'Remove file';
+        remove.textContent = '✕';
+        remove.addEventListener('click', ()=> removeFileAt(idx));
+        card.appendChild(remove);
+
+        // PDF badge vs image preview
+        if (file.name.toLowerCase().endsWith('.pdf')){
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.textContent = 'PDF';
+          card.appendChild(badge);
+
+          // Simple icon tile for PDFs
+          const pdfTile = document.createElement('div');
+          pdfTile.style.height = '96px';
+          pdfTile.style.display = 'flex';
+          pdfTile.style.alignItems = 'center';
+          pdfTile.style.justifyContent = 'center';
+          pdfTile.style.opacity = '0.75';
+          pdfTile.textContent = '📄 ' + file.name;
+          card.appendChild(pdfTile);
+        } else {
+          const img = document.createElement('img');
+          img.alt = file.name;
+          const reader = new FileReader();
+          reader.onload = e => img.src = e.target.result;
+          reader.readAsDataURL(file);
+          card.appendChild(img);
+        }
+
+        grid.appendChild(card);
+      });
     }
-  }
 
-  // Category selection
-  function selectCategory(btn, category) {
-    // Remove previous selection
-    document.querySelectorAll('.category-pill').forEach(pill => {
-      pill.classList.remove('selected');
-    });
-    
-    // Mark as selected
-    btn.classList.add('selected');
-    
-    // Set hidden input
-    document.getElementById('category').value = category;
-  }
-
-  // Toggle recurring options
-  function toggleRecurring(checkbox) {
-    const options = document.getElementById('recurring-options');
-    options.style.display = checkbox.checked ? 'block' : 'none';
-  }
-
-  // Set interval from quick buttons
-  function setInterval(days) {
-    document.getElementById('interval_days').value = days;
-  }
-
-  // Update performed by when vendor selected
-  function updatePerformedBy(select) {
-    if (select.value) {
-      const vendorName = select.options[select.selectedIndex].text.split(' (')[0];
-      document.querySelector('select[name="performed_by"]').value = 'Hired Professional';
+    function removeFileAt(index){
+      const files = Array.from(input.files || []);
+      const dt = new DataTransfer();
+      files.forEach((f, i) => { if (i !== index) dt.items.add(f); });
+      input.files = dt.files;
+      renderPreviews();
     }
-  }
-
-  // Initialize selected category if editing
-  {% if maintenance %}
-  document.addEventListener('DOMContentLoaded', function() {
-    const category = '{{ maintenance.category }}';
-    document.querySelectorAll('.category-pill').forEach(pill => {
-      if (pill.dataset.category === category) {
-        pill.classList.add('selected');
-      }
-    });
-  });
-  {% endif %}
+  })();
 </script>
 {% endblock %}

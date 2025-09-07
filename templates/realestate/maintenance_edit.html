@@ -1,0 +1,425 @@
+{# =============================================================================
+  FILE: templates/realestate/edit_maintenance.html
+  PURPOSE: Real Estate — Edit Maintenance record for a Property
+  TEMPLATE VERSION: v2.2.0
+  LAST UPDATED: 2025-09-05
+
+  ── Changelog ──────────────────────────────────────────────────────────────────
+  v2.2.0
+  - FIX: Existing Photos card height now auto; uniform 4:3 tiles; buttons pinned to bottom.
+
+  v2.1.0
+  - ADDED: Delete Record button in sticky action bar.
+
+  v2.0.0
+  - Overhauled UI (dark, cards, DnD previews, sticky action bar).
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Edit Maintenance{% endblock %}
+{% set active = 'realestate' %}
+{% block header %}Edit Maintenance — {{ property.name }}{% endblock %}
+
+{% block content %}
+<form method="POST"
+      enctype="multipart/form-data"
+      class="kcard maint-form"
+      style="display:grid;gap:14px;max-width:980px;">
+
+  <!-- Header -->
+  <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <h2 class="kcard-title" style="margin:0;">Edit Maintenance</h2>
+      <span class="kchip">Property: <strong>{{ property.name }}</strong></span>
+      {% if maint.date_completed %}
+        <span class="kchip">Completed: <strong>{{ maint.date_completed.strftime('%b %d, %Y') }}</strong></span>
+      {% endif %}
+      {% if maint.category %}
+        <span class="kchip">{{ maint.category }}</span>
+      {% endif %}
+    </div>
+    <div class="kcard-actions" style="display:flex;gap:8px;">
+      <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.property_detail', id=property.id) }}">← Back</a>
+    </div>
+  </div>
+
+  <!-- Service Info -->
+  <section class="ksection">
+    <h3 class="ksection-title">Service Info</h3>
+
+    <div class="grid-2">
+      <div class="kfield">
+        <label for="category">Category <span class="req">*</span></label>
+        <select id="category" name="category" required>
+          {% set cats = ['HVAC','Plumbing','Electrical','Exterior','Interior','Appliances','Yard','Roof','Other'] %}
+          <option value="">Select…</option>
+          {% for c in cats %}
+            <option value="{{ c }}" {% if maint.category == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+        <div class="khint">Used for filters and reporting.</div>
+      </div>
+
+      <div class="kfield">
+        <label for="task">Task <span class="req">*</span></label>
+        <input type="text" id="task" name="task" value="{{ maint.task }}" required placeholder="e.g., Replace kitchen faucet">
+        <div class="khint">Short, action-oriented title.</div>
+      </div>
+    </div>
+
+    <div class="kfield">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="4" placeholder="What was done, parts used, warranty notes…">{{ maint.description or '' }}</textarea>
+    </div>
+
+    <div class="grid-3">
+      <div class="kfield">
+        <label for="date_completed">Date Completed <span class="req">*</span></label>
+        <input type="date" id="date_completed" name="date_completed"
+               value="{{ maint.date_completed.strftime('%Y-%m-%d') if maint.date_completed else '' }}" required>
+      </div>
+      <div class="kfield">
+        <label for="performed_by">Performed By</label>
+        <input type="text" id="performed_by" name="performed_by" value="{{ maint.performed_by or '' }}" placeholder="Self or Vendor name">
+      </div>
+      <div class="kfield">
+        <label for="cost">Cost</label>
+        <input type="number" step="0.01" id="cost" name="cost" value="{{ maint.cost or '' }}" inputmode="decimal" placeholder="0.00">
+      </div>
+    </div>
+  </section>
+
+  <!-- Add Files -->
+  <section class="ksection">
+    <h3 class="ksection-title">Add More Files</h3>
+
+    <div class="kfield">
+      <label>Add More Work Photos (multiple)</label>
+      <div id="dz-photos" class="dropzone" tabindex="0" aria-label="Upload photos by clicking or dragging files here">
+        <div class="dz-inner">
+          <div class="dz-icon">🖼️</div>
+          <div class="dz-text">
+            <strong>Choose or drag work photos</strong>
+            <span>JPG, PNG, HEIC</span>
+          </div>
+          <label class="kbtn" for="photos">Choose Files</label>
+        </div>
+        <input type="file" id="photos" name="photos" multiple accept="image/*" style="display:none;">
+      </div>
+      <div id="preview-photos" class="preview-grid" hidden></div>
+    </div>
+
+    <div class="kfield">
+      <label>Add a Receipt (image or PDF)</label>
+      <div id="dz-receipt" class="dropzone" tabindex="0" aria-label="Upload a receipt by clicking or dragging a file here">
+        <div class="dz-inner">
+          <div class="dz-icon">📄</div>
+          <div class="dz-text">
+            <strong>Choose or drag receipt</strong>
+            <span>PNG, JPG, or PDF</span>
+          </div>
+          <label class="kbtn" for="receipt">Choose File</label>
+        </div>
+        <input type="file" id="receipt" name="receipt" accept="image/*,.pdf" style="display:none;">
+      </div>
+      <div id="preview-receipt" class="preview-grid one" hidden></div>
+    </div>
+  </section>
+
+  <!-- Sticky Actions -->
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <div class="keys-hint">Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> to Save</div>
+      <div class="actions" style="display:flex; gap:8px; align-items:center; width:100%;">
+        <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="kbtn">Cancel</a>
+        <button type="submit" class="kbtn kbtn-primary">Save Changes</button>
+
+        <form method="post"
+              action="{{ url_for('realestate.delete_maintenance', property_id=property.id, maint_id=maint.id) }}"
+              style="margin-left:auto;"
+              onsubmit="return confirm('Delete this maintenance record and all of its photos? This cannot be undone.');">
+          <button type="submit" class="kbtn kbtn-danger">Delete Record</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div style="height:14px;"></div>
+
+<!-- Existing Photos (fixed) -->
+<section class="kcard" id="existingPhotos">
+  <div class="kcard-head">
+    <div class="kcard-title">Existing Photos</div>
+  </div>
+
+  {% if photos %}
+    <div class="kcard-body">
+      <div class="gallery-grid">
+        {% for ph in photos %}
+          {% set is_pdf = ph.filename.lower().endswith('.pdf') %}
+          <article class="gal-item">
+            {% if ph.photo_type == 'receipt' %}
+              <div class="badge">RECEIPT</div>
+            {% endif %}
+
+            {% if is_pdf %}
+              <div class="pdf-tile">
+                <span>📄</span>
+                <div class="name">{{ ph.filename }}</div>
+                <a class="kbtn kbtn-ghost" href="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" target="_blank">Open PDF</a>
+              </div>
+            {% else %}
+              <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" alt="photo">
+            {% endif %}
+
+            <form method="POST"
+                  action="{{ url_for('realestate.delete_maintenance_photo', property_id=property.id, maint_id=maint.id, photo_id=ph.id) }}"
+                  class="gal-actions"
+                  onsubmit="return confirm('Remove this photo?')">
+              <button class="kbtn" type="submit">Delete Photo</button>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="kcard-body">
+      <div class="kempty">No photos yet.</div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kcard-head{padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .ksection{display:grid;gap:12px}
+  .ksection-title{font-weight:700;margin:6px 0}
+
+  .kchip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 8px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(255,255,255,0.04);font-size:.9rem
+  }
+
+  /* Local button safety */
+  .kbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;cursor:pointer;line-height:1;transition:transform .06s ease,border-color .15s ease}
+  .kbtn:hover{transform:translateY(-1px);border-color:var(--primary)}
+  .kbtn-ghost{background:transparent}
+  .kbtn-primary{background:rgba(110,168,255,.18);border-color:rgba(110,168,255,.45)}
+  .kbtn-danger{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.55);color:#fecaca}
+
+  .kfield label{display:block;margin-bottom:6px;color:var(--text-muted)}
+  .kfield select,
+  .kfield input[type="text"],
+  .kfield input[type="date"],
+  .kfield input[type="number"],
+  .kfield textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,0.02);color:var(--text)
+  }
+  .kfield textarea{resize:vertical;min-height:120px}
+
+  .grid-2{display:grid;gap:12px;grid-template-columns:repeat(2, minmax(0,1fr));}
+  .grid-3{display:grid;gap:12px;grid-template-columns:repeat(3, minmax(0,1fr));}
+  @media (max-width: 960px){
+    .grid-2{grid-template-columns:1fr;}
+    .grid-3{grid-template-columns:1fr;}
+  }
+
+  .dropzone{
+    border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,0.02);
+    padding:18px;outline:none
+  }
+  .dropzone:focus{box-shadow:0 0 0 2px rgba(255,255,255,0.06) inset}
+  .dz-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .dz-icon{font-size:28px;opacity:.7}
+  .dz-text{display:flex;flex-direction:column;gap:2px;color:var(--text-muted)}
+  .dz-text strong{color:var(--text);font-weight:700}
+
+  .preview-grid{
+    margin-top:10px;
+    display:grid;gap:10px;
+    grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
+  }
+  .preview-grid.one{grid-template-columns:repeat(1, minmax(220px,1fr));}
+  .preview{
+    position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:rgba(255,255,255,0.02);
+  }
+  .preview img{display:block;width:100%;height:100%;object-fit:cover}
+  .preview .badge{
+    position:absolute;left:8px;top:8px;font-size:.75rem;border:1px solid var(--line);
+    border-radius:999px;padding:2px 6px;background:rgba(0,0,0,.45);backdrop-filter:blur(2px)
+  }
+  .preview .remove{
+    position:absolute;right:8px;top:8px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(0,0,0,.45);backdrop-filter:blur(2px);padding:4px 7px;cursor:pointer
+  }
+
+  .actionbar{position:sticky;bottom:0;z-index:5;margin-top:4px;}
+  .actionbar-inner{
+    border:1px solid var(--line);border-radius:12px;background:rgba(10,15,26,.75);
+    backdrop-filter:blur(6px);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px
+  }
+  .keys-hint{color:var(--text-muted);font-size:.9rem}
+  kbd{border:1px solid var(--line);border-bottom-color:rgba(255,255,255,0.25);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:rgba(255,255,255,0.06)}
+
+  /* ---------- Existing Photos (fixed) ---------- */
+  #existingPhotos .kcard-body{max-height:none;height:auto;overflow:visible}
+
+  .gallery-grid{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fill, minmax(160px,1fr));
+    grid-auto-rows:auto;
+    align-items:start;
+  }
+  .gal-item{
+    position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:rgba(255,255,255,0.02);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .gal-item img{
+    width:100%;
+    height:auto;            /* allow natural height */
+    aspect-ratio:4/3;       /* uniform tiles */
+    object-fit:cover;
+    display:block;
+  }
+  .gal-item .badge{
+    position:absolute;left:8px;top:8px;font-size:.75rem;border:1px solid var(--line);
+    border-radius:999px;padding:2px 6px;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);font-weight:700
+  }
+  .gal-item .pdf-tile{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    padding:14px;
+    aspect-ratio:4/3;       /* match image aspect */
+    width:100%;
+  }
+  .gal-item .pdf-tile span{font-size:28px}
+  .gal-item .pdf-tile .name{font-size:.85rem;text-align:center;color:var(--text-muted);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .gal-actions{padding:10px;display:flex;justify-content:flex-end;margin-top:auto}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    const form = document.querySelector('.maint-form');
+
+    // Work photos
+    const inputPhotos = document.getElementById('photos');
+    const dzPhotos = document.getElementById('dz-photos');
+    const gridPhotos = document.getElementById('preview-photos');
+
+    // Receipt
+    const inputReceipt = document.getElementById('receipt');
+    const dzReceipt = document.getElementById('dz-receipt');
+    const gridReceipt = document.getElementById('preview-receipt');
+
+    // Keyboard shortcut
+    form.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') form.requestSubmit();
+    });
+
+    // Helpers
+    function prevent(e){ e.preventDefault(); e.stopPropagation(); }
+    function addDragHandlers(zone){
+      ['dragenter','dragover'].forEach(evt => zone.addEventListener(evt, (e)=>{ prevent(e); zone.classList.add('is-drag'); }));
+      ['dragleave','drop'].forEach(evt => zone.addEventListener(evt, (e)=>{ prevent(e); zone.classList.remove('is-drag'); }));
+    }
+    function buildFileList(exist, add){
+      const dt = new DataTransfer();
+      exist.forEach(f => dt.items.add(f));
+      add.forEach(f => dt.items.add(f));
+      return dt.files;
+    }
+    function removeFromInput(inputEl, index, rerender){
+      const files = Array.from(inputEl.files || []);
+      const dt = new DataTransfer();
+      files.forEach((f,i)=>{ if(i!==index) dt.items.add(f); });
+      inputEl.files = dt.files;
+      rerender();
+    }
+
+    // Photos DnD + previews
+    addDragHandlers(dzPhotos);
+    dzPhotos.addEventListener('drop', (e)=>{
+      const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      inputPhotos.files = buildFileList(Array.from(inputPhotos.files || []), files);
+      renderPhotoPreviews();
+    });
+    dzPhotos.addEventListener('click', (e)=>{ if (e.target.tagName !== 'LABEL') inputPhotos.click(); });
+    inputPhotos.addEventListener('change', renderPhotoPreviews);
+
+    function renderPhotoPreviews(){
+      const files = Array.from(inputPhotos.files || []);
+      gridPhotos.innerHTML = '';
+      if (!files.length){ gridPhotos.hidden = true; return; }
+      gridPhotos.hidden = false;
+
+      files.forEach((file, idx) => {
+        const card = document.createElement('div');
+        card.className = 'preview';
+
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+        remove.textContent = '✕';
+        remove.addEventListener('click', ()=> removeFromInput(inputPhotos, idx, renderPhotoPreviews));
+        card.appendChild(remove);
+
+        const img = document.createElement('img'); img.alt = file.name;
+        const reader = new FileReader(); reader.onload = e => img.src = e.target.result; reader.readAsDataURL(file);
+        card.appendChild(img);
+
+        gridPhotos.appendChild(card);
+      });
+    }
+
+    // Receipt DnD + preview (single)
+    addDragHandlers(dzReceipt);
+    dzReceipt.addEventListener('drop', (e)=>{
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      inputReceipt.files = files.slice(0, 1);
+      renderReceiptPreview();
+    });
+    dzReceipt.addEventListener('click', (e)=>{ if (e.target.tagName !== 'LABEL') inputReceipt.click(); });
+    inputReceipt.addEventListener('change', renderReceiptPreview);
+
+    function renderReceiptPreview(){
+      const file = (inputReceipt.files || [])[0];
+      gridReceipt.innerHTML = '';
+      if (!file){ gridReceipt.hidden = true; return; }
+      gridReceipt.hidden = false;
+
+      const card = document.createElement('div');
+      card.className = 'preview';
+
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+      remove.textContent = '✕';
+      remove.addEventListener('click', ()=> { inputReceipt.value=''; renderReceiptPreview(); });
+      card.appendChild(remove);
+
+      if (file.name.toLowerCase().endsWith('.pdf')){
+        const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = 'PDF';
+        card.appendChild(badge);
+        const tile = document.createElement('div');
+        tile.style.height = '120px'; tile.style.display='flex'; tile.style.alignItems='center';
+        tile.style.justifyContent='center'; tile.style.opacity='.75';
+        tile.textContent = '📄 ' + file.name;
+        card.appendChild(tile);
+      } else {
+        const img = document.createElement('img'); img.alt = file.name;
+        const reader = new FileReader(); reader.onload = e => img.src = e.target.result; reader.readAsDataURL(file);
+        card.appendChild(img);
+      }
+
+      gridReceipt.appendChild(card);
+    }
+  })();
+</script>
+{% endblock %}

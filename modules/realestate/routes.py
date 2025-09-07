@@ -1,365 +1,558 @@
 # modules/realestate/routes.py
-"""
-Real Estate Management Routes
-Version: 1.0.0
-Created: 2025-01-03
-
-Handles all routes for property management, maintenance tracking,
-vendor management, and cost analysis.
-
-CHANGELOG:
-v1.0.0 (2025-01-03)
-- Initial route implementation
-- Mobile-first dashboard and quick-add
-- Property CRUD operations
-- Maintenance tracking with photos
-- Vendor management
-- Cost analysis and reporting
-"""
-
+# Real Estate routes — with outbuildings + vendors + purchase fields + delete property
+from flask import render_template, request, redirect, url_for, flash, current_app
+from datetime import datetime
+from collections import defaultdict
 import os
-import json
-from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
-from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
-from sqlalchemy import extract, func
-from . import realestate_bp
-from .constants import (
-    PROPERTY_TYPES, 
-    MAINTENANCE_CATEGORIES, 
-    MAINTENANCE_TASKS,
-    COST_CATEGORIES, 
-    VENDOR_SERVICE_TYPES,
-    QUICK_ADD_TASKS,
-    WEATHER_CONDITIONS,
-    PERFORMED_BY,
-    COMMON_INTERVALS
-)
-from models import (
-    db, 
-    Property, 
-    PropertyMaintenance, 
-    PropertyVendor,
+
+# ✅ Import db and models directly from their modules (no models/__init__.py exports needed)
+from models.base import db
+from models.realestate import (
+    Property,
+    PropertyMaintenance,
     PropertyMaintenancePhoto,
-    MaintenanceTemplate
+    PropertyVendor,
+    PropertyOutbuilding,
 )
 
-# ==================== DASHBOARD & OVERVIEW ====================
+from . import realestate_bp
+from modules.equipment.utils import allowed_file, save_uploaded_photo
 
-@realestate_bp.route('/')
+
+# ---------------- Dashboard ----------------
+
+@realestate_bp.route("/")
 def dashboard():
-    """
-    Main dashboard - shows property cards with selected property detail view
-    Hybrid approach: property cards as selectors + detailed view of selected property
-    """
-    # Get all active properties
-    properties = Property.query.filter_by(is_active=True).order_by(Property.name).all()
-    
-    # Get selected property from query params (for property switching)
-    selected_property_id = request.args.get('property_id', type=int)
-    
-    if selected_property_id:
-        selected_property = Property.query.get(selected_property_id)
-    elif properties:
-        # Default to primary residence or first property
-        primary = next((p for p in properties if p.is_primary_residence), None)
-        selected_property = primary or properties[0]
-    else:
-        selected_property = None
-    
-    # Initialize dashboard data
-    overdue_tasks = []
-    upcoming_tasks = []
-    recent_maintenance = []
-    monthly_costs = {}
-    
-    if selected_property:
-        # Get overdue tasks
-        overdue_tasks = PropertyMaintenance.query.filter_by(
-            property_id=selected_property.id,
-            is_recurring=True
-        ).filter(
-            PropertyMaintenance.next_due_date < datetime.utcnow().date()
-        ).order_by(PropertyMaintenance.next_due_date).all()
-        
-        # Get upcoming tasks (next 30 days)
-        upcoming_tasks = PropertyMaintenance.query.filter_by(
-            property_id=selected_property.id,
-            is_recurring=True
-        ).filter(
-            PropertyMaintenance.next_due_date >= datetime.utcnow().date(),
-            PropertyMaintenance.next_due_date <= datetime.utcnow().date() + timedelta(days=30)
-        ).order_by(PropertyMaintenance.next_due_date).all()
-        
-        # Get recent maintenance (last 10)
-        recent_maintenance = PropertyMaintenance.query.filter_by(
-            property_id=selected_property.id
-        ).order_by(PropertyMaintenance.date_completed.desc()).limit(10).all()
-        
-        # Calculate monthly costs for current year
-        current_year = datetime.utcnow().year
-        monthly_query = db.session.query(
-            extract('month', PropertyMaintenance.date_completed).label('month'),
-            func.sum(PropertyMaintenance.cost).label('total')
-        ).filter(
-            PropertyMaintenance.property_id == selected_property.id,
-            extract('year', PropertyMaintenance.date_completed) == current_year
-        ).group_by(extract('month', PropertyMaintenance.date_completed)).all()
-        
-        monthly_costs = {month: float(total or 0) for month, total in monthly_query}
-    
-    # Get quick add templates
-    quick_tasks = QUICK_ADD_TASKS[:6]  # Top 6 for mobile
-    
-    return render_template('realestate/dashboard.html',
-                         properties=properties,
-                         selected_property=selected_property,
-                         overdue_tasks=overdue_tasks,
-                         upcoming_tasks=upcoming_tasks,
-                         recent_maintenance=recent_maintenance,
-                         monthly_costs=monthly_costs,
-                         quick_tasks=quick_tasks,
-                         active='realestate')
-
-
-# ==================== PROPERTY MANAGEMENT ====================
-
-@realestate_bp.route('/property/add', methods=['GET', 'POST'])
-def add_property():
-    """Add a new property to manage"""
-    if request.method == 'POST':
-        property = Property(
-            name=request.form.get('name'),
-            address=request.form.get('address'),
-            city=request.form.get('city'),
-            state=request.form.get('state'),
-            zip_code=request.form.get('zip_code'),
-            property_type=request.form.get('property_type', 'house'),
-            square_footage=request.form.get('square_footage', type=int),
-            lot_size_acres=request.form.get('lot_size_acres', type=float),
-            year_built=request.form.get('year_built', type=int),
-            is_primary_residence=request.form.get('is_primary_residence') == 'on',
-            notes=request.form.get('notes')
-        )
-        
-        # Handle purchase info
-        if request.form.get('purchase_date'):
-            property.purchase_date = datetime.strptime(request.form.get('purchase_date'), '%Y-%m-%d').date()
-        property.purchase_price = request.form.get('purchase_price', type=float)
-        
-        # Equipment details
-        property.hvac_filter_size = request.form.get('hvac_filter_size')
-        property.generator_make = request.form.get('generator_make')
-        property.generator_model = request.form.get('generator_model')
-        property.water_heater_type = request.form.get('water_heater_type')
-        property.septic_tank_size_gallons = request.form.get('septic_tank_size_gallons', type=int)
-        
-        # Handle photo upload
-        if 'profile_photo' in request.files:
-            file = request.files['profile_photo']
-            if file and file.filename:
-                filename = secure_filename(file.filename)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{timestamp}_{filename}"
-                
-                # Create directory if it doesn't exist
-                upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'property_profiles')
-                os.makedirs(upload_dir, exist_ok=True)
-                
-                file.save(os.path.join(upload_dir, filename))
-                property.profile_photo = filename
-        
-        db.session.add(property)
-        db.session.commit()
-        
-        flash(f'Property "{property.name}" added successfully!', 'success')
-        return redirect(url_for('realestate.property_detail', id=property.id))
-    
-    return render_template('realestate/property_form.html',
-                         property_types=PROPERTY_TYPES,
-                         active='realestate')
-
-
-@realestate_bp.route('/property/<int:id>')
-def property_detail(id):
-    """View detailed information about a property"""
-    property = Property.query.get_or_404(id)
-    
-    # Get recent maintenance
-    recent_maintenance = PropertyMaintenance.query.filter_by(
-        property_id=id
-    ).order_by(PropertyMaintenance.date_completed.desc()).limit(20).all()
-    
-    # Get vendors
-    vendors = PropertyVendor.query.filter_by(property_id=id).order_by(PropertyVendor.service_type).all()
-    
-    # Calculate statistics
-    stats = {
-        'total_maintenance': PropertyMaintenance.query.filter_by(property_id=id).count(),
-        'ytd_cost': db.session.query(func.sum(PropertyMaintenance.cost)).filter(
-            PropertyMaintenance.property_id == id,
-            extract('year', PropertyMaintenance.date_completed) == datetime.utcnow().year
-        ).scalar() or 0,
-        'overdue_count': property.overdue_maintenance_count,
-        'upcoming_count': property.upcoming_maintenance_count
-    }
-    
-    return render_template('realestate/property_detail.html',
-                         property=property,
-                         recent_maintenance=recent_maintenance,
-                         vendors=vendors,
-                         stats=stats,
-                         active='realestate')
-
-
-@realestate_bp.route('/property/<int:id>/edit', methods=['GET', 'POST'])
-def edit_property(id):
-    """Edit property information"""
-    property = Property.query.get_or_404(id)
-    
-    if request.method == 'POST':
-        property.name = request.form.get('name')
-        property.address = request.form.get('address')
-        property.city = request.form.get('city')
-        property.state = request.form.get('state')
-        property.zip_code = request.form.get('zip_code')
-        property.property_type = request.form.get('property_type')
-        property.square_footage = request.form.get('square_footage', type=int)
-        property.lot_size_acres = request.form.get('lot_size_acres', type=float)
-        property.year_built = request.form.get('year_built', type=int)
-        property.is_primary_residence = request.form.get('is_primary_residence') == 'on'
-        property.notes = request.form.get('notes')
-        
-        # Update equipment details
-        property.hvac_filter_size = request.form.get('hvac_filter_size')
-        property.generator_make = request.form.get('generator_make')
-        property.generator_model = request.form.get('generator_model')
-        property.water_heater_type = request.form.get('water_heater_type')
-        property.septic_tank_size_gallons = request.form.get('septic_tank_size_gallons', type=int)
-        
-        property.updated_at = datetime.utcnow()
-        
-        db.session.commit()
-        flash(f'Property "{property.name}" updated!', 'success')
-        return redirect(url_for('realestate.property_detail', id=id))
-    
-    return render_template('realestate/property_form.html',
-                         property=property,
-                         property_types=PROPERTY_TYPES,
-                         active='realestate')
-
-
-# ==================== MAINTENANCE TRACKING ====================
-
-@realestate_bp.route('/property/<int:property_id>/maintenance/add', methods=['GET', 'POST'])
-def add_maintenance(property_id):
-    """Add a maintenance record - mobile optimized"""
-    property = Property.query.get_or_404(property_id)
-    
-    if request.method == 'POST':
-        maintenance = PropertyMaintenance(
-            property_id=property_id,
-            category=request.form.get('category'),
-            task=request.form.get('task'),
-            description=request.form.get('description'),
-            date_completed=datetime.strptime(request.form.get('date_completed'), '%Y-%m-%d').date(),
-            performed_by=request.form.get('performed_by', 'Self'),
-            cost=request.form.get('cost', type=float) or 0,
-            cost_category=request.form.get('cost_category'),
-            notes=request.form.get('notes'),
-            is_recurring=request.form.get('is_recurring') == 'on'
-        )
-        
-        # Handle recurring task setup
-        if maintenance.is_recurring:
-            interval = request.form.get('interval_days', type=int)
-            if interval:
-                maintenance.interval_days = interval
-                maintenance.calculate_next_due()
-        
-        # Handle supplies used
-        if request.form.get('supplies_used'):
-            maintenance.supplies_used = request.form.get('supplies_used')
-        
-        # Handle vendor selection
-        vendor_id = request.form.get('vendor_id', type=int)
-        if vendor_id:
-            maintenance.vendor_id = vendor_id
-            vendor = PropertyVendor.query.get(vendor_id)
-            if vendor:
-                maintenance.performed_by = vendor.company_name
-        
-        db.session.add(maintenance)
-        db.session.flush()  # Get the ID before handling photos
-        
-        # Handle photo uploads
-        if 'photos' in request.files:
-            files = request.files.getlist('photos')
-            for file in files:
-                if file and file.filename:
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f"{timestamp}_{filename}"
-                    
-                    upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'property_maintenance')
-                    os.makedirs(upload_dir, exist_ok=True)
-                    
-                    file.save(os.path.join(upload_dir, filename))
-                    
-                    photo = PropertyMaintenancePhoto(
-                        maintenance_id=maintenance.id,
-                        filename=filename,
-                        photo_type=request.form.get('photo_type', 'general')
-                    )
-                    db.session.add(photo)
-        
-        # Update or create template for quick access
-        template = MaintenanceTemplate.query.filter_by(
-            category=maintenance.category,
-            task_name=maintenance.task
-        ).first()
-        
-        if template:
-            template.times_used += 1
-            template.last_used = datetime.utcnow()
-        else:
-            template = MaintenanceTemplate(
-                category=maintenance.category,
-                task_name=maintenance.task,
-                default_interval_days=maintenance.interval_days,
-                typical_cost=maintenance.cost,
-                times_used=1,
-                last_used=datetime.utcnow()
+    q = request.args.get("q", "").strip()
+    query = Property.query
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Property.name.ilike(like),
+                Property.address.ilike(like),
+                Property.city.ilike(like),
+                Property.state.ilike(like),
+                Property.zip_code.ilike(like),
             )
-            db.session.add(template)
-        
+        )
+    properties = query.order_by(Property.name.asc()).all()
+    return render_template(
+        "realestate/dashboard.html",
+        properties=properties,
+        q=q,
+        active="realestate",
+    )
+
+
+# ---------------- Property Detail ----------------
+
+@realestate_bp.route("/<int:id>")
+def property_detail(id):
+    prop = Property.query.get_or_404(id)
+
+    # Maintenance list
+    maintenance = (
+        PropertyMaintenance.query.filter_by(property_id=id)
+        .order_by(
+            PropertyMaintenance.date_completed.desc(),
+            PropertyMaintenance.id.desc()
+        )
+        .all()
+    )
+
+    # Photos grouped by maintenance_id
+    maint_ids = [m.id for m in maintenance] or [0]
+    photos = (
+        PropertyMaintenancePhoto.query
+        .filter(PropertyMaintenancePhoto.maintenance_id.in_(maint_ids))
+        .order_by(
+            PropertyMaintenancePhoto.uploaded_at.desc(),
+            PropertyMaintenancePhoto.id.desc()
+        )
+        .all()
+    )
+    photos_by_maint = defaultdict(list)
+    for ph in photos:
+        photos_by_maint[ph.maintenance_id].append(ph)
+    recent_photos = photos[:12]
+
+    # Vendors
+    vendors = (
+        PropertyVendor.query.filter_by(property_id=id)
+        .order_by(PropertyVendor.service_type.asc(), PropertyVendor.company_name.asc())
+        .all()
+    )
+
+    # Outbuildings
+    outbuildings = (
+        PropertyOutbuilding.query.filter_by(property_id=id)
+        .order_by(PropertyOutbuilding.name.asc())
+        .all()
+    )
+
+    return render_template(
+        "realestate/property_detail.html",
+        property=prop,
+        maintenance=maintenance,
+        photos_by_maint=photos_by_maint,
+        recent_photos=recent_photos,
+        vendors=vendors,
+        outbuildings=outbuildings,
+        active="realestate",
+    )
+
+
+# ---------------- Add / Edit / Delete Property ----------------
+
+@realestate_bp.route("/add", methods=["GET", "POST"])
+def add_property():
+    if request.method == "POST":
+        name = request.form.get("name")
+
+        # optional purchase date
+        pd_raw = (request.form.get("purchase_date") or "").strip()
+        purchase_date = None
+        if pd_raw:
+            try:
+                purchase_date = datetime.strptime(pd_raw, "%Y-%m-%d").date()
+            except ValueError:
+                purchase_date = None
+
+        prop = Property(
+            name=name,
+            address=request.form.get("address"),
+            city=request.form.get("city"),
+            state=request.form.get("state"),
+            zip_code=request.form.get("zip_code"),
+            country=request.form.get("country"),
+            county=request.form.get("county"),
+            township=request.form.get("township"),
+            property_type=request.form.get("property_type"),
+            year_built=request.form.get("year_built", type=int),
+            square_footage=request.form.get("square_footage", type=int),
+            lot_size_acres=request.form.get("lot_size_acres", type=float),
+            purchase_date=purchase_date,
+            purchase_price=request.form.get("purchase_price", type=float),
+            notes=request.form.get("notes"),
+        )
+
+        # optional profile photo
+        file = request.files.get("profile_photo")
+        if file and allowed_file(file.filename):
+            filename = save_uploaded_photo(file, "property_profiles", name or "property")
+            prop.profile_photo = filename
+
+        db.session.add(prop)
         db.session.commit()
-        
-        flash(f'Maintenance record added for {maintenance.task}!', 'success')
-        
-        # Check if this was a quick add (mobile)
-        if request.form.get('quick_add'):
-            return redirect(url_for('realestate.dashboard', property_id=property_id))
-        
-        return redirect(url_for('realestate.property_detail', id=property_id))
-    
-    # GET request - show form
-    # Get categories and tasks for dropdowns
-    vendors = PropertyVendor.query.filter_by(property_id=property_id).order_by(PropertyVendor.service_type).all()
-    
-    # Get frequently used tasks for quick selection
-    frequent_tasks = MaintenanceTemplate.query.order_by(
-        MaintenanceTemplate.times_used.desc()
-    ).limit(10).all()
-    
-    return render_template('realestate/maintenance_form.html',
-                         property=property,
-                         categories=MAINTENANCE_CATEGORIES,
-                         tasks=MAINTENANCE_TASKS,
-                         cost_categories=COST_CATEGORIES,
-                         vendors=vendors,
-                         frequent_tasks=frequent_tasks,
-                         performed_by_options=PERFORMED_BY,
-                         weather_conditions=WEATHER_CONDITIONS,
-                         common_intervals=COMMON_INTERVALS,
-                         active='realestate')
+        flash(f'Property "{prop.name}" added successfully!', "success")
+        return redirect(url_for("realestate.property_detail", id=prop.id))
+
+    return render_template("realestate/property_form.html", property=None, active="realestate")
+
+
+@realestate_bp.route("/<int:id>/edit", methods=["GET", "POST"])
+def edit_property(id):
+    prop = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        prop.name = request.form.get("name")
+        prop.address = request.form.get("address")
+        prop.city = request.form.get("city")
+        prop.state = request.form.get("state")
+        prop.zip_code = request.form.get("zip_code")
+        prop.country = request.form.get("country")
+        prop.county = request.form.get("county")
+        prop.township = request.form.get("township")
+        prop.property_type = request.form.get("property_type")
+        prop.year_built = request.form.get("year_built", type=int)
+        prop.square_footage = request.form.get("square_footage", type=int)
+        prop.lot_size_acres = request.form.get("lot_size_acres", type=float)
+        prop.purchase_price = request.form.get("purchase_price", type=float)
+
+        pd_raw = (request.form.get("purchase_date") or "").strip()
+        if pd_raw:
+            try:
+                prop.purchase_date = datetime.strptime(pd_raw, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        else:
+            prop.purchase_date = None
+
+        prop.notes = request.form.get("notes")
+
+        # optional new profile photo
+        file = request.files.get("profile_photo")
+        if file and allowed_file(file.filename):
+            filename = save_uploaded_photo(file, "property_profiles", prop.name or "property")
+            prop.profile_photo = filename
+
+        db.session.commit()
+        flash(f'Property "{prop.name}" updated', "success")
+        return redirect(url_for("realestate.property_detail", id=prop.id))
+
+    return render_template("realestate/property_form.html", property=prop, active="realestate")
+
+
+@realestate_bp.route("/<int:id>/delete", methods=["POST"])
+def delete_property(id):
+    """Delete a property and all related maintenance, photos, vendors, and outbuildings."""
+    prop = Property.query.get_or_404(id)
+
+    # Delete maintenance (and files)
+    maint_items = PropertyMaintenance.query.filter_by(property_id=prop.id).all()
+    for m in maint_items:
+        photos = PropertyMaintenancePhoto.query.filter_by(maintenance_id=m.id).all()
+        for ph in photos:
+            try:
+                full_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "maintenance_photos", ph.filename)
+                if os.path.exists(full_path):
+                    os.remove(full_path)
+            except Exception:
+                pass
+            db.session.delete(ph)
+        db.session.delete(m)
+
+    # Delete vendors
+    vendors = PropertyVendor.query.filter_by(property_id=prop.id).all()
+    for v in vendors:
+        db.session.delete(v)
+
+    # Delete outbuildings and their profile photos
+    outbuildings = PropertyOutbuilding.query.filter_by(property_id=prop.id).all()
+    for ob in outbuildings:
+        try:
+            if ob.profile_photo:
+                p = os.path.join(current_app.config["UPLOAD_FOLDER"], "outbuilding_profiles", ob.profile_photo)
+                if os.path.exists(p):
+                    os.remove(p)
+        except Exception:
+            pass
+        db.session.delete(ob)
+
+    # Delete property profile photo
+    try:
+        if prop.profile_photo:
+            p_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "property_profiles", prop.profile_photo)
+            if os.path.exists(p_path):
+                os.remove(p_path)
+    except Exception:
+        pass
+
+    db.session.delete(prop)
+    db.session.commit()
+    flash("Property deleted", "success")
+    return redirect(url_for("realestate.dashboard"))
+
+
+# ---------------- Vendors (Add / Edit / Delete) ----------------
+
+@realestate_bp.route("/<int:property_id>/vendors/add", methods=["GET", "POST"])
+def add_vendor(property_id):
+    prop = Property.query.get_or_404(property_id)
+
+    if request.method == "POST":
+        vendor = PropertyVendor(
+            property_id=property_id,
+            company_name=(request.form.get("company_name") or "").strip(),
+            service_type=(request.form.get("service_type") or "").strip(),
+            phone=(request.form.get("phone") or "").strip(),
+            email=(request.form.get("email") or "").strip(),
+            notes=request.form.get("notes"),
+        )
+        if not vendor.company_name:
+            flash("Company name is required.", "error")
+            return render_template("realestate/vendor_form.html", property=prop, vendor=None, active="realestate")
+
+        db.session.add(vendor)
+        db.session.commit()
+        flash("Vendor added", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    return render_template("realestate/vendor_form.html", property=prop, vendor=None, active="realestate")
+
+
+@realestate_bp.route("/<int:property_id>/vendors/<int:vendor_id>/edit", methods=["GET", "POST"])
+def edit_vendor(property_id, vendor_id):
+    prop = Property.query.get_or_404(property_id)
+    vendor = PropertyVendor.query.get_or_404(vendor_id)
+    if vendor.property_id != property_id:
+        flash("Vendor does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    if request.method == "POST":
+        vendor.company_name = (request.form.get("company_name") or "").strip()
+        vendor.service_type = (request.form.get("service_type") or "").strip()
+        vendor.phone = (request.form.get("phone") or "").strip()
+        vendor.email = (request.form.get("email") or "").strip()
+        vendor.notes = request.form.get("notes")
+
+        if not vendor.company_name:
+            flash("Company name is required.", "error")
+            return render_template("realestate/vendor_form.html", property=prop, vendor=vendor, active="realestate")
+
+        db.session.commit()
+        flash("Vendor updated", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    return render_template("realestate/vendor_form.html", property=prop, vendor=vendor, active="realestate")
+
+
+@realestate_bp.route("/<int:property_id>/vendors/<int:vendor_id>/delete", methods=["POST"])
+def delete_vendor(property_id, vendor_id):
+    vendor = PropertyVendor.query.get_or_404(vendor_id)
+    if vendor.property_id != property_id:
+        flash("Vendor does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    db.session.delete(vendor)
+    db.session.commit()
+    flash("Vendor deleted", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
+
+
+# ---------------- Maintenance (Add / Edit / Delete) ----------------
+
+@realestate_bp.route("/<int:property_id>/maintenance/add", methods=["GET", "POST"])
+def add_maintenance(property_id):
+    prop = Property.query.get_or_404(property_id)
+
+    if request.method == "POST":
+        category = (request.form.get("category") or "Other").strip()
+        task = (request.form.get("task") or "").strip()
+
+        date_str = (request.form.get("date_completed") or "").strip()
+        try:
+            date_completed = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
+        except ValueError:
+            date_completed = datetime.utcnow().date()
+
+        maint = PropertyMaintenance(
+            property_id=property_id,
+            category=category,
+            task=task,
+            description=request.form.get("description"),
+            date_completed=date_completed,
+            performed_by=request.form.get("performed_by"),
+            cost=request.form.get("cost", type=float) or 0.0,
+        )
+
+        db.session.add(maint)
+        db.session.flush()  # for maint.id
+
+        # Work photos (multiple)
+        files = request.files.getlist("photos")
+        for f in files:
+            if f and allowed_file(f.filename):
+                filename = save_uploaded_photo(f, "maintenance_photos", task or "maintenance")
+                db.session.add(PropertyMaintenancePhoto(
+                    maintenance_id=maint.id,
+                    filename=filename,
+                    photo_type="general",
+                ))
+
+        # Receipt (single)
+        receipt = request.files.get("receipt")
+        if receipt and allowed_file(receipt.filename):
+            rname = save_uploaded_photo(receipt, "maintenance_photos", (task or "maintenance") + "_receipt")
+            db.session.add(PropertyMaintenancePhoto(
+                maintenance_id=maint.id,
+                filename=rname,
+                photo_type="receipt",
+            ))
+
+        db.session.commit()
+        flash("Maintenance record added", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    return render_template("realestate/maintenance_form.html", property=prop, active="realestate")
+
+
+@realestate_bp.route("/<int:property_id>/maintenance/<int:maint_id>/edit", methods=["GET", "POST"])
+def edit_maintenance(property_id, maint_id):
+    prop = Property.query.get_or_404(property_id)
+    maint = PropertyMaintenance.query.get_or_404(maint_id)
+    if maint.property_id != property_id:
+        flash("Maintenance item does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    if request.method == "POST":
+        maint.category = (request.form.get("category") or "Other").strip()
+        maint.task = (request.form.get("task") or "").strip()
+        maint.description = request.form.get("description")
+        maint.performed_by = request.form.get("performed_by")
+        maint.cost = request.form.get("cost", type=float) or 0.0
+
+        date_str = (request.form.get("date_completed") or "").strip()
+        try:
+            maint.date_completed = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else maint.date_completed
+        except ValueError:
+            pass
+
+        # Add more work photos
+        files = request.files.getlist("photos")
+        for f in files:
+            if f and allowed_file(f.filename):
+                filename = save_uploaded_photo(f, "maintenance_photos", maint.task or "maintenance")
+                db.session.add(PropertyMaintenancePhoto(
+                    maintenance_id=maint.id,
+                    filename=filename,
+                    photo_type="general",
+                ))
+
+        # Optional new receipt
+        receipt = request.files.get("receipt")
+        if receipt and allowed_file(receipt.filename):
+            rname = save_uploaded_photo(receipt, "maintenance_photos", (maint.task or "maintenance") + "_receipt")
+            db.session.add(PropertyMaintenancePhoto(
+                maintenance_id=maint.id,
+                filename=rname,
+                photo_type="receipt",
+            ))
+
+        db.session.commit()
+        flash("Maintenance updated", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    photos = (
+        PropertyMaintenancePhoto.query
+        .filter_by(maintenance_id=maint.id)
+        .order_by(PropertyMaintenancePhoto.uploaded_at.desc())
+        .all()
+    )
+    return render_template(
+        "realestate/maintenance_edit.html",
+        property=prop,
+        maint=maint,
+        photos=photos,
+        active="realestate",
+    )
+
+
+@realestate_bp.route("/<int:property_id>/maintenance/<int:maint_id>/delete", methods=["POST"])
+def delete_maintenance(property_id, maint_id):
+    maint = PropertyMaintenance.query.get_or_404(maint_id)
+    if maint.property_id != property_id:
+        flash("Item does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    photos = PropertyMaintenancePhoto.query.filter_by(maintenance_id=maint.id).all()
+    for ph in photos:
+        try:
+            full_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "maintenance_photos", ph.filename)
+            if os.path.exists(full_path):
+                os.remove(full_path)
+        except Exception:
+            pass
+        db.session.delete(ph)
+
+    db.session.delete(maint)
+    db.session.commit()
+    flash("Maintenance deleted", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
+
+
+@realestate_bp.route("/<int:property_id>/maintenance/<int:maint_id>/photo/<int:photo_id>/delete", methods=["POST"])
+def delete_maintenance_photo(property_id, maint_id, photo_id):
+    maint = PropertyMaintenance.query.get_or_404(maint_id)
+    photo = PropertyMaintenancePhoto.query.get_or_404(photo_id)
+    if maint.property_id != property_id or photo.maintenance_id != maint_id:
+        flash("Photo does not match this maintenance item.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    try:
+        full_path = os.path.join(current_app.config()["UPLOAD_FOLDER"], "maintenance_photos", photo.filename)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except Exception:
+        pass
+
+    db.session.delete(photo)
+    db.session.commit()
+    flash("Photo removed", "success")
+    return redirect(url_for("realestate.edit_maintenance", property_id=property_id, maint_id=maint_id))
+
+
+# ---------------- Outbuildings (Add / Edit / Delete) ----------------
+
+@realestate_bp.route("/<int:property_id>/outbuildings/add", methods=["GET", "POST"])
+def add_outbuilding(property_id):
+    prop = Property.query.get_or_404(property_id)
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Name is required.", "error")
+            return render_template("realestate/outbuilding_form.html", property=prop, outbuilding=None, active="realestate")
+
+        ob = PropertyOutbuilding(
+            property_id=property_id,
+            name=name,
+            type=(request.form.get("type") or "").strip(),
+            year_built=request.form.get("year_built", type=int),
+            square_footage=request.form.get("square_footage", type=int),
+            notes=request.form.get("notes"),
+        )
+
+        # Optional profile photo
+        f = request.files.get("profile_photo")
+        if f and allowed_file(f.filename):
+            os.makedirs(os.path.join(current_app.config['UPLOAD_FOLDER'], 'outbuilding_profiles'), exist_ok=True)
+            fname = save_uploaded_photo(f, "outbuilding_profiles", name or "outbuilding")
+            ob.profile_photo = fname
+
+        db.session.add(ob)
+        db.session.commit()
+        flash("Outbuilding added", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    return render_template("realestate/outbuilding_form.html", property=prop, outbuilding=None, active="realestate")
+
+
+@realestate_bp.route("/<int:property_id>/outbuildings/<int:ob_id>/edit", methods=["GET", "POST"])
+def edit_outbuilding(property_id, ob_id):
+    prop = Property.query.get_or_404(property_id)
+    ob = PropertyOutbuilding.query.get_or_404(ob_id)
+    if ob.property_id != property_id:
+        flash("Outbuilding does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    if request.method == "POST":
+        ob.name = (request.form.get("name") or "").strip()
+        ob.type = (request.form.get("type") or "").strip()
+        ob.year_built = request.form.get("year_built", type=int)
+        ob.square_footage = request.form.get("square_footage", type=int)
+        ob.notes = request.form.get("notes")
+
+        f = request.files.get("profile_photo")
+        if f and allowed_file(f.filename):
+            os.makedirs(os.path.join(current_app.config['UPLOAD_FOLDER'], 'outbuilding_profiles'), exist_ok=True)
+            fname = save_uploaded_photo(f, "outbuilding_profiles", ob.name or "outbuilding")
+            ob.profile_photo = fname
+
+        db.session.commit()
+        flash("Outbuilding updated", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    return render_template("realestate/outbuilding_form.html", property=prop, outbuilding=ob, active="realestate")
+
+
+@realestate_bp.route("/<int:property_id>/outbuildings/<int:ob_id>/delete", methods=["POST"])
+def delete_outbuilding(property_id, ob_id):
+    ob = PropertyOutbuilding.query.get_or_404(ob_id)
+    if ob.property_id != property_id:
+        flash("Outbuilding does not belong to this property.", "error")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    try:
+        if ob.profile_photo:
+            p = os.path.join(current_app.config['UPLOAD_FOLDER'], 'outbuilding_profiles', ob.profile_photo)
+            if os.path.exists(p):
+                os.remove(p)
+    except Exception:
+        pass
+
+    db.session.delete(ob)
+    db.session.commit()
+    flash("Outbuilding deleted", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))

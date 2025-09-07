@@ -1,10 +1,14 @@
 # app.py - Updated with Real Estate Management
 """
 Life Management System - Application Factory
-Version: 1.3.0
-Updated: 2025-01-03
+Version: 1.3.1
+Updated: 2025-09-05
 
 CHANGELOG:
+v1.3.1 (2025-09-05)
+- Register real estate blueprint without an extra url_prefix
+  (the blueprint provides url_prefix="/property" itself)
+
 v1.3.0 (2025-01-03)
 - Added Real Estate Management blueprint
 - Added property photo upload directories
@@ -32,7 +36,7 @@ def create_app():
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'equipment_profiles'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'maintenance_photos'), exist_ok=True)
     
-    # ========== NEW: Real Estate upload directories ==========
+    # ========== Real Estate upload directories ==========
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_profiles'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_maintenance'), exist_ok=True)
     
@@ -64,7 +68,9 @@ def register_blueprints(app):
     from modules.weekly import weekly_bp
     from modules.goals import goals_bp
     from modules.todo import todo_bp
-    from modules.realestate import realestate_bp  # NEW
+
+    # NEW: Real Estate blueprint (provides its own url_prefix='/property')
+    from modules.realestate import realestate_bp  
     
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
@@ -73,8 +79,10 @@ def register_blueprints(app):
     app.register_blueprint(weekly_bp, url_prefix='/weekly')
     app.register_blueprint(goals_bp, url_prefix='/goals')
     app.register_blueprint(todo_bp, url_prefix='/todo')
-    app.register_blueprint(realestate_bp, url_prefix='/property')  # NEW
     
+    # Important: do NOT pass url_prefix again here
+    app.register_blueprint(realestate_bp)
+
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True, host='0.0.0.0', port=5000)

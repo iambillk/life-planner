@@ -1,9 +1,13 @@
 {# =============================================================================
   FILE: templates/projects_tch_detail.html
   PURPOSE: TCH Project — Detail view (tasks, ideas, milestones, notes, files)
-  TEMPLATE VERSION: v1.1.3
-  LAST UPDATED: 2025-09-05
+  TEMPLATE VERSION: v1.2.0
+  LAST UPDATED: 2025-09-06
 
+  v1.2.0
+  - NEW: Add files to existing projects without new routes
+  - NEW: Always show files section with empty state
+  - NEW: Inline upload form using existing edit endpoint
   v1.1.3
   - Force inner scrolling by giving .section-scroll a fixed viewport height (height: 60vh)
   - Keep min-height:0 on ancestors so flex children can shrink
@@ -217,7 +221,7 @@
   /* Files (now at bottom) */
   .files-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
   .files-section h2{ margin:0 0 10px 0; font-size:1.05rem; }
-  .files-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:10px; }
+  .files-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:10px; margin-top:10px; }
   .file-card{ background:#0c1322; border:1px solid var(--pd-line); border-radius:12px; padding:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
   .file-icon{ font-size:28px; }
   .file-name{ font-weight:700; color:var(--pd-text); font-size:.9rem; word-break:break-word; }
@@ -226,6 +230,39 @@
   .btn-icon{ background:transparent; border:1px solid var(--pd-line); color:var(--pd-text); border-radius:10px; padding:6px 8px; font-size:.9rem; }
   .btn-icon:hover{ border-color:var(--pd-primary); }
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
+
+  /* File upload specific styles */
+  .file-upload-panel{
+    background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:12px; margin-bottom:12px;
+  }
+  .drop{
+    position:relative; border:2px dashed var(--pd-line); border-radius:12px;
+    background:#0b1120; padding:12px; transition: border-color .2s ease, background .2s ease;
+  }
+  .drop.is-drag{ border-color: var(--pd-primary); background: rgba(110,168,255,.06); }
+  .file-upload-input{ width:100%; }
+  .file-upload-input::-webkit-file-upload-button{
+    padding:8px 12px; border-radius:10px; border:none; cursor:pointer;
+    color:#0a0f1a; background: var(--pd-primary); margin-right:10px;
+  }
+  .selected-files-list{ margin-top:10px; display:grid; gap:6px; }
+  .file-pill{
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:#0b1120; border:1px solid var(--pd-line); border-radius:999px; font-size:.9rem;
+  }
+  .file-pill .type{ font-weight:800; font-size:.75rem; color:#0a0f1a; padding:2px 8px; border-radius:999px; }
+  .type.image{ background:#a78bfa; }
+  .type.pdf{ background:#f87171; }
+  .type.word{ background:#60a5fa; }
+  .type.excel{ background:#34d399; }
+  .type.archive{ background:#fbbf24; }
+  .type.other{ background:#94a3b8; }
+  .pill-size{ margin-left:auto; color: var(--pd-muted); font-size:.8rem; }
+  .totals{ margin-top:6px; padding-top:6px; border-top:1px dashed var(--pd-line); color: var(--pd-muted); font-size:.9rem; }
+
+  .empty-state{ text-align:center; color:var(--pd-muted); padding:20px; }
+  .empty-state-box{ text-align:center; padding:30px; }
+  .empty-state-box p{ color:var(--pd-muted); margin-bottom:12px; font-size:1.1rem; }
 
   /* Anchors + footer */
   .page-foot{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:8px; }
@@ -603,39 +640,94 @@
   </div>
   {% endif %}
 
-  {% if files %}
+  <!-- Files section - Always visible now -->
   <div class="files-section" id="files">
-    <h2>📎 Project Files</h2>
-    <div class="files-grid">
-      {% for file in files %}
-      <div class="file-card">
-        <div class="file-icon">
-          {% if file.original_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %} 🖼️
-          {% elif file.original_name.lower().endswith('.pdf') %} 📕
-          {% elif file.original_name.lower().endswith(('.doc', '.docx')) %} 📄
-          {% elif file.original_name.lower().endswith(('.xls', '.xlsx')) %} 📊
-          {% elif file.original_name.lower().endswith(('.zip', '.rar', '.7z')) %} 🗜️
-          {% else %} 📁
-          {% endif %}
-        </div>
-        <div class="file-name" title="{{ file.original_name }}">{{ file.original_name|truncate(28) }}</div>
-        <div class="file-date">{{ file.uploaded_at.strftime('%b %d, %Y') }}</div>
-        <div class="file-actions">
-          <a class="btn-icon" title="Download" href="{{ url_for('projects.download_file', project_id=project.id, file_id=file.id) }}">⬇️</a>
-          <form method="POST" action="{{ url_for('projects.delete_file', project_id=project.id, file_id=file.id) }}" onsubmit="return confirm('Delete this file?');" style="display:inline;">
-            <button type="submit" class="btn-icon btn-delete" title="Delete">🗑️</button>
-          </form>
-        </div>
-      </div>
-      {% endfor %}
+    <div class="section-header">
+      <h2>📎 Project Files</h2>
+      <button class="btn btn-primary btn-sm" onclick="toggleFileUploadPanel()">
+        ➕ Add Files
+      </button>
     </div>
+
+    <!-- File upload panel (hidden by default) -->
+    <div class="file-upload-panel" id="file-upload-panel" style="display:none;">
+      <form method="POST" 
+            action="{{ url_for('projects.edit_tch', id=project.id) }}" 
+            enctype="multipart/form-data">
+        <!-- Hidden fields to preserve existing project data -->
+        <input type="hidden" name="name" value="{{ project.name }}">
+        <input type="hidden" name="category" value="{{ project.category }}">
+        <input type="hidden" name="description" value="{{ project.description or '' }}">
+        <input type="hidden" name="goal" value="{{ project.goal or '' }}">
+        <input type="hidden" name="motivation" value="{{ project.motivation or '' }}">
+        <input type="hidden" name="strategy" value="{{ project.strategy or '' }}">
+        <input type="hidden" name="priority" value="{{ project.priority }}">
+        <input type="hidden" name="status" value="{{ project.status }}">
+        <input type="hidden" name="start_date" value="{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else '' }}">
+        <input type="hidden" name="deadline" value="{{ project.deadline.strftime('%Y-%m-%d') if project.deadline else '' }}">
+        
+        <!-- File upload area -->
+        <div id="dropZone" class="drop">
+          <input type="file" 
+                 id="attachments" 
+                 name="attachments" 
+                 class="file-upload-input"
+                 multiple
+                 accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.zip,.rar,.7z">
+          <div class="hint">Drag & drop files here, or click to select.</div>
+        </div>
+        
+        <!-- Selected files preview -->
+        <div id="selected-files" class="selected-files-list" aria-live="polite"></div>
+        <div id="files-total" class="totals"></div>
+        
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button type="submit" class="btn btn-primary btn-sm">Upload Files</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFileUploadPanel()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    {% if files %}
+      <!-- Existing files grid -->
+      <div class="files-grid">
+        {% for file in files %}
+        <div class="file-card">
+          <div class="file-icon">
+            {% if file.original_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %} 🖼️
+            {% elif file.original_name.lower().endswith('.pdf') %} 📕
+            {% elif file.original_name.lower().endswith(('.doc', '.docx')) %} 📄
+            {% elif file.original_name.lower().endswith(('.xls', '.xlsx')) %} 📊
+            {% elif file.original_name.lower().endswith(('.zip', '.rar', '.7z')) %} 🗜️
+            {% else %} 📁
+            {% endif %}
+          </div>
+          <div class="file-name" title="{{ file.original_name }}">{{ file.original_name|truncate(28) }}</div>
+          <div class="file-date">{{ file.uploaded_at.strftime('%b %d, %Y') }}</div>
+          <div class="file-actions">
+            <a class="btn-icon" title="Download" href="{{ url_for('projects.download_file', project_id=project.id, file_id=file.id) }}">⬇️</a>
+            <form method="POST" action="{{ url_for('projects.delete_file', project_id=project.id, file_id=file.id) }}" onsubmit="return confirm('Delete this file?');" style="display:inline;">
+              <button type="submit" class="btn-icon btn-delete" title="Delete">🗑️</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- Empty state -->
+      <div class="empty-state-box">
+        <p>📁 No files uploaded yet</p>
+        <button class="btn btn-primary" onclick="toggleFileUploadPanel()">
+          Upload your first file
+        </button>
+      </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <div class="page-foot">
     <details>
       <summary>Page Info & Changelog</summary>
-      <code>v1.1.3 — Force inner scroll with height:60vh on list areas. Prior fixes kept.</code>
+      <code>v1.2.0 — Added inline file upload capability using existing edit endpoint</code>
     </details>
   </div>
 
@@ -699,6 +791,94 @@
       }
     });
   });
+})();
+
+// Toggle file upload panel
+function toggleFileUploadPanel() {
+  const panel = document.getElementById('file-upload-panel');
+  if (panel) {
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    // Clear any previously selected files when closing
+    if (panel.style.display === 'none') {
+      const input = document.getElementById('attachments');
+      if (input) input.value = '';
+      const list = document.getElementById('selected-files');
+      if (list) list.innerHTML = '';
+      const totals = document.getElementById('files-total');
+      if (totals) totals.textContent = '';
+    }
+  }
+}
+
+// File upload drag & drop functionality
+(function(){
+  const dz = document.getElementById('dropZone');
+  const input = document.getElementById('attachments');
+  const list = document.getElementById('selected-files');
+  const totals = document.getElementById('files-total');
+
+  function extType(name){
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if(['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext)) return 'image';
+    if(ext === 'pdf') return 'pdf';
+    if(['doc','docx','rtf'].includes(ext)) return 'word';
+    if(['xls','xlsx','csv'].includes(ext)) return 'excel';
+    if(['zip','rar','7z','tar','gz'].includes(ext)) return 'archive';
+    return 'other';
+  }
+  
+  function fmtSize(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+  }
+  
+  function renderFiles(files){
+    if(!files || !files.length){ 
+      list.innerHTML=''; 
+      totals.textContent=''; 
+      return; 
+    }
+    let total = 0;
+    const rows = Array.from(files).map(f => {
+      total += f.size;
+      const t = extType(f.name);
+      return `<div class="file-pill">
+        <span class="type ${t}">${t}</span>
+        <span class="name" title="${f.name}">${f.name}</span>
+        <span class="pill-size">${fmtSize(f.size)}</span>
+      </div>`;
+    }).join('');
+    list.innerHTML = rows;
+    totals.textContent = `${files.length} file${files.length>1?'s':''} • ${fmtSize(total)}`;
+  }
+
+  if(input) {
+    input.addEventListener('change', e => renderFiles(e.target.files));
+  }
+  
+  if(dz) {
+    ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => {
+      e.preventDefault(); 
+      e.stopPropagation(); 
+      dz.classList.add('is-drag');
+    }));
+    
+    ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => {
+      e.preventDefault(); 
+      e.stopPropagation(); 
+      dz.classList.remove('is-drag');
+    }));
+    
+    dz.addEventListener('drop', e => {
+      if(!input) return;
+      const dt = e.dataTransfer;
+      if(dt?.files?.length){
+        input.files = dt.files;
+        renderFiles(dt.files);
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}
