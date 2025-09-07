@@ -27,7 +27,7 @@ def index():
             trigger_season=season, is_active=True, completed=False
         ).all()
     
-    return render_template('dashboard.html',
+    return render_template('equipment/dashboard.html',
                          equipment=equipment_list,
                          overdue=overdue,
                          upcoming=upcoming,

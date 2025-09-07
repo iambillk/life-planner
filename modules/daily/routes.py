@@ -1,7 +1,7 @@
 # modules/daily/routes.py
 """
 Daily Planner Routes - The Drill Sergeant System
-Complete working version with all fixes
+Complete working version with evening review time settings
 """
 
 from flask import render_template, request, redirect, url_for, jsonify, flash
@@ -38,7 +38,8 @@ def index():
     # Check if user is locked out (hasn't done morning minimums)
     lockout = False
     lockout_message = None
-    if human.morning_complete < 2:  # Need 2 of 3 tasks
+    morning_lockout_tasks = int(DailyConfig.get('morning_lockout_tasks', '2'))
+    if human.morning_complete < morning_lockout_tasks:
         lockout = True
         lockout_message = get_lockout_message(human)
     
@@ -97,6 +98,10 @@ def index():
     # Get harassment message for current time
     harassment = get_current_harassment(human)
     
+    # Get evening review settings - IMPORTANT!
+    evening_review_hour = int(DailyConfig.get('evening_review_hour', '20'))
+    evening_review_end_hour = int(DailyConfig.get('evening_review_end_hour', '3'))
+    
     return render_template(
         'daily/dashboard.html',
         today=today,
@@ -109,6 +114,8 @@ def index():
         notes_by_category=notes_by_category,
         harassment=harassment,
         datetime=datetime,
+        evening_review_hour=evening_review_hour,  # PASS TO TEMPLATE
+        evening_review_end_hour=evening_review_end_hour,  # PASS TO TEMPLATE
         active='daily'
     )
 
@@ -516,6 +523,7 @@ def settings():
         'morning_lockout_tasks': DailyConfig.get('morning_lockout_tasks', '2'),
         'default_view': DailyConfig.get('default_view', 'week'),
         'evening_review_hour': DailyConfig.get('evening_review_hour', '20'),
+        'evening_review_end_hour': DailyConfig.get('evening_review_end_hour', '3'),  # IMPORTANT!
         'quiet_start': DailyConfig.get('quiet_start', '22'),
         'quiet_end': DailyConfig.get('quiet_end', '6'),
     }
@@ -536,7 +544,7 @@ def settings():
 def save_settings():
     """Save all settings"""
     
-    # Save each setting
+    # Save each setting - INCLUDING evening_review_end_hour!
     settings_to_save = [
         'projects_to_show',
         'harassment_level',
@@ -545,6 +553,7 @@ def save_settings():
         'morning_lockout_tasks',
         'default_view',
         'evening_review_hour',
+        'evening_review_end_hour',  # THIS WAS MISSING!
         'quiet_start',
         'quiet_end'
     ]
@@ -574,6 +583,7 @@ def reset_settings():
         'morning_lockout_tasks': '2',
         'default_view': 'week',
         'evening_review_hour': '20',
+        'evening_review_end_hour': '3',  # DEFAULT END TIME
         'quiet_start': '22',
         'quiet_end': '6',
         'custom_messages': ''
@@ -649,26 +659,37 @@ def get_current_harassment(human):
 def auto_select_tasks():
     """Auto-select tasks for today based on neglect and deadlines"""
     today_tasks = []
+    today = date.today()
     
     # Get settings
     num_to_show = int(DailyConfig.get('projects_to_show', 5))
     
-    # Get TCH projects with deadlines soon (excluding completed)
+    # Get TCH projects with deadlines (excluding completed)
     tch_urgent = TCHProject.query.filter(
         TCHProject.status != 'completed',
-        TCHProject.deadline != None,
-        TCHProject.deadline <= date.today() + timedelta(days=7)
-    ).all()
+        TCHProject.deadline != None
+    ).order_by(TCHProject.deadline).all()
     
-    # Add urgent tasks
+    # Add urgent tasks with CORRECT deadline detection
     for project in tch_urgent[:3]:  # Max 3 urgent
+        # Determine deadline status - FIXED!
+        if project.deadline < today:
+            deadline_text = "OVERDUE"
+            priority = 1
+        elif project.deadline <= today + timedelta(days=7):
+            deadline_text = "DEADLINE APPROACHING"
+            priority = 2
+        else:
+            deadline_text = f"Due {project.deadline.strftime('%b %d')}"
+            priority = 3
+            
         task = DailyTask(
-            date=date.today(),
+            date=today,
             project_id=project.id,
             project_type='TCH',
             project_name=f"{project.name} [{project.status.upper()}]",
-            task_description=f"Work on {project.name} - DEADLINE APPROACHING",
-            priority=1
+            task_description=f"Work on {project.name} - {deadline_text}",
+            priority=priority
         )
         db.session.add(task)
         today_tasks.append(task)

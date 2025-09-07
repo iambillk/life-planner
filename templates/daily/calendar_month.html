@@ -1,161 +1,294 @@
 <!-- templates/daily/calendar_month.html -->
 {% extends "base.html" %}
-{% block title %}Monthly Calendar{% endblock %}
-{% block header %}MONTH VIEW - {{ month_start.strftime('%B %Y') }}{% endblock %}
+{% block title %}Month Calendar{% endblock %}
+{% block header %}MONTH VIEW{% endblock %}
 
 {% block extra_css %}
 <style>
-    .calendar-controls {
+    /* ==================== CALENDAR CONTAINER ==================== */
+    .calendar-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    /* ==================== NAVIGATION BAR ==================== */
+    .calendar-nav {
         background: var(--card);
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
     }
     
-    .month-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 2px;
-        background: var(--line);
-        padding: 2px;
-        border-radius: 8px;
+    .nav-buttons {
+        display: flex;
+        gap: 10px;
     }
     
-    .day-header {
+    .nav-btn {
         background: var(--panel);
-        padding: 10px;
-        text-align: center;
-        font-weight: bold;
-        color: var(--primary);
-    }
-    
-    .day-cell {
-        background: var(--card);
-        min-height: 100px;
-        padding: 8px;
-        position: relative;
-    }
-    
-    .day-cell.other-month {
-        background: var(--panel);
-        opacity: 0.5;
-    }
-    
-    .day-cell.today {
-        background: linear-gradient(135deg, var(--card), var(--primary-700));
-        border: 2px solid var(--primary);
-    }
-    
-    .day-cell.weekend {
-        background: rgba(16, 185, 129, 0.1);
-    }
-    
-    .day-number {
-        font-weight: bold;
-        margin-bottom: 5px;
         color: var(--text);
-    }
-    
-    .day-cell.today .day-number {
-        color: var(--primary);
-        font-size: 18px;
-    }
-    
-    .event-chip {
-        background: var(--panel);
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin: 2px 0;
-        font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        padding: 10px 20px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        font-weight: 600;
         cursor: pointer;
-        border-left: 3px solid var(--primary);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
     
-    .event-chip:hover {
+    .nav-btn:hover {
+        background: var(--card);
+        border-color: var(--primary);
+        transform: translateY(-1px);
+        color: var(--text);
+        text-decoration: none;
+    }
+    
+    .nav-btn.primary {
         background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    .nav-btn.primary:hover {
+        background: var(--primary-hover);
         color: white;
     }
     
-    .event-chip.wife {
-        border-left-color: #ec4899;
-    }
-    
-    .event-chip.kids {
-        border-left-color: #10b981;
-    }
-    
-    .event-chip.family {
-        border-left-color: #f59e0b;
-    }
-    
-    .event-chip.deadline {
-        background: rgba(239, 68, 68, 0.2);
-        border-left-color: #ef4444;
-        color: #ef4444;
-        font-weight: bold;
-    }
-    
-    .more-events {
-        font-size: 10px;
+    .month-title {
+        font-size: 28px;
+        font-weight: 700;
         color: var(--primary);
         text-align: center;
-        margin-top: 2px;
-        cursor: pointer;
+        flex: 1;
     }
     
+    /* ==================== MONTH STATS ==================== */
     .month-stats {
-        background: var(--panel);
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    
-    .stat-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 15px;
-        margin-top: 10px;
+        margin-bottom: 25px;
     }
     
-    .stat-item {
+    .stat-card {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 15px;
         text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
     }
     
     .stat-value {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: bold;
         color: var(--primary);
+        line-height: 1;
+        margin-bottom: 8px;
     }
     
     .stat-label {
         font-size: 12px;
         color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    /* Modal for day details */
-    .day-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+    /* ==================== CALENDAR GRID ==================== */
+    .calendar-grid {
         background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 12px;
         padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        z-index: 1000;
-        max-width: 500px;
-        width: 90%;
-        max-height: 70vh;
-        overflow-y: auto;
+        margin-bottom: 25px;
     }
     
+    .weekday-headers {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    .weekday-header {
+        text-align: center;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .month-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+    
+    /* ==================== DAY CELLS ==================== */
+    .day-cell {
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        min-height: 120px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .day-cell:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .day-cell.other-month {
+        opacity: 0.3;
+        background: var(--card);
+    }
+    
+    .day-cell.today {
+        background: linear-gradient(to bottom, rgba(98, 0, 238, 0.1), var(--panel));
+        border-color: var(--primary);
+        box-shadow: 0 0 20px rgba(98, 0, 238, 0.15);
+    }
+    
+    .day-cell.weekend {
+        background: linear-gradient(to bottom, rgba(34, 197, 94, 0.05), var(--panel));
+    }
+    
+    .day-number {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+    
+    .day-cell.today .day-number {
+        color: var(--primary);
+        display: inline-block;
+        background: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 24px;
+    }
+    
+    /* ==================== EVENT CHIPS ==================== */
+    .event-chip {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin: 2px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        background: var(--card);
+        border-left: 2px solid var(--primary);
+    }
+    
+    .event-chip.wife {
+        border-left-color: #ec4899;
+        background: linear-gradient(to right, rgba(236, 72, 153, 0.15), var(--card));
+    }
+    
+    .event-chip.kids {
+        border-left-color: #10b981;
+        background: linear-gradient(to right, rgba(16, 185, 129, 0.15), var(--card));
+    }
+    
+    .event-chip.family {
+        border-left-color: #f59e0b;
+        background: linear-gradient(to right, rgba(245, 158, 11, 0.15), var(--card));
+    }
+    
+    .event-chip.deadline {
+        border-left-color: var(--danger);
+        background: linear-gradient(to right, rgba(239, 68, 68, 0.15), var(--card));
+        font-weight: 600;
+    }
+    
+    .more-events {
+        font-size: 10px;
+        color: var(--primary);
+        font-weight: 600;
+        margin-top: 4px;
+        text-align: center;
+    }
+    
+    /* ==================== ACTION BAR ==================== */
+    .action-bar {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .action-btn {
+        background: var(--primary);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .action-btn:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(98, 0, 238, 0.2);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .action-btn.secondary {
+        background: var(--panel);
+        color: var(--text);
+        border: 2px solid var(--line);
+    }
+    
+    .action-btn.secondary:hover {
+        background: var(--card);
+        border-color: var(--primary);
+        color: var(--text);
+    }
+    
+    .action-btn.warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+    
+    /* ==================== DAY MODAL ==================== */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -163,157 +296,233 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0,0,0,0.7);
+        background: rgba(0, 0, 0, 0.8);
         z-index: 999;
     }
     
-    .modal-header {
-        border-bottom: 2px solid var(--line);
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+    .day-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 25px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 70vh;
+        overflow-y: auto;
+        z-index: 1000;
     }
     
-    .event-detail {
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    .modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .close-btn {
+        background: var(--danger);
+        color: white;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-events {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .modal-event {
         background: var(--panel);
-        padding: 10px;
-        border-radius: 6px;
-        margin: 8px 0;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid var(--primary);
+    }
+    
+    .modal-event.wife {
+        border-left-color: #ec4899;
+    }
+    
+    .modal-event.kids {
+        border-left-color: #10b981;
+    }
+    
+    .modal-event.family {
+        border-left-color: #f59e0b;
+    }
+    
+    .modal-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Calendar Controls -->
-    <div class="calendar-controls">
-        <div>
+<div class="calendar-container">
+    
+    <!-- NAVIGATION -->
+    <div class="calendar-nav">
+        <div class="nav-buttons">
             {% set prev_month = month_start - timedelta(days=1) %}
-            <a href="{{ url_for('daily.calendar_view', view='month', month=prev_month.strftime('%Y-%m')) }}" class="btn btn-secondary">
-                ← Previous Month
+            <a href="{{ url_for('daily.calendar_view', view='month', month=prev_month.strftime('%Y-%m')) }}" class="nav-btn">
+                ← Previous
             </a>
         </div>
         
-        <div>
-            <h3>{{ month_start.strftime('%B %Y') }}</h3>
+        <div class="month-title">
+            {{ month_start.strftime('%B %Y') }}
         </div>
         
-        <div>
+        <div class="nav-buttons">
             {% set next_month = month_end + timedelta(days=1) %}
-            <a href="{{ url_for('daily.calendar_view', view='month', month=next_month.strftime('%Y-%m')) }}" class="btn btn-secondary">
-                Next Month →
+            <a href="{{ url_for('daily.calendar_view', view='month', month=next_month.strftime('%Y-%m')) }}" class="nav-btn">
+                Next →
             </a>
-            <a href="{{ url_for('daily.calendar_view', view='week') }}" class="btn btn-primary">Week View</a>
-            <a href="{{ url_for('daily.add_event') }}" class="btn btn-success">Add Event</a>
+            <a href="{{ url_for('daily.calendar_view', view='week') }}" class="nav-btn">
+                📅 Week View
+            </a>
+            <a href="{{ url_for('daily.add_event') }}" class="nav-btn primary">
+                ➕ Add Event
+            </a>
         </div>
     </div>
     
-    <!-- Month Statistics -->
+    <!-- MONTH STATS -->
     <div class="month-stats">
-        <h4>Month Overview</h4>
-        <div class="stat-grid">
-            <div class="stat-item">
-                <div class="stat-value">{{ events|length }}</div>
-                <div class="stat-label">Total Events</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">{{ events|selectattr('who', 'equalto', 'Me')|list|length }}</div>
-                <div class="stat-label">Your Events</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">{{ events|selectattr('who', 'equalto', 'Wife')|list|length }}</div>
-                <div class="stat-label">Wife's Events</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">{{ events|selectattr('who', 'in', ['Tommy', 'Sarah'])|list|length }}</div>
-                <div class="stat-label">Kid Events</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">{{ project_deadlines|length }}</div>
-                <div class="stat-label">Project Deadlines</div>
-            </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ events|length }}</div>
+            <div class="stat-label">Total Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ events|selectattr('who', 'equalto', 'Me')|list|length }}</div>
+            <div class="stat-label">Your Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ events|selectattr('who', 'equalto', 'Wife')|list|length }}</div>
+            <div class="stat-label">Wife's Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ events|selectattr('who', 'in', ['Tommy', 'Sarah'])|list|length }}</div>
+            <div class="stat-label">Kid Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ project_deadlines|length if project_deadlines else 0 }}</div>
+            <div class="stat-label">Deadlines</div>
         </div>
     </div>
     
-    <!-- Month Calendar Grid -->
-    <div class="month-grid">
-        <!-- Day Headers -->
-        <div class="day-header">Sunday</div>
-        <div class="day-header">Monday</div>
-        <div class="day-header">Tuesday</div>
-        <div class="day-header">Wednesday</div>
-        <div class="day-header">Thursday</div>
-        <div class="day-header">Friday</div>
-        <div class="day-header">Saturday</div>
+    <!-- CALENDAR GRID -->
+    <div class="calendar-grid">
+        <div class="weekday-headers">
+            <div class="weekday-header">Sun</div>
+            <div class="weekday-header">Mon</div>
+            <div class="weekday-header">Tue</div>
+            <div class="weekday-header">Wed</div>
+            <div class="weekday-header">Thu</div>
+            <div class="weekday-header">Fri</div>
+            <div class="weekday-header">Sat</div>
+        </div>
         
-        <!-- Calendar Days -->
-        {% set current_date = month_start - timedelta(days=month_start.weekday() + 1) %}
-        {% if month_start.weekday() != 6 %}
+        <div class="month-days">
             {% set current_date = month_start - timedelta(days=month_start.weekday() + 1) %}
-        {% else %}
-            {% set current_date = month_start %}
-        {% endif %}
-        
-        {% for week in range(6) %}
-            {% for day in range(7) %}
-                {% set is_current_month = current_date.month == month_start.month %}
-                {% set is_today = current_date == today %}
-                {% set is_weekend = current_date.weekday() in [5, 6] %}
-                
-                <div class="day-cell {% if not is_current_month %}other-month{% endif %} {% if is_today %}today{% endif %} {% if is_weekend %}weekend{% endif %}"
-                     onclick="showDayDetails('{{ current_date.strftime('%Y-%m-%d') }}')">
-                    <div class="day-number">{{ current_date.day }}</div>
+            {% if month_start.weekday() != 6 %}
+                {% set current_date = month_start - timedelta(days=month_start.weekday() + 1) %}
+            {% else %}
+                {% set current_date = month_start %}
+            {% endif %}
+            
+            {% for week in range(6) %}
+                {% for day in range(7) %}
+                    {% set is_current_month = current_date.month == month_start.month %}
+                    {% set is_today = current_date == today %}
+                    {% set is_weekend = current_date.weekday() in [5, 6] %}
                     
-                    <!-- Events for this day -->
-                    {% set day_events = events|selectattr('event_date', 'equalto', current_date)|list %}
-                    {% set day_deadlines = project_deadlines|selectattr('deadline', 'equalto', current_date)|list if project_deadlines else [] %}
-                    
-                    <!-- Show first 3 events -->
-                    {% for event in day_events[:3] %}
-                    <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
-                         title="{{ event.event_time or '' }} - {{ event.event_type }} ({{ event.who }})">
-                        {% if event.event_time %}{{ event.event_time }} {% endif %}{{ event.event_type }}
+                    <div class="day-cell {% if not is_current_month %}other-month{% endif %} {% if is_today %}today{% endif %} {% if is_weekend %}weekend{% endif %}"
+                         onclick="showDayDetails('{{ current_date.strftime('%Y-%m-%d') }}')">
+                        <div class="day-number">{{ current_date.day }}</div>
+                        
+                        <!-- Events for this day -->
+                        {% set day_events = events|selectattr('event_date', 'equalto', current_date)|list %}
+                        {% set day_deadlines = project_deadlines|selectattr('deadline', 'equalto', current_date)|list if project_deadlines else [] %}
+                        
+                        <!-- Show first 3 events -->
+                        {% for event in day_events[:3] %}
+                        <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
+                             title="{{ event.event_time or '' }} - {{ event.event_type }} ({{ event.who }})">
+                            {% if event.event_time %}{{ event.event_time|truncate(8, True, '') }} {% endif %}{{ event.event_type|truncate(20, True, '') }}
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Show project deadlines -->
+                        {% for project in day_deadlines %}
+                        <div class="event-chip deadline" title="DEADLINE: {{ project.name }}">
+                            ⚠️ {{ project.name|truncate(15, True, '') }}
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Show more indicator if needed -->
+                        {% if (day_events|length + day_deadlines|length) > 3 %}
+                        <div class="more-events">+{{ (day_events|length + day_deadlines|length) - 3 }} more</div>
+                        {% endif %}
                     </div>
-                    {% endfor %}
                     
-                    <!-- Show project deadlines -->
-                    {% for project in day_deadlines %}
-                    <div class="event-chip deadline" title="DEADLINE: {{ project.name }}">
-                        ⚠️ {{ project.name }}
-                    </div>
-                    {% endfor %}
-                    
-                    <!-- Show more indicator if needed -->
-                    {% if (day_events|length + day_deadlines|length) > 3 %}
-                    <div class="more-events">+{{ (day_events|length + day_deadlines|length) - 3 }} more</div>
-                    {% endif %}
-                </div>
-                
-                {% set current_date = current_date + timedelta(days=1) %}
+                    {% set current_date = current_date + timedelta(days=1) %}
+                {% endfor %}
             {% endfor %}
-        {% endfor %}
+        </div>
     </div>
     
-    <!-- Quick Actions -->
-    <div class="text-center mt-4">
-        <a href="{{ url_for('daily.index') }}" class="btn btn-secondary">Back to Dashboard</a>
-        <button class="btn btn-warning" onclick="checkTimeTree()">Check TimeTree</button>
-        <a href="{{ url_for('daily.add_event', date=today.strftime('%Y-%m-%d')) }}" class="btn btn-primary">Add Today's Event</a>
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+        <a href="{{ url_for('daily.index') }}" class="action-btn secondary">
+            ← Back to Dashboard
+        </a>
+        <button class="action-btn warning" onclick="checkTimeTree()">
+            📱 Check TimeTree
+        </button>
+        <a href="{{ url_for('daily.add_event', date=today.strftime('%Y-%m-%d')) }}" class="action-btn">
+            ➕ Add Today's Event
+        </a>
     </div>
+    
 </div>
 
-<!-- Modal for day details -->
+<!-- DAY DETAILS MODAL -->
 <div class="modal-overlay" onclick="closeDayModal()"></div>
 <div class="day-modal" id="dayModal">
     <div class="modal-header">
-        <h3 id="modalDate">Date</h3>
-        <button class="btn btn-sm btn-danger float-end" onclick="closeDayModal()">×</button>
+        <h3 class="modal-title" id="modalDate">Date</h3>
+        <button class="close-btn" onclick="closeDayModal()">×</button>
     </div>
-    <div id="modalContent">
+    <div class="modal-events" id="modalContent">
         <!-- Events will be loaded here -->
     </div>
-    <div class="mt-3">
-        <button class="btn btn-primary" id="addEventBtn">Add Event</button>
-        <button class="btn btn-secondary" onclick="closeDayModal()">Close</button>
+    <div class="modal-actions">
+        <button class="action-btn" id="addEventBtn">Add Event</button>
+        <button class="action-btn secondary" onclick="closeDayModal()">Close</button>
     </div>
 </div>
 
@@ -321,44 +530,54 @@
     // Store events data for modal
     const eventsData = {
         {% for event in events %}
-        '{{ event.event_date.strftime('%Y-%m-%d') }}': {
-            events: [
-                {% for e in events if e.event_date == event.event_date %}
-                {
-                    time: '{{ e.event_time or "All Day" }}',
-                    type: '{{ e.event_type }}',
-                    who: '{{ e.who }}',
-                    description: '{{ e.description or "" }}'
-                },
-                {% endfor %}
-            ]
-        },
+        '{{ event.event_date.strftime('%Y-%m-%d') }}': '{{ event.event_date.strftime('%Y-%m-%d') }}',
         {% endfor %}
     };
+    
+    // Store all events for display
+    const allEvents = [
+        {% for event in events %}
+        {
+            date: '{{ event.event_date.strftime('%Y-%m-%d') }}',
+            time: '{{ event.event_time or "All Day" }}',
+            type: '{{ event.event_type }}',
+            who: '{{ event.who }}',
+            description: '{{ event.description or "" }}'
+        },
+        {% endfor %}
+    ];
     
     function showDayDetails(date) {
         const modal = document.getElementById('dayModal');
         const overlay = document.querySelector('.modal-overlay');
         const content = document.getElementById('modalContent');
-        const dateObj = new Date(date);
+        const dateObj = new Date(date + 'T00:00:00');
         
         // Format date nicely
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('modalDate').textContent = dateObj.toLocaleDateString('en-US', options);
         
         // Get events for this day
-        const dayData = eventsData[date];
+        const dayEvents = allEvents.filter(e => e.date === date);
         
-        if (dayData && dayData.events.length > 0) {
-            content.innerHTML = dayData.events.map(event => `
-                <div class="event-detail">
-                    <strong>${event.time}</strong> - ${event.type}
-                    <span class="float-end badge bg-primary">${event.who}</span>
-                    ${event.description ? `<br><small>${event.description}</small>` : ''}
-                </div>
-            `).join('');
+        if (dayEvents.length > 0) {
+            content.innerHTML = dayEvents.map(event => {
+                const whoClass = event.who.toLowerCase().replace(' ', '');
+                return `
+                    <div class="modal-event ${whoClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: var(--primary);">${event.time}</strong>
+                            <span class="event-who ${whoClass}" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--primary); color: white;">
+                                ${event.who}
+                            </span>
+                        </div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">${event.type}</div>
+                        ${event.description ? `<div style="font-size: 13px; color: var(--text-muted);">${event.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
         } else {
-            content.innerHTML = '<p>No events scheduled for this day.</p>';
+            content.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No events scheduled for this day.</p>';
         }
         
         // Set add event button
@@ -377,10 +596,10 @@
     }
     
     function checkTimeTree() {
-        if (confirm('Have you checked TimeTree for any family events not shown here?')) {
+        if (confirm('Have you checked TimeTree for any family events not shown here?\n\nMake sure all important family events are synchronized!')) {
             alert('Good! Remember to add any important family events to this calendar too.');
         } else {
-            alert('Go check TimeTree now and add any missing events!');
+            alert('Go check TimeTree now and add any missing events!\n\nYour wife will NOT be happy if you miss something.');
         }
     }
 </script>
