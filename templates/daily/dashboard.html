@@ -1,0 +1,452 @@
+<!-- templates/daily/dashboard.html -->
+{% extends "base.html" %}
+{% block title %}Daily Planner - Command Center{% endblock %}
+{% block header %}DAILY BATTLE STATION{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Drill Sergeant Theme */
+    .lockout-banner {
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.9; }
+    }
+    
+    .lockout-banner h2 {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+        text-transform: uppercase;
+    }
+    
+    .human-maintenance {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .maintenance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .maintenance-item {
+        background: var(--panel);
+        padding: 10px;
+        border-radius: 6px;
+        border: 2px solid var(--line);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .maintenance-item.complete {
+        border-color: var(--success);
+        opacity: 0.7;
+    }
+    
+    .maintenance-item.critical {
+        border-color: var(--danger);
+        animation: shake 0.5s infinite;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-2px); }
+        75% { transform: translateX(2px); }
+    }
+    
+    .btn.pulse {
+        animation: pulse 2s infinite;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+    
+    .harassment-message {
+        background: linear-gradient(135deg, #dc2626, #7f1d1d);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .calendar-section {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .event-item {
+        background: var(--panel);
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 5px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .event-who {
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--primary);
+        color: white;
+    }
+    
+    .project-section {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .task-item {
+        background: var(--panel);
+        padding: 12px;
+        border-radius: 6px;
+        margin: 8px 0;
+        border-left: 4px solid var(--primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .task-item.tch {
+        border-left-color: #3b82f6;
+    }
+    
+    .task-item.personal {
+        border-left-color: #10b981;
+    }
+    
+    .task-item a {
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .task-item a:hover {
+        color: var(--primary);
+    }
+    
+    .notes-section {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 8px;
+    }
+    
+    .note-category {
+        margin: 10px 0;
+    }
+    
+    .note-category h4 {
+        color: var(--primary);
+        margin-bottom: 5px;
+    }
+    
+    .note-item {
+        background: var(--panel);
+        padding: 8px;
+        border-radius: 4px;
+        margin: 4px 0;
+        font-size: 14px;
+    }
+    
+    .stats-bar {
+        background: var(--panel);
+        padding: 10px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--primary);
+    }
+    
+    .shower-shame {
+        color: var(--danger);
+        font-weight: bold;
+        font-size: 18px;
+    }
+    
+    .project-status-badge {
+        background: var(--primary);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        margin-left: 5px;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- LOCKOUT BANNER (if locked) -->
+    {% if lockout %}
+    <div class="lockout-banner">
+        <h2>🚫 SYSTEM LOCKED - YOU'RE NOT HUMAN YET</h2>
+        <pre>{{ lockout_message }}</pre>
+        <p style="margin-top: 15px;">Complete your biological minimums to unlock project access!</p>
+    </div>
+    {% endif %}
+    
+    <!-- HARASSMENT MESSAGE -->
+    {% if harassment %}
+    <div class="harassment-message">
+        ⚠️ {{ harassment }} ⚠️
+    </div>
+    {% endif %}
+    
+    <!-- STATS BAR -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value">{{ human.days_since_shower }}</div>
+            <div>Days Since Shower</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ human.water_glasses }}/8</div>
+            <div>Water Glasses</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ daily_tasks|length }}</div>
+            <div>Tasks Today</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ human.morning_complete }}/3</div>
+            <div>Morning Tasks</div>
+        </div>
+    </div>
+    
+    <!-- Evening Review Button (ONLY shows after 6 PM) -->
+    {% if datetime.now().hour >= 18 %}
+    <div class="text-center mb-3">
+        {% if datetime.now().hour >= 20 %}
+        <a href="{{ url_for('daily.evening_review') }}" class="btn btn-lg btn-warning pulse">
+            🌙 START EVENING REVIEW - TIME TO FACE YOUR FAILURES
+        </a>
+        {% else %}
+        <span class="btn btn-secondary disabled">
+            🌙 Evening Review Available at 8 PM
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- HUMAN MAINTENANCE SECTION -->
+    <div class="human-maintenance">
+        <h3>🚿 BIOLOGICAL MAINTENANCE</h3>
+        {% if human.days_since_shower >= 2 %}
+        <div class="shower-shame">
+            ⚠️ {{ human.days_since_shower }} DAYS WITHOUT SHOWER - YOU REEK! ⚠️
+        </div>
+        {% endif %}
+        
+        <div class="maintenance-grid">
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="meds">
+                <button type="submit" class="maintenance-item {% if human.meds_taken %}complete{% elif not human.meds_taken %}critical{% endif %}">
+                    💊 Morning Meds<br>
+                    <small>{% if human.meds_taken %}✅ Taken{% else %}❌ NOT TAKEN{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="shower">
+                <button type="submit" class="maintenance-item {% if human.shower_taken %}complete{% elif human.days_since_shower >= 2 %}critical{% endif %}">
+                    🚿 Shower<br>
+                    <small>{% if human.shower_taken %}✅ Clean{% else %}❌ Day {{ human.days_since_shower }}{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="teeth">
+                <button type="submit" class="maintenance-item {% if human.teeth_brushed_am %}complete{% endif %}">
+                    🦷 Brush Teeth<br>
+                    <small>{% if human.teeth_brushed_am %}✅ Brushed{% else %}❌ Fuzzy{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="breakfast">
+                <button type="submit" class="maintenance-item {% if human.breakfast %}complete{% endif %}">
+                    🍳 Breakfast<br>
+                    <small>{% if human.breakfast %}✅ Ate{% else %}❌ Skipped{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="lunch">
+                <button type="submit" class="maintenance-item {% if human.lunch %}complete{% endif %}">
+                    🥪 Lunch<br>
+                    <small>{% if human.lunch %}✅ Ate{% else %}❌ Skipped{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="dinner">
+                <button type="submit" class="maintenance-item {% if human.dinner %}complete{% endif %}">
+                    🍽️ Dinner<br>
+                    <small>{% if human.dinner %}✅ Ate{% else %}❌ Skipped{% endif %}</small>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: inline;">
+                <input type="hidden" name="task" value="water">
+                <button type="submit" class="maintenance-item">
+                    💧 Water<br>
+                    <small>{{ human.water_glasses }}/8 glasses</small>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- PROJECT TASKS (if not locked) -->
+            {% if not lockout %}
+            <div class="project-section">
+                <h3>📋 TODAY'S PROJECT BATTLES</h3>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ daily_tasks|length }} tasks selected</span>
+                    <div>
+                        <a href="{{ url_for('daily.select_tasks') }}" class="btn btn-sm btn-primary">Select Different Tasks</a>
+                        <a href="{{ url_for('daily.settings') }}" class="btn btn-sm btn-secondary">⚙️ Settings</a>
+                    </div>
+                </div>
+                
+                {% if daily_tasks %}
+                    {% for task in daily_tasks %}
+                    <div class="task-item {% if task.project_type == 'TCH' %}tch{% else %}personal{% endif %}">
+                        <div style="flex-grow: 1;">
+                            <a href="{{ url_for('projects.tch_detail' if task.project_type == 'TCH' else 'persprojects.detail', id=task.project_id) }}">
+                                <strong>[{{ task.project_type }}] {{ task.project_name }}</strong>
+                            </a>
+                            <br>
+                            <small style="color: var(--text-muted);">{{ task.task_description }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No tasks selected. <a href="{{ url_for('daily.select_tasks') }}">Select tasks from projects</a></p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="project-section" style="opacity: 0.3;">
+                <h3>🔒 PROJECTS LOCKED</h3>
+                <p>Complete your biological minimums to unlock project access.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- CALENDAR SECTION -->
+            <div class="calendar-section">
+                <h4>📅 TODAY & TOMORROW</h4>
+                
+                <div class="mb-3">
+                    <strong>Today ({{ today.strftime('%A, %b %d') }})</strong>
+                    {% if today_events %}
+                        {% for event in today_events %}
+                        <div class="event-item">
+                            <div>
+                                {{ event.event_time or 'All Day' }} - {{ event.event_type }}
+                                {% if event.description %}<br><small>{{ event.description }}</small>{% endif %}
+                            </div>
+                            <span class="event-who">{{ event.who }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="event-item">No events today</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <strong>Tomorrow</strong>
+                    {% if tomorrow_events %}
+                        {% for event in tomorrow_events %}
+                        <div class="event-item">
+                            <div>
+                                {{ event.event_time or 'All Day' }} - {{ event.event_type }}
+                            </div>
+                            <span class="event-who">{{ event.who }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="event-item">No events tomorrow</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('daily.calendar_view') }}" class="btn btn-sm btn-secondary">Full Calendar</a>
+                    <a href="{{ url_for('daily.add_event') }}" class="btn btn-sm btn-primary">Add Event</a>
+                </div>
+            </div>
+            
+            <!-- NOTES SECTION -->
+            <div class="notes-section">
+                <h4>📝 CAPTURED NOTES</h4>
+                
+                <!-- Quick Add Form -->
+                <form method="POST" action="{{ url_for('daily.add_note') }}" class="mb-3">
+                    <div class="input-group">
+                        <select name="category" class="form-select form-select-sm">
+                            <option value="Work">Work</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Kids">Kids</option>
+                            <option value="Crisis">Crisis</option>
+                            <option value="Random">Random</option>
+                        </select>
+                        <input type="text" name="note" class="form-control form-control-sm" placeholder="Quick note..." required>
+                        <button type="submit" class="btn btn-sm btn-primary">Add</button>
+                    </div>
+                </form>
+                
+                <!-- Notes by Category -->
+                {% for category, notes in notes_by_category.items() %}
+                <div class="note-category">
+                    <h4>{{ category }} ({{ notes|length }})</h4>
+                    {% for note in notes %}
+                    <div class="note-item">
+                        {{ note.note }}
+                        <a href="{{ url_for('daily.resolve_note', note_id=note.id) }}" class="text-success float-end">✓</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh for time-based harassment -->
+<script>
+    // Reload page every 30 minutes to update harassment messages
+    setTimeout(function() {
+        location.reload();
+    }, 30 * 60 * 1000);
+</script>
+{% endblock %}

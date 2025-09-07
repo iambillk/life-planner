@@ -1,0 +1,202 @@
+<!-- templates/daily/select_tasks.html -->
+{% extends "base.html" %}
+{% block title %}Select Today's Tasks{% endblock %}
+{% block header %}SELECT YOUR BATTLES{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-card {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 4px solid var(--line);
+    }
+    
+    .project-card.tch {
+        border-left-color: #3b82f6;
+    }
+    
+    .project-card.personal {
+        border-left-color: #10b981;
+    }
+    
+    .project-card.neglected {
+        border-left-color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .neglect-badge {
+        background: var(--danger);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .deadline-badge {
+        background: var(--warning);
+        color: black;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .quick-task-form {
+        margin-top: 10px;
+        padding: 10px;
+        background: var(--panel);
+        border-radius: 6px;
+    }
+    
+    .stats-header {
+        background: var(--panel);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .warning-box {
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid var(--danger);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats Header -->
+    <div class="stats-header">
+        <h3>📊 PROJECT REALITY CHECK</h3>
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Total Projects:</strong> {{ projects_data|length }}
+            </div>
+            <div class="col-md-3">
+                <strong>Neglected (>7 days):</strong> 
+                <span class="text-danger">{{ projects_data|selectattr('days_neglected', '>', 7)|list|length }}</span>
+            </div>
+            <div class="col-md-3">
+                <strong>With Deadlines:</strong> 
+                <span class="text-warning">{{ projects_data|selectattr('deadline')|list|length }}</span>
+            </div>
+            <div class="col-md-3">
+                <strong>Currently Selected:</strong> 
+                <span id="selected-count">0</span> tasks
+            </div>
+        </div>
+    </div>
+    
+    <!-- Warning if too many neglected -->
+    {% set neglected_count = projects_data|selectattr('days_neglected', '>', 14)|list|length %}
+    {% if neglected_count > 5 %}
+    <div class="warning-box">
+        <h4>⚠️ WARNING: {{ neglected_count }} projects haven't been touched in 2+ weeks!</h4>
+        <p>You're spreading yourself too thin. Consider killing some zombie projects.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Project List -->
+    <div class="row">
+        <div class="col-md-6">
+            <h4>💼 TCH PROJECTS</h4>
+            {% for item in projects_data if item.type == 'TCH' %}
+            <div class="project-card tch {% if item.days_neglected > 14 %}neglected{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5>{{ item.project.name }}</h5>
+                        <p class="mb-2">{{ item.project.description or 'No description' }}</p>
+                        <div>
+                            {% if item.days_neglected == 999 %}
+                            <span class="neglect-badge">NEVER TOUCHED</span>
+                            {% elif item.days_neglected > 7 %}
+                            <span class="neglect-badge">{{ item.days_neglected }} days neglected</span>
+                            {% endif %}
+                            
+                            {% if item.deadline %}
+                            {% set days_until = (item.deadline - today).days %}
+                            {% if days_until < 0 %}
+                            <span class="deadline-badge">OVERDUE BY {{ -days_until }} DAYS!</span>
+                            {% elif days_until < 7 %}
+                            <span class="deadline-badge">Due in {{ days_until }} days</span>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Add Task Form -->
+                <form method="POST" action="{{ url_for('daily.add_task') }}" class="quick-task-form">
+                    <input type="hidden" name="project_id" value="{{ item.project.id }}">
+                    <input type="hidden" name="project_type" value="TCH">
+                    <input type="hidden" name="priority" value="{% if item.deadline and (item.deadline - today).days < 7 %}1{% else %}2{% endif %}">
+                    <div class="input-group">
+                        <input type="text" name="task_description" class="form-control form-control-sm" 
+                               placeholder="What needs to be done?" required>
+                        <button type="submit" class="btn btn-sm btn-primary">Add to Today</button>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="col-md-6">
+            <h4>🏠 PERSONAL PROJECTS</h4>
+            {% for item in projects_data if item.type == 'Personal' %}
+            <div class="project-card personal {% if item.days_neglected > 14 %}neglected{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5>{{ item.project.name }}</h5>
+                        <p class="mb-2">{{ item.project.description or 'No description' }}</p>
+                        <div>
+                            {% if item.days_neglected == 999 %}
+                            <span class="neglect-badge">NEVER TOUCHED</span>
+                            {% elif item.days_neglected > 7 %}
+                            <span class="neglect-badge">{{ item.days_neglected }} days neglected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Add Task Form -->
+                <form method="POST" action="{{ url_for('daily.add_task') }}" class="quick-task-form">
+                    <input type="hidden" name="project_id" value="{{ item.project.id }}">
+                    <input type="hidden" name="project_type" value="Personal">
+                    <input type="hidden" name="priority" value="3">
+                    <div class="input-group">
+                        <input type="text" name="task_description" class="form-control form-control-sm" 
+                               placeholder="What needs to be done?" required>
+                        <button type="submit" class="btn btn-sm btn-primary">Add to Today</button>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="mt-4">
+        <a href="{{ url_for('daily.index') }}" class="btn btn-secondary">Back to Dashboard</a>
+        <button onclick="autoSelectNeglected()" class="btn btn-warning">Auto-Select Most Neglected</button>
+    </div>
+</div>
+
+<script>
+    // Update selected count
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+            let count = document.getElementById('selected-count');
+            count.textContent = parseInt(count.textContent) + 1;
+        });
+    });
+    
+    function autoSelectNeglected() {
+        alert('This would auto-select the 5 most neglected projects. Feature coming soon!');
+    }
+</script>
+{% endblock %}

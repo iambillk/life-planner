@@ -9,7 +9,7 @@ v1.0.0 (Original)
 - Initial model imports for all existing modules
 """
 from .base import db
-from .daily import DailyTask
+
 from .equipment import (
     Equipment, 
     MaintenanceRecord, 
@@ -53,9 +53,22 @@ from .persprojects import (
     PersonalProjectFile
 )
 
+# Import daily planner models
+from models.daily_planner import (
+    DailyConfig,
+    CalendarEvent,
+    EventType,
+    RecurringEvent,
+    DailyTask,
+    HumanMaintenance,
+    CapturedNote,
+    HarassmentLog,
+    ProjectRotation,
+    init_daily_planner
+)
+
 __all__ = [
     'db',
-    'DailyTask',
     # Equipment models
     'Equipment', 
     'MaintenanceRecord', 
@@ -72,7 +85,7 @@ __all__ = [
     'TCHIdea', 
     'TCHMilestone',
     'TCHProjectNote',
-    # 'PersonalProject',  <-- REMOVE OR COMMENT THIS LINE TOO
+    # 'PersonalProject',
     'ProjectFile',
     # Other models
     'Goal',
@@ -91,5 +104,16 @@ __all__ = [
     'PersonalIdea',
     'PersonalMilestone',
     'PersonalProjectNote',
-    'PersonalProjectFile'
+    'PersonalProjectFile',
+    # Daily Planner
+    'DailyConfig',
+    'CalendarEvent',
+    'EventType',
+    'RecurringEvent',    
+    'DailyTask',
+    'HumanMaintenance',
+    'CapturedNote',
+    'HarassmentLog',
+    'ProjectRotation',
+    'init_daily_planner'
 ]

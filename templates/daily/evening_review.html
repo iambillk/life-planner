@@ -1,0 +1,387 @@
+<!-- templates/daily/evening_review.html -->
+{% extends "base.html" %}
+{% block title %}Evening Review{% endblock %}
+{% block header %}EVENING DEBRIEF - {{ today.strftime('%A, %B %d') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .review-section {
+        background: var(--card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .review-section h3 {
+        color: var(--primary);
+        margin-bottom: 15px;
+        border-bottom: 2px solid var(--line);
+        padding-bottom: 10px;
+    }
+    
+    .performance-summary {
+        background: linear-gradient(135deg, #1e293b, #334155);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .grade-display {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .grade-letter {
+        font-size: 72px;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .grade-f { color: #ef4444; }
+    .grade-d { color: #f97316; }
+    .grade-c { color: #eab308; }
+    .grade-b { color: #22c55e; }
+    .grade-a { color: #10b981; }
+    
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .metric-card {
+        background: var(--panel);
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+    }
+    
+    .metric-card.success {
+        border: 2px solid var(--success);
+    }
+    
+    .metric-card.failure {
+        border: 2px solid var(--danger);
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 5px 0;
+    }
+    
+    .task-review-item {
+        background: var(--panel);
+        padding: 10px;
+        margin: 8px 0;
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .task-review-item.completed {
+        opacity: 0.7;
+        text-decoration: line-through;
+    }
+    
+    .timetree-check {
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .timetree-form {
+        background: var(--panel);
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 15px;
+    }
+    
+    .event-input-row {
+        display: grid;
+        grid-template-columns: 2fr 2fr 3fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .tomorrow-plan {
+        background: var(--card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .suggested-tasks {
+        background: var(--panel);
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 15px;
+    }
+    
+    .task-suggestion {
+        padding: 10px;
+        margin: 8px 0;
+        background: var(--card);
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .final-message {
+        background: linear-gradient(135deg, #1e40af, #3730a3);
+        color: white;
+        padding: 30px;
+        border-radius: 8px;
+        text-align: center;
+        margin-top: 30px;
+    }
+    
+    .lockout-warning {
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid var(--danger);
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-weight: bold;
+    }
+    
+    .shame-list {
+        color: var(--danger);
+        font-size: 18px;
+        margin: 10px 0;
+    }
+    
+    .checkbox-large {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Performance Summary -->
+    <div class="performance-summary">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="grade-display">
+                    <h3>Today's Grade</h3>
+                    <p class="grade-letter grade-{{ grade|lower }}">{{ grade }}</p>
+                    <p>{{ grade_message }}</p>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <h3>📊 DAILY METRICS</h3>
+                <div class="metric-grid">
+                    <div class="metric-card {% if human.meds_taken %}success{% else %}failure{% endif %}">
+                        <div>💊 Medications</div>
+                        <div class="metric-value">{% if human.meds_taken %}✅ TAKEN{% else %}❌ MISSED{% endif %}</div>
+                    </div>
+                    <div class="metric-card {% if human.shower_taken or human.days_since_shower < 2 %}success{% else %}failure{% endif %}">
+                        <div>🚿 Shower</div>
+                        <div class="metric-value">
+                            {% if human.shower_taken %}✅ CLEAN{% else %}❌ {{ human.days_since_shower }} DAYS{% endif %}
+                        </div>
+                    </div>
+                    <div class="metric-card {% if meals_eaten >= 2 %}success{% else %}failure{% endif %}">
+                        <div>🍽️ Meals</div>
+                        <div class="metric-value">{{ meals_eaten }}/3</div>
+                    </div>
+                    <div class="metric-card {% if human.water_glasses >= 6 %}success{% else %}failure{% endif %}">
+                        <div>💧 Water</div>
+                        <div class="metric-value">{{ human.water_glasses }}/8</div>
+                    </div>
+                    <div class="metric-card {% if tasks_completed > 0 %}success{% else %}failure{% endif %}">
+                        <div>✅ Tasks</div>
+                        <div class="metric-value">{{ tasks_completed }}/{{ tasks_total }}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div>🏃 Streak</div>
+                        <div class="metric-value">{{ review_streak }} days</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shame Section (if needed) -->
+    {% if human.days_since_shower >= 3 or not human.meds_taken %}
+    <div class="lockout-warning">
+        <h3>⚠️ UNACCEPTABLE PERFORMANCE ⚠️</h3>
+        <div class="shame-list">
+            {% if human.days_since_shower >= 3 %}
+            • {{ human.days_since_shower }} DAYS WITHOUT SHOWER - YOU'RE DISGUSTING<br>
+            {% endif %}
+            {% if not human.meds_taken %}
+            • SKIPPED MEDICATIONS - YOUR BRAIN ISN'T WORKING<br>
+            {% endif %}
+            {% if meals_eaten < 2 %}
+            • BARELY ATE - YOU'RE RUNNING ON FUMES<br>
+            {% endif %}
+        </div>
+        <p>Tomorrow you WILL fix this or be locked out completely.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Task Review -->
+    <div class="review-section">
+        <h3>📋 PROJECT TASK REVIEW</h3>
+        {% if daily_tasks %}
+            <p>Completion Rate: <strong>{{ (tasks_completed / tasks_total * 100)|round|int }}%</strong></p>
+            {% for task in daily_tasks %}
+            <div class="task-review-item {% if task.completed %}completed{% endif %}">
+                <div>
+                    <strong>[{{ task.project_type }}]</strong> {{ task.project_name }}<br>
+                    <small>{{ task.task_description }}</small>
+                </div>
+                <div>
+                    {% if task.completed %}✅{% else %}❌{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No tasks were selected today. That's a problem.</p>
+        {% endif %}
+    </div>
+    
+    <!-- TimeTree Check Section -->
+    <div class="timetree-check">
+        <h3>📱 MANDATORY TIMETREE CHECK</h3>
+        <p>You MUST check TimeTree before planning tomorrow. No exceptions.</p>
+        
+        <div style="margin: 20px 0;">
+            <label style="font-size: 20px;">
+                <input type="checkbox" id="timetree_checked" class="checkbox-large" onchange="enableTomorrowPlanning()">
+                <strong>I have checked TimeTree for tomorrow's family events</strong>
+            </label>
+        </div>
+        
+        <div class="timetree-form" id="timetree_form" style="display: none;">
+            <h4>Add any TimeTree events to YOUR calendar:</h4>
+            <form id="add_events_form">
+                <div id="event_inputs">
+                    <div class="event-input-row">
+                        <input type="text" class="form-control form-control-sm" placeholder="Event type">
+                        <input type="text" class="form-control form-control-sm" placeholder="Time">
+                        <input type="text" class="form-control form-control-sm" placeholder="Description">
+                        <button type="button" class="btn btn-sm btn-success" onclick="addEventRow()">+</button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary mt-3" onclick="saveTomorrowEvents()">
+                    Save Tomorrow's Events
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tomorrow Planning (locked until TimeTree checked) -->
+    <div class="tomorrow-plan" id="tomorrow_plan" style="opacity: 0.3; pointer-events: none;">
+        <h3>📅 TOMORROW'S BATTLE PLAN</h3>
+        
+        <div class="suggested-tasks">
+            <h4>Suggested Project Tasks (based on deadlines and neglect):</h4>
+            {% for suggestion in task_suggestions %}
+            <div class="task-suggestion">
+                <div>
+                    <strong>[{{ suggestion.type }}] {{ suggestion.project.name }}</strong><br>
+                    <small>{{ suggestion.reason }}</small>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="acceptTask({{ suggestion.project.id }}, '{{ suggestion.type }}')">
+                    Accept
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="mt-4">
+            <h4>Or manually select tasks:</h4>
+            <a href="{{ url_for('daily.select_tasks') }}" class="btn btn-primary">
+                Select Tomorrow's Tasks
+            </a>
+        </div>
+    </div>
+    
+    <!-- Final Message -->
+    <div class="final-message">
+        <h2>{{ final_message_title }}</h2>
+        <p style="font-size: 18px;">{{ final_message_body }}</p>
+        
+        <div style="margin-top: 30px;">
+            <h3>TOMORROW'S NON-NEGOTIABLES:</h3>
+            <div style="font-size: 16px; text-align: left; max-width: 400px; margin: 0 auto;">
+                ✓ Take medications FIRST THING<br>
+                ✓ Shower (no excuses)<br>
+                ✓ Eat actual breakfast<br>
+                ✓ Complete at least 3 project tasks<br>
+                ✓ Drink 8 glasses of water<br>
+                ✓ Check in for evening review
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <button class="btn btn-lg btn-success" onclick="completeReview()">
+                Complete Review & Go To Bed
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function enableTomorrowPlanning() {
+        const checkbox = document.getElementById('timetree_checked');
+        const form = document.getElementById('timetree_form');
+        const plan = document.getElementById('tomorrow_plan');
+        
+        if (checkbox.checked) {
+            form.style.display = 'block';
+            plan.style.opacity = '1';
+            plan.style.pointerEvents = 'auto';
+        } else {
+            form.style.display = 'none';
+            plan.style.opacity = '0.3';
+            plan.style.pointerEvents = 'none';
+        }
+    }
+    
+    function addEventRow() {
+        const container = document.getElementById('event_inputs');
+        const newRow = document.createElement('div');
+        newRow.className = 'event-input-row';
+        newRow.innerHTML = `
+            <input type="text" class="form-control form-control-sm" placeholder="Event type">
+            <input type="text" class="form-control form-control-sm" placeholder="Time">
+            <input type="text" class="form-control form-control-sm" placeholder="Description">
+            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">-</button>
+        `;
+        container.appendChild(newRow);
+    }
+    
+    function saveTomorrowEvents() {
+        alert('Events saved! (Feature to be implemented)');
+    }
+    
+    function acceptTask(projectId, projectType) {
+        alert(`Task from project ${projectId} accepted for tomorrow!`);
+        event.target.disabled = true;
+        event.target.textContent = 'Added';
+    }
+    
+    function completeReview() {
+        if (!document.getElementById('timetree_checked').checked) {
+            alert('You MUST check TimeTree first!');
+            return;
+        }
+        
+        if (confirm('Have you:\n- Checked TimeTree?\n- Selected tomorrow\'s tasks?\n- Set out clothes?\n- Put meds where you\'ll see them?\n\nReady for bed?')) {
+            window.location.href = '{{ url_for("daily.index") }}';
+        }
+    }
+</script>
+{% endblock %}
