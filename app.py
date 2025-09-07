@@ -39,6 +39,9 @@ def create_app():
     # ========== Real Estate upload directories ==========
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_profiles'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_maintenance'), exist_ok=True)
+
+    # In app.py, in the create_app() function where other directories are created, add:
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'personal_project_files'), exist_ok=True)
     
     # Context processors
     @app.context_processor
@@ -64,17 +67,17 @@ def register_blueprints(app):
     from modules.daily import daily_bp
     from modules.equipment import equipment_bp
     from modules.projects import projects_bp
+    from modules.persprojects import persprojects_bp
     from modules.health import health_bp
     from modules.weekly import weekly_bp
     from modules.goals import goals_bp
     from modules.todo import todo_bp
-
-    # NEW: Real Estate blueprint (provides its own url_prefix='/property')
     from modules.realestate import realestate_bp  
     
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
     app.register_blueprint(projects_bp, url_prefix='/projects')
+    app.register_blueprint(persprojects_bp, url_prefix='/personal')
     app.register_blueprint(health_bp, url_prefix='/health')
     app.register_blueprint(weekly_bp, url_prefix='/weekly')
     app.register_blueprint(goals_bp, url_prefix='/goals')

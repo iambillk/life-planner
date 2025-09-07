@@ -1,27 +1,27 @@
-<!-- templates/tch_projects.html - ENHANCED VERSION -->
+<!-- templates/persprojects/index.html - KILLER VERSION matching TCH exactly -->
 {% extends "base.html" %}
-{% block title %}TCH Projects{% endblock %}
-{% block header %}TCH Projects{% endblock %}
+{% block title %}Personal Projects{% endblock %}
+{% block header %}Personal Projects{% endblock %}
 
 {% block extra_css %}
 <style>
   /* ========= Page-scoped CSS (dark theme) ======================================= */
   :root{
-    --tch-bg: var(--bg, #0b0f1a);
-    --tch-panel: var(--panel, #121a2a);
-    --tch-card: var(--card, #0f1625);
-    --tch-line: var(--line, #1f2a3d);
-    --tch-text: var(--text, #e6eaf2);
-    --tch-muted: var(--text-muted, #9fb0c8);
-    --tch-primary: var(--primary, #6ea8ff);
-    --tch-primary-700: var(--primary-700, #3f7fe6);
-    --tch-success: var(--success, #22c55e);
-    --tch-warn: var(--warning, #f59e0b);
-    --tch-danger: var(--danger, #ef4444);
+    --pp-bg: var(--bg, #0b0f1a);
+    --pp-panel: var(--panel, #121a2a);
+    --pp-card: var(--card, #0f1625);
+    --pp-line: var(--line, #1f2a3d);
+    --pp-text: var(--text, #e6eaf2);
+    --pp-muted: var(--text-muted, #9fb0c8);
+    --pp-primary: var(--primary, #6ea8ff);
+    --pp-primary-700: var(--primary-700, #3f7fe6);
+    --pp-success: var(--success, #22c55e);
+    --pp-warn: var(--warning, #f59e0b);
+    --pp-danger: var(--danger, #ef4444);
 
-    --tch-radius: var(--radius, 14px);
-    --tch-radius-sm: var(--radius-sm, 10px);
-    --tch-shadow: 0 6px 18px rgba(0,0,0,.35);
+    --pp-radius: var(--radius, 14px);
+    --pp-radius-sm: var(--radius-sm, 10px);
+    --pp-shadow: 0 6px 18px rgba(0,0,0,.35);
   }
 
   .projects-container{ display:grid; gap:16px; }
@@ -31,20 +31,20 @@
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding:14px 16px;
     background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border:1px solid var(--tch-line); border-radius: var(--tch-radius);
-    box-shadow: var(--tch-shadow);
+    border:1px solid var(--pp-line); border-radius: var(--pp-radius);
+    box-shadow: var(--pp-shadow);
   }
   .page-header h1{ margin:0; font-size:1.15rem; letter-spacing:.2px; font-weight:650; }
   .page-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   
   .btn{
     display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:12px; border:1px solid var(--tch-line);
-    background:var(--tch-card); color:var(--tch-text); text-decoration:none;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--pp-line);
+    background:var(--pp-card); color:var(--pp-text); text-decoration:none;
     transition:transform .1s ease, border-color .2s ease, background .2s ease;
     font-size:.95rem; cursor:pointer;
   }
-  .btn:hover{ border-color:var(--tch-primary); transform:translateY(-1px); }
+  .btn:hover{ border-color:var(--pp-primary); transform:translateY(-1px); }
   .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
   .btn-primary:hover{ background: rgba(110,168,255,.25); }
   .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
@@ -53,38 +53,38 @@
   .controls{ display:grid; gap:12px; }
   .controls-row{
     display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
-    border-radius:var(--tch-radius-sm);
+    padding:12px; background:var(--pp-card); border:1px solid var(--pp-line);
+    border-radius:var(--pp-radius-sm);
   }
   .search-input{
-    flex:1; padding:10px 14px; border:1px solid var(--tch-line);
-    background:var(--tch-panel); border-radius:10px; color:var(--tch-text);
+    flex:1; padding:10px 14px; border:1px solid var(--pp-line);
+    background:var(--pp-panel); border-radius:10px; color:var(--pp-text);
     min-width:200px; font-size:.95rem;
   }
-  .search-input:focus{ outline:none; border-color:var(--tch-primary); }
-  .search-input::placeholder{ color:var(--tch-muted); }
+  .search-input:focus{ outline:none; border-color:var(--pp-primary); }
+  .search-input::placeholder{ color:var(--pp-muted); }
   
   .select{
-    padding:10px 14px; border:1px solid var(--tch-line);
-    background:var(--tch-panel); border-radius:10px; color:var(--tch-text);
+    padding:10px 14px; border:1px solid var(--pp-line);
+    background:var(--pp-panel); border-radius:10px; color:var(--pp-text);
     font-size:.95rem; cursor:pointer;
   }
-  .select:focus{ outline:none; border-color:var(--tch-primary); }
+  .select:focus{ outline:none; border-color:var(--pp-primary); }
 
   /* ======= Filter Tabs ======= */
   .filter-tabs{
     display:flex; gap:6px; flex-wrap:wrap;
-    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
-    border-radius:var(--tch-radius-sm);
+    padding:12px; background:var(--pp-card); border:1px solid var(--pp-line);
+    border-radius:var(--pp-radius-sm);
   }
   .tab{
     padding:8px 14px; border-radius:10px; text-decoration:none;
-    background:var(--tch-panel); color:var(--tch-muted); transition:all .2s;
+    background:var(--pp-panel); color:var(--pp-muted); transition:all .2s;
     border:1px solid transparent; font-size:.9rem; cursor:pointer;
   }
-  .tab:hover{ border-color:var(--tch-primary); color:var(--tch-text); }
+  .tab:hover{ border-color:var(--pp-primary); color:var(--pp-text); }
   .tab.active{ 
-    background:rgba(110,168,255,.18); color:var(--tch-primary); 
+    background:rgba(110,168,255,.18); color:var(--pp-primary); 
     border-color:rgba(110,168,255,.45); 
   }
   .tab .badge{
@@ -96,17 +96,17 @@
   /* ======= Category Chips ======= */
   .category-chips{
     display:flex; gap:6px; flex-wrap:wrap;
-    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
-    border-radius:var(--tch-radius-sm);
+    padding:12px; background:var(--pp-card); border:1px solid var(--pp-line);
+    border-radius:var(--pp-radius-sm);
   }
   .chip{
     padding:6px 12px; border-radius:999px; font-size:.85rem;
-    background:var(--tch-panel); color:var(--tch-muted); cursor:pointer;
+    background:var(--pp-panel); color:var(--pp-muted); cursor:pointer;
     border:1px solid transparent; transition:all .2s;
   }
-  .chip:hover{ border-color:var(--tch-primary); color:var(--tch-text); }
+  .chip:hover{ border-color:var(--pp-primary); color:var(--pp-text); }
   .chip.active{ 
-    background:rgba(110,168,255,.18); color:var(--tch-primary); 
+    background:rgba(110,168,255,.18); color:var(--pp-primary); 
     border-color:rgba(110,168,255,.45); 
   }
 
@@ -118,13 +118,13 @@
 
   /* ======= Project Card ======= */
   .project-card{
-    background:var(--tch-card); border:1px solid var(--tch-line);
-    border-radius:var(--tch-radius); padding:14px;
-    box-shadow:var(--tch-shadow); transition:transform .15s ease, border-color .2s;
+    background:var(--pp-card); border:1px solid var(--pp-line);
+    border-radius:var(--pp-radius); padding:14px;
+    box-shadow:var(--pp-shadow); transition:transform .15s ease, border-color .2s;
     display:flex; flex-direction:column; gap:10px;
     position:relative; overflow:visible;
   }
-  .project-card:hover{ transform:translateY(-2px); border-color:var(--tch-primary); }
+  .project-card:hover{ transform:translateY(-2px); border-color:var(--pp-primary); }
 
   /* Priority Ribbon */
   .priority-ribbon{
@@ -137,7 +137,6 @@
   .priority-medium{ background:#3b82f6; color:#0a0f1a; }
   .priority-high{ background:#f59e0b; color:#0a0f1a; }
   .priority-critical{ background:#ef4444; color:#fff; animation: pulse 2s infinite; }
-  .priority-urgent{ background:#ef4444; color:#fff; animation: pulse 2s infinite; }
 
   @keyframes pulse{
     0%, 100%{ opacity:1; }
@@ -147,7 +146,7 @@
   /* Card Header */
   .project-header{ display:flex; justify-content:space-between; align-items:flex-start; }
   .project-name{ 
-    font-size:1.05rem; font-weight:700; color:var(--tch-text); 
+    font-size:1.05rem; font-weight:700; color:var(--pp-text); 
     margin:0 0 8px 0; letter-spacing:.3px;
   }
 
@@ -159,47 +158,48 @@
   }
   .status-planning{ background:#64748b; color:#0a0f1a; }
   .status-active{ background:#3b82f6; color:#0a0f1a; }
-  .status-on_hold{ background:#f59e0b; color:#0a0f1a; }
+  .status-on_hold, .status-on-hold{ background:#f59e0b; color:#0a0f1a; }
   .status-completed{ background:#22c55e; color:#0a0f1a; }
-  .status-cancelled{ background:#ef4444; color:#fff; }
 
-  /* Category-specific colors */
   .category-badge{
     padding:4px 10px; border-radius:8px; font-size:.7rem;
     font-weight:700; text-transform:uppercase;
+    background:var(--pp-panel); color:var(--pp-muted);
+    border:1px solid var(--pp-line);
   }
-  .category-dc-work{ background:#3b82f6; color:#0a0f1a; }
-  .category-coding{ background:#8b5cf6; color:#0a0f1a; }
-  .category-managerial{ background:#f59e0b; color:#0a0f1a; }
-  .category-sales{ background:#10b981; color:#0a0f1a; }
-  .category-client-health{ background:#ef4444; color:#fff; }
-  .category-operations{ background:#6366f1; color:#0a0f1a; }
-  .category-research{ background:#06b6d4; color:#0a0f1a; }
-  .category-development{ background:#22c55e; color:#0a0f1a; }
-  .category-marketing{ background:#ec4899; color:#0a0f1a; }
-  .category-general{ background:#6b7280; color:#fff; }
+  
+  /* Special category colors */
+  .category-home-improvement{ background:#8b5cf6; color:#0a0f1a; }
+  .category-hobbies-crafts{ background:#ec4899; color:#0a0f1a; }
+  .category-learning-education{ background:#3b82f6; color:#0a0f1a; }
+  .category-health-fitness{ background:#10b981; color:#0a0f1a; }
+  .category-financial{ background:#f59e0b; color:#0a0f1a; }
+  .category-travel{ background:#06b6d4; color:#0a0f1a; }
+  .category-creative{ background:#a855f7; color:#0a0f1a; }
+  .category-family-relationships{ background:#f43f5e; color:#0a0f1a; }
+  .category-organization{ background:#6366f1; color:#0a0f1a; }
 
   /* Goal & Description boxes */
   .project-goal, .project-desc{
-    background:#0c1322; border:1px solid var(--tch-line); border-radius:10px;
-    color:var(--tch-text); font-size:.92rem; padding:10px; margin-bottom:10px;
+    background:#0c1322; border:1px solid var(--pp-line); border-radius:10px;
+    color:var(--pp-text); font-size:.92rem; padding:10px; margin-bottom:10px;
   }
   .project-goal strong, .project-desc strong{ 
-    color:var(--tch-primary); font-weight:700; 
+    color:var(--pp-primary); font-weight:700; 
   }
 
   /* Project Meta */
   .project-meta{ 
     margin:12px 0; padding-top:10px; 
-    border-top:1px dashed var(--tch-line); 
+    border-top:1px dashed var(--pp-line); 
   }
   .deadline{ 
-    color:var(--tch-muted); font-size:.9rem; margin-bottom:8px; 
+    color:var(--pp-muted); font-size:.9rem; margin-bottom:8px; 
     display:flex; align-items:center; gap:6px;
   }
   .overdue-badge{
     display:inline-block; margin-left:6px; padding:2px 6px; border-radius:6px;
-    background:var(--tch-danger); color:#0a0f1a; font-size:.72rem; 
+    background:var(--pp-danger); color:#0a0f1a; font-size:.72rem; 
     font-weight:800; animation: blink 2s infinite;
   }
   @keyframes blink{
@@ -209,22 +209,22 @@
 
   /* Progress Bar */
   .progress-bar{
-    background:#0c1322; border:1px solid var(--tch-line);
+    background:#0c1322; border:1px solid var(--pp-line);
     height:10px; border-radius:999px; overflow:hidden; margin-bottom:6px;
   }
   .progress-fill{ 
-    background: linear-gradient(90deg, var(--tch-primary), var(--tch-primary-700)); 
+    background: linear-gradient(90deg, var(--pp-primary), var(--pp-primary-700)); 
     height:100%; transition: width .3s; 
   }
   .progress-text{ 
-    font-size:.8rem; color:var(--tch-muted); 
+    font-size:.8rem; color:var(--pp-muted); 
     text-align:center; margin-bottom:8px;
   }
 
   /* Stats */
   .project-stats{ 
     display:flex; gap:12px; margin:10px 0; font-size:.85rem; 
-    color:var(--tch-muted); flex-wrap:wrap; 
+    color:var(--pp-muted); flex-wrap:wrap; 
   }
   .project-stats span{ 
     display:inline-flex; align-items:center; gap:6px; 
@@ -238,30 +238,30 @@
   /* Empty State */
   .empty-state{
     grid-column:1 / -1; text-align:center; padding:60px 20px; 
-    color:var(--tch-muted);
-    background:var(--tch-card); border:1px dashed var(--tch-line); 
-    border-radius: var(--tch-radius);
+    color:var(--pp-muted);
+    background:var(--pp-card); border:1px dashed var(--pp-line); 
+    border-radius: var(--pp-radius);
   }
   .empty-state .icon{ 
     font-size:48px; margin-bottom:16px; opacity:.5; 
   }
   .empty-state h3{ 
-    margin:6px 0 12px; color:var(--tch-text); font-size:1.2rem; 
+    margin:6px 0 12px; color:var(--pp-text); font-size:1.2rem; 
   }
   .empty-state p{ margin-bottom:20px; }
 
   /* Stats summary bar */
   .stats-bar{
     display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
-    padding:14px; background:var(--tch-card); border:1px solid var(--tch-line);
-    border-radius:var(--tch-radius-sm); margin-bottom:16px;
+    padding:14px; background:var(--pp-card); border:1px solid var(--pp-line);
+    border-radius:var(--pp-radius-sm); margin-bottom:16px;
   }
   .stat-item{
     display:flex; align-items:center; gap:8px;
-    color:var(--tch-muted);
+    color:var(--pp-muted);
   }
   .stat-item .number{
-    font-size:1.2rem; font-weight:700; color:var(--tch-text);
+    font-size:1.2rem; font-weight:700; color:var(--pp-text);
   }
 
   /* Responsive */
@@ -280,15 +280,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="projects-container" id="tch-projects">
+<div class="projects-container" id="personal-projects">
   
   <!-- ====================== HEADER ======================= -->
   <div class="page-header">
     <h1>
-      <span aria-hidden="true">💼</span> TCH Projects
+      <span aria-hidden="true">🎯</span> Personal Projects
     </h1>
     <div class="page-actions">
-      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary" title="Create a new TCH project">
+      <a href="{{ url_for('persprojects.add') }}" class="btn btn-primary" title="Create a new personal project">
         <span aria-hidden="true">➕</span> New Project
       </a>
     </div>
@@ -303,23 +303,18 @@
     </div>
     <div class="stat-item">
       <span aria-hidden="true">🚀</span>
-      <span class="number">{{ status_counts.active }}</span>
+      <span class="number">{{ projects|selectattr('status', 'equalto', 'active')|list|length }}</span>
       <span>Active</span>
     </div>
     <div class="stat-item">
-      <span aria-hidden="true">📝</span>
-      <span class="number">{{ status_counts.planning }}</span>
-      <span>Planning</span>
-    </div>
-    <div class="stat-item">
-      <span aria-hidden="true">⏸️</span>
-      <span class="number">{{ status_counts.on_hold }}</span>
-      <span>On Hold</span>
-    </div>
-    <div class="stat-item">
       <span aria-hidden="true">✅</span>
-      <span class="number">{{ status_counts.completed }}</span>
+      <span class="number">{{ projects|selectattr('status', 'equalto', 'completed')|list|length }}</span>
       <span>Completed</span>
+    </div>
+    <div class="stat-item">
+      <span aria-hidden="true">⏳</span>
+      <span class="number">{{ projects|selectattr('deadline')|list|length }}</span>
+      <span>With Deadlines</span>
     </div>
   </div>
 
@@ -341,49 +336,51 @@
 
     <!-- Status Filter Tabs -->
     <div class="filter-tabs" role="tablist" aria-label="Status filter">
-      <a href="{{ url_for('projects.tch_index', status='all', category=category_filter) }}"
+      <a href="{{ url_for('persprojects.index', status='all') }}"
          class="tab {% if status_filter == 'all' %}active{% endif %}" 
          role="tab" aria-selected="{{ 'true' if status_filter == 'all' else 'false' }}">
         All Projects
       </a>
-      <a href="{{ url_for('projects.tch_index', status='planning', category=category_filter) }}"
+      <a href="{{ url_for('persprojects.index', status='planning') }}"
          class="tab {% if status_filter == 'planning' %}active{% endif %}" 
          role="tab">
         📝 Planning
-        {% if status_counts.planning > 0 %}<span class="badge">{{ status_counts.planning }}</span>{% endif %}
+        {% set planning_count = projects|selectattr('status', 'equalto', 'planning')|list|length %}
+        {% if planning_count > 0 %}<span class="badge">{{ planning_count }}</span>{% endif %}
       </a>
-      <a href="{{ url_for('projects.tch_index', status='active', category=category_filter) }}"
+      <a href="{{ url_for('persprojects.index', status='active') }}"
          class="tab {% if status_filter == 'active' %}active{% endif %}" 
          role="tab">
         🚀 Active
-        {% if status_counts.active > 0 %}<span class="badge">{{ status_counts.active }}</span>{% endif %}
+        {% set active_count = projects|selectattr('status', 'equalto', 'active')|list|length %}
+        {% if active_count > 0 %}<span class="badge">{{ active_count }}</span>{% endif %}
       </a>
-      <a href="{{ url_for('projects.tch_index', status='on_hold', category=category_filter) }}"
+      <a href="{{ url_for('persprojects.index', status='on_hold') }}"
          class="tab {% if status_filter == 'on_hold' %}active{% endif %}" 
          role="tab">
         ⏸️ On Hold
-        {% if status_counts.on_hold > 0 %}<span class="badge">{{ status_counts.on_hold }}</span>{% endif %}
+        {% set hold_count = projects|selectattr('status', 'equalto', 'on_hold')|list|length %}
+        {% if hold_count > 0 %}<span class="badge">{{ hold_count }}</span>{% endif %}
       </a>
-      <a href="{{ url_for('projects.tch_index', status='completed', category=category_filter) }}"
+      <a href="{{ url_for('persprojects.index', status='completed') }}"
          class="tab {% if status_filter == 'completed' %}active{% endif %}" 
          role="tab">
         ✅ Completed
-        {% if status_counts.completed > 0 %}<span class="badge">{{ status_counts.completed }}</span>{% endif %}
+        {% set complete_count = projects|selectattr('status', 'equalto', 'completed')|list|length %}
+        {% if complete_count > 0 %}<span class="badge">{{ complete_count }}</span>{% endif %}
       </a>
     </div>
 
     <!-- Category Filter -->
     <div class="category-chips" role="group" aria-label="Category filter">
-      <a href="{{ url_for('projects.tch_index', status=status_filter, category='all') }}"
-         class="chip {% if category_filter == 'all' %}active{% endif %}">
+      <span class="chip active" data-category="all" onclick="filterCategory('all')">
         All Categories
-      </a>
+      </span>
       {% for cat in categories %}
-      <a href="{{ url_for('projects.tch_index', status=status_filter, category=cat) }}"
-         class="chip {% if category_filter == cat %}active{% endif %}">
+      <span class="chip" data-category="{{ cat|lower|replace(' ', '-') }}" 
+            onclick="filterCategory('{{ cat|lower|replace(' ', '-') }}')">
         {{ cat }}
-        {% if category_counts[cat] > 0 %}({{ category_counts[cat] }}){% endif %}
-      </a>
+      </span>
       {% endfor %}
     </div>
   </div>
@@ -393,7 +390,7 @@
     {% for project in projects %}
     <div class="project-card" 
          data-name="{{ project.name|lower }}"
-         data-category="{{ project.category|lower|replace(' ', '-') }}"
+         data-category="{{ (project.category or 'other')|lower|replace(' ', '-') }}"
          data-status="{{ project.status }}"
          data-priority="{{ project.priority }}"
          data-progress="{{ project.progress }}"
@@ -403,7 +400,7 @@
       
       <!-- Priority Ribbon -->
       <div class="priority-ribbon priority-{{ project.priority }}">
-        {% if project.priority in ['critical', 'urgent'] %}🔥{% endif %}
+        {% if project.priority == 'critical' %}🔥{% endif %}
         {{ project.priority|upper }}
       </div>
 
@@ -415,8 +412,8 @@
         <span class="status-badge status-{{ project.status }}">
           {{ project.status|replace('_', ' ')|upper }}
         </span>
-        <span class="category-badge category-{{ project.category|lower|replace(' ', '-') }}">
-          <span aria-hidden="true">🏷️</span> {{ project.category }}
+        <span class="category-badge category-{{ (project.category or 'other')|lower|replace(' ', '-') }}">
+          <span aria-hidden="true">🏷️</span> {{ project.category or 'Uncategorized' }}
         </span>
       </div>
 
@@ -440,7 +437,8 @@
         <div class="deadline">
           <span aria-hidden="true">📅</span>
           <span>Due: {{ project.deadline.strftime('%b %d, %Y') }}</span>
-          {% if project.deadline < datetime.now().date() and project.status != 'completed' %}
+          {% set now = datetime.now().date() %}
+          {% if project.deadline < now and project.status != 'completed' %}
             <span class="overdue-badge">OVERDUE</span>
           {% endif %}
         </div>
@@ -455,9 +453,15 @@
 
       <!-- Stats -->
       <div class="project-stats">
+        {% if project.tasks %}
         <span><span aria-hidden="true">✅</span> {{ project.tasks|selectattr('completed')|list|length }}/{{ project.tasks|length }} tasks</span>
+        {% endif %}
+        {% if project.ideas %}
         <span><span aria-hidden="true">💡</span> {{ project.ideas|length }} ideas</span>
+        {% endif %}
+        {% if project.milestones %}
         <span><span aria-hidden="true">🏁</span> {{ project.milestones|selectattr('completed')|list|length }}/{{ project.milestones|length }} milestones</span>
+        {% endif %}
         {% if project.files %}
         <span><span aria-hidden="true">📎</span> {{ project.files|length }} files</span>
         {% endif %}
@@ -465,32 +469,34 @@
 
       <!-- Actions -->
       <div class="project-actions">
-        <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn btn-sm btn-primary">
+        <a href="{{ url_for('persprojects.detail', id=project.id) }}" class="btn btn-sm btn-primary">
           <span aria-hidden="true">👁️</span> View
         </a>
-        <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-sm">
+        <a href="{{ url_for('persprojects.edit', id=project.id) }}" class="btn btn-sm">
           <span aria-hidden="true">✏️</span> Edit
         </a>
-        <a href="{{ url_for('projects.add_tch_task', project_id=project.id) }}" class="btn btn-sm">
-          <span aria-hidden="true">➕</span> Quick Task
-        </a>
+        <form method="POST" action="{{ url_for('persprojects.delete', id=project.id) }}" 
+              style="display:inline;" 
+              onsubmit="return confirm('Delete project: {{ project.name }}?\n\nThis will permanently delete all tasks, ideas, milestones, notes, and files.');">
+          <button type="submit" class="btn btn-sm" style="border-color:var(--pp-danger); color:var(--pp-danger);">
+            <span aria-hidden="true">🗑️</span> Delete
+          </button>
+        </form>
       </div>
     </div>
     {% else %}
     <!-- Empty State -->
     <div class="empty-state">
       <div class="icon" aria-hidden="true">📂</div>
-      <h3>No TCH projects found</h3>
+      <h3>No personal projects found</h3>
       <p>
         {% if status_filter != 'all' %}
           No {{ status_filter|replace('_', ' ') }} projects yet.
-        {% elif category_filter != 'all' %}
-          No projects in the {{ category_filter }} category.
         {% else %}
-          Start your first work project!
+          Start organizing your life with personal projects!
         {% endif %}
       </p>
-      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary">
+      <a href="{{ url_for('persprojects.add') }}" class="btn btn-primary">
         <span aria-hidden="true">➕</span> Create Your First Project
       </a>
     </div>
@@ -498,7 +504,7 @@
   </div>
 </div>
 
-<!-- JavaScript for search and sort -->
+<!-- JavaScript for search, sort, and filter -->
 <script>
 // Search functionality
 document.getElementById('searchProjects').addEventListener('input', function(e) {
@@ -510,6 +516,12 @@ document.getElementById('searchProjects').addEventListener('input', function(e) 
     const matches = name.includes(searchTerm);
     card.style.display = matches ? '' : 'none';
   });
+  
+  // Show empty state if no results
+  const visibleCards = Array.from(cards).filter(c => c.style.display !== 'none');
+  if (visibleCards.length === 0 && searchTerm) {
+    // Could add a "no search results" message here
+  }
 });
 
 // Sort functionality
@@ -529,7 +541,7 @@ document.getElementById('sortProjects').addEventListener('change', function(e) {
       case 'progress_desc':
         return parseInt(b.dataset.progress) - parseInt(a.dataset.progress);
       case 'priority_desc':
-        const priorityOrder = {'urgent': 0, 'critical': 0, 'high': 1, 'medium': 2, 'low': 3};
+        const priorityOrder = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3};
         return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
       case 'name_asc':
         return a.dataset.name.localeCompare(b.dataset.name);
@@ -541,6 +553,31 @@ document.getElementById('sortProjects').addEventListener('change', function(e) {
   // Re-append in new order
   cards.forEach(card => grid.appendChild(card));
 });
+
+// Category filter
+let activeCategory = 'all';
+
+function filterCategory(category) {
+  activeCategory = category;
+  
+  // Update chip styles
+  document.querySelectorAll('.category-chips .chip').forEach(chip => {
+    if (chip.dataset.category === category) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+  
+  // Filter cards
+  document.querySelectorAll('.project-card').forEach(card => {
+    if (category === 'all' || card.dataset.category === category) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
 
 // Initialize datetime for overdue checking
 const datetime = { now: () => ({ date: () => new Date() }) };

@@ -108,25 +108,6 @@ class TCHProjectNote(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class PersonalProject(db.Model):
-    __tablename__ = 'personal_projects'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(20), default='active')
-    deadline = db.Column(db.Date)
-    progress = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship to files
-    files = db.relationship('ProjectFile',
-                           primaryjoin="and_(PersonalProject.id==ProjectFile.project_id, ProjectFile.project_type=='personal')",
-                           foreign_keys='ProjectFile.project_id',
-                           cascade='all, delete-orphan',
-                           viewonly=True)
-
 # NEW MODEL FOR FILE ATTACHMENTS
 class ProjectFile(db.Model):
     """Simple file attachment for projects"""

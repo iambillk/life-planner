@@ -1,0 +1,478 @@
+<!-- templates/persprojects/detail.html - Correctly matching TCH Detail layout -->
+{% extends "base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block header %}{{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --pd-bg: var(--bg, #0b0f1a);
+    --pd-panel: var(--panel, #121a2a);
+    --pd-card: var(--card, #0f1625);
+    --pd-line: var(--line, #1f2a3d);
+    --pd-text: var(--text, #e6eaf2);
+    --pd-muted: var(--text-muted, #9fb0c8);
+    --pd-primary: var(--primary, #6ea8ff);
+    --pd-primary-700: var(--primary-700, #3f7fe6);
+    --pd-success: var(--success, #22c55e);
+    --pd-warn: var(--warning, #f59e0b);
+    --pd-danger: var(--danger, #ef4444);
+    --pd-radius: var(--radius, 14px);
+    --pd-radius-sm: var(--radius-sm, 10px);
+    --pd-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .project-detail-container{
+    padding:16px; max-width:1200px; margin:0 auto; display:grid; gap:16px;
+    min-height: 0;
+  }
+
+  /* Sticky summary header */
+  .project-header-section{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid var(--pd-line);
+    border-radius: var(--pd-radius);
+    padding: 12px;
+    box-shadow: var(--pd-shadow);
+    backdrop-filter: blur(6px);
+  }
+  .header-top{
+    display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-bottom:8px;
+  }
+  .header-top h1{ margin:0; font-size:1.2rem; letter-spacing:.2px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--pd-line);
+    background:var(--pd-card); color:var(--pd-text); text-decoration:none; font-size:.95rem;
+    transition: transform .1s ease, border-color .2s ease;
+  }
+  .btn:hover{ border-color:var(--pd-primary); transform:translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-outline{ background:transparent; }
+  .btn-sm{ padding:6px 10px; font-size:.85rem; border-radius:10px; }
+  .btn-danger{ background:#2a0f15; border-color:#7f1d1d; }
+
+  .anchor{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--pd-line);
+    background:var(--pd-card); color:var(--pd-text); text-decoration:none; font-size:.95rem;
+    transition: all .2s;
+  }
+  .anchor:hover{ border-color:var(--pd-primary); }
+
+  /* Metadata chips */
+  .project-metadata{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px; font-size:.85rem; font-weight:700;
+    background:#0c1322; color:var(--pd-muted); border:1px solid var(--pd-line);
+  }
+  .chip strong{ color:var(--pd-text); }
+  .chip-status{ background:#0c1529; color:#0a0f1a; }
+  .chip-status.status-active{ background:#3b82f6; }
+  .chip-status.status-planning{ background:#64748b; }
+  .chip-status.status-on_hold{ background:#f59e0b; }
+  .chip-status.status-completed{ background:#22c55e; }
+  .chip-priority.priority-low{ background:#4b5563; color:#0a0f1a; }
+  .chip-priority.priority-medium{ background:#3b82f6; color:#0a0f1a; }
+  .chip-priority.priority-high{ background:#f59e0b; color:#0a0f1a; }
+  .chip-priority.priority-critical{ background:#ef4444; color:#0a0f1a; }
+
+  .project-description{ color:var(--pd-muted); margin-top:8px; }
+
+  /* Progress bar */
+  .header-progress{ margin-top:12px; }
+  .progress-bar-compact{
+    background:#0c1322; border:1px solid var(--pd-line);
+    height:16px; border-radius:999px; overflow:hidden;
+  }
+  .progress-fill-compact{
+    background: linear-gradient(90deg, var(--pd-primary), var(--pd-primary-700));
+    height:100%; transition:width .3s;
+  }
+  .progress-label{ font-size:.8rem; color:var(--pd-muted); margin-top:4px; }
+
+  /* Anchor row */
+  .anchor-row{
+    display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;
+  }
+
+  /* Info cards section */
+  .info-cards-section{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:14px;
+  }
+  .info-card{
+    background:var(--pd-card); border:1px solid var(--pd-line);
+    border-radius:var(--pd-radius); padding:12px; box-shadow:var(--pd-shadow);
+  }
+  .info-card-header{
+    font-size:.95rem; font-weight:700; color:var(--pd-text);
+    border-bottom:1px dashed var(--pd-line); padding-bottom:6px; margin-bottom:6px;
+  }
+  .info-card-content{ color:var(--pd-muted); }
+
+  /* Main content grid - TWO COLUMN LAYOUT */
+  .content-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:14px;
+    min-height: 0; align-items:start;
+  }
+
+  /* Content sections with scrollable area */
+  .content-section{
+    display:flex; flex-direction:column; gap:10px;
+    background:var(--pd-card); border:1px solid var(--pd-line);
+    border-radius:var(--pd-radius); padding:12px; box-shadow:var(--pd-shadow);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .section-header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--pd-line); padding-bottom:6px;
+    min-height: 0;
+  }
+  .section-header h2{ margin:0; font-size:1.05rem; }
+
+  /* Add panel */
+  .add-panel{
+    display:none; background:#0c1322; border:1px solid var(--pd-line);
+    border-radius:10px; padding:10px; margin-bottom:10px;
+  }
+  .add-panel.open{ display:block; }
+
+  .add-panel input, .add-panel textarea, .add-panel select{
+    width:100%; background:#0b1120; color:var(--pd-text);
+    border:1px solid var(--pd-line); border-radius:8px; padding:8px;
+    font-size:.95rem; margin-bottom:8px;
+  }
+
+  /* SCROLLABLE SECTION - Fixed height with internal scroll */
+  .section-scroll{
+    height: 40vh;
+    min-height: 0;
+    overflow: auto;
+    padding-right:4px;
+    overscroll-behavior: contain;
+  }
+
+  /* Item styling */
+  .item{
+    background:#0c1322; border:1px solid var(--pd-line);
+    border-radius:10px; padding:10px; margin-bottom:8px;
+  }
+  .item:hover{ border-color:var(--pd-primary); }
+  .item.completed{ opacity:.6; }
+  .item-header{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+  }
+  .item-content{ flex:1; }
+  .item-actions{ display:flex; gap:6px; }
+  .item-meta{ color:var(--pd-muted); font-size:.85rem; margin-top:4px; }
+
+  /* Empty state */
+  .empty-state{
+    text-align:center; color:var(--pd-muted); padding:20px; font-size:.95rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px){
+    .header-top{ grid-template-columns: 1fr; }
+    .content-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-detail-container">
+
+  <!-- Sticky summary header -->
+  <div class="project-header-section">
+    <div class="header-top">
+      <h1>{{ project.name }}</h1>
+      <div class="header-actions">
+        <!-- Anchor links integrated into header -->
+        <a href="#tasks" class="anchor">✅ Tasks</a>
+        <a href="#ideas" class="anchor">💡 Ideas</a>
+        <a href="#milestones" class="anchor">🏁 Milestones</a>
+        <a href="#notes" class="anchor">📝 Notes</a>
+        <a href="#files" class="anchor">📎 Files</a>
+        
+        <a href="{{ url_for('persprojects.edit', id=project.id) }}" class="btn">✏️ Edit</a>
+        <a href="{{ url_for('persprojects.index') }}" class="btn btn-outline">← Back</a>
+      </div>
+    </div>
+
+    <div class="project-metadata">
+      <span class="chip"><strong>Category:</strong> {{ project.category or 'Uncategorized' }}</span>
+      <span class="chip chip-status status-{{ project.status }}">{{ project.status|replace('_',' ')|title }}</span>
+      <span class="chip chip-priority priority-{{ project.priority }}">{{ project.priority|title }} Priority</span>
+    </div>
+
+    {% if project.description %}
+      <div class="project-description">{{ project.description }}</div>
+    {% endif %}
+
+    <div class="header-progress">
+      <div class="progress-bar-compact">
+        <div class="progress-fill-compact" style="width: {{ project.progress }}%"></div>
+      </div>
+      <div class="progress-label">{{ project.progress }}% complete</div>
+    </div>
+
+    <!-- Second row of anchors (matching TCH layout) -->
+    <div class="anchor-row">
+      <a class="anchor" href="#tasks">✅ Tasks</a>
+      <a class="anchor" href="#ideas">💡 Ideas</a>
+      <a class="anchor" href="#milestones">🏁 Milestones</a>
+      <a class="anchor" href="#notes">📝 Notes</a>
+      <a class="anchor" href="#files">📎 Files</a>
+    </div>
+  </div>
+
+  <!-- Info Cards Row -->
+  {% if project.goal or project.motivation or project.strategy %}
+  <div class="info-cards-section">
+    {% if project.goal %}
+      <div class="info-card">
+        <div class="info-card-header">🎯 Goal</div>
+        <div class="info-card-content">{{ project.goal }}</div>
+      </div>
+    {% endif %}
+    {% if project.motivation %}
+      <div class="info-card">
+        <div class="info-card-header">🔥 Motivation</div>
+        <div class="info-card-content">{{ project.motivation }}</div>
+      </div>
+    {% endif %}
+    {% if project.strategy %}
+      <div class="info-card">
+        <div class="info-card-header">📋 Strategy</div>
+        <div class="info-card-content">{{ project.strategy }}</div>
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Main Content Grid - 2 COLUMN LAYOUT -->
+  <div class="content-grid">
+    
+    <!-- Tasks Section -->
+    <div class="content-section" id="tasks">
+      <div class="section-header">
+        <h2>✅ Tasks</h2>
+        <button class="btn btn-sm btn-primary" onclick="toggleAddPanel('tasks-add')">+ Add</button>
+      </div>
+      
+      <div class="add-panel" id="tasks-add">
+        <form method="POST" action="{{ url_for('persprojects.add_task', project_id=project.id) }}">
+          <input type="text" name="content" placeholder="Task description..." required>
+          <button type="submit" class="btn btn-sm btn-primary">Add Task</button>
+        </form>
+      </div>
+      
+      <div class="section-scroll">
+        {% if project.tasks %}
+          {% for task in project.tasks %}
+          <div class="item {% if task.completed %}completed{% endif %}">
+            <div class="item-header">
+              <div class="item-content">
+                <form method="POST" action="{{ url_for('persprojects.toggle_task', task_id=task.id) }}" style="display:inline;">
+                  <input type="checkbox" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}>
+                  <span>{{ task.content }}</span>
+                </form>
+              </div>
+              <div class="item-actions">
+                <form method="POST" action="{{ url_for('persprojects.delete_task', task_id=task.id) }}">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">×</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No tasks yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Ideas Section -->
+    <div class="content-section" id="ideas">
+      <div class="section-header">
+        <h2>💡 Ideas</h2>
+        <button class="btn btn-sm btn-primary" onclick="toggleAddPanel('ideas-add')">+ Add</button>
+      </div>
+      
+      <div class="add-panel" id="ideas-add">
+        <form method="POST" action="{{ url_for('persprojects.add_idea', project_id=project.id) }}">
+          <textarea name="content" placeholder="Your idea..." required></textarea>
+          <button type="submit" class="btn btn-sm btn-primary">Add Idea</button>
+        </form>
+      </div>
+      
+      <div class="section-scroll">
+        {% if project.ideas %}
+          {% for idea in project.ideas %}
+          <div class="item">
+            <div class="item-header">
+              <div class="item-content">{{ idea.content }}</div>
+              <div class="item-actions">
+                <form method="POST" action="{{ url_for('persprojects.update_idea_status', idea_id=idea.id) }}">
+                  <select name="status" onchange="this.form.submit()" style="padding:4px; border-radius:6px;">
+                    <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
+                    <option value="considering" {% if idea.status == 'considering' %}selected{% endif %}>Considering</option>
+                    <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
+                    <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                  </select>
+                </form>
+                <form method="POST" action="{{ url_for('persprojects.delete_idea', idea_id=idea.id) }}">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">×</button>
+                </form>
+              </div>
+            </div>
+            <div class="item-meta">{{ idea.created_at.strftime('%b %d, %Y') }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No ideas yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Milestones Section -->
+    <div class="content-section" id="milestones">
+      <div class="section-header">
+        <h2>🏁 Milestones</h2>
+        <button class="btn btn-sm btn-primary" onclick="toggleAddPanel('milestones-add')">+ Add</button>
+      </div>
+      
+      <div class="add-panel" id="milestones-add">
+        <form method="POST" action="{{ url_for('persprojects.add_milestone', project_id=project.id) }}">
+          <input type="text" name="title" placeholder="Milestone title..." required>
+          <input type="text" name="description" placeholder="Description (optional)">
+          <input type="date" name="target_date">
+          <button type="submit" class="btn btn-sm btn-primary">Add Milestone</button>
+        </form>
+      </div>
+      
+      <div class="section-scroll">
+        {% if project.milestones %}
+          {% for milestone in project.milestones %}
+          <div class="item {% if milestone.completed %}completed{% endif %}">
+            <div class="item-header">
+              <div class="item-content">
+                <strong>{{ milestone.title }}</strong>
+                {% if milestone.description %}<br><small>{{ milestone.description }}</small>{% endif %}
+                {% if milestone.target_date %}<br><small>Target: {{ milestone.target_date.strftime('%b %d, %Y') }}</small>{% endif %}
+                {% if milestone.completed %}<br><small style="color:var(--pd-success);">✓ Completed</small>{% endif %}
+              </div>
+              <div class="item-actions">
+                <form method="POST" action="{{ url_for('persprojects.complete_milestone', milestone_id=milestone.id) }}">
+                  <button type="submit" class="btn btn-sm">{{ 'Undo' if milestone.completed else 'Complete' }}</button>
+                </form>
+                <form method="POST" action="{{ url_for('persprojects.delete_milestone', milestone_id=milestone.id) }}">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">×</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No milestones set</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="content-section" id="notes">
+      <div class="section-header">
+        <h2>📝 Notes</h2>
+        <button class="btn btn-sm btn-primary" onclick="toggleAddPanel('notes-add')">+ Add</button>
+      </div>
+      
+      <div class="add-panel" id="notes-add">
+        <form method="POST" action="{{ url_for('persprojects.add_note', project_id=project.id) }}">
+          <textarea name="content" placeholder="Your note..." required></textarea>
+          <select name="category">
+            <option value="general">General</option>
+            <option value="progress">Progress</option>
+            <option value="issue">Issue</option>
+            <option value="research">Research</option>
+            <option value="reference">Reference</option>
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Add Note</button>
+        </form>
+      </div>
+      
+      <div class="section-scroll">
+        {% if project.notes %}
+          {% for note in project.notes|reverse %}
+          <div class="item">
+            <div class="item-header">
+              <div class="item-content">{{ note.content }}</div>
+              <div class="item-actions">
+                <form method="POST" action="{{ url_for('persprojects.delete_note', note_id=note.id) }}">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">×</button>
+                </form>
+              </div>
+            </div>
+            <div class="item-meta">{{ note.created_at.strftime('%b %d %I:%M %p') }} · {{ note.category|title }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No notes yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Files Section (spans full width if alone) -->
+    <div class="content-section" id="files" style="grid-column: span 2;">
+      <div class="section-header">
+        <h2>📎 Files</h2>
+        <button class="btn btn-sm btn-primary" onclick="toggleAddPanel('files-add')">+ Upload</button>
+      </div>
+      
+      <div class="add-panel" id="files-add">
+        <form method="POST" action="{{ url_for('persprojects.upload_file', project_id=project.id) }}" enctype="multipart/form-data">
+          <input type="file" name="file" required>
+          <button type="submit" class="btn btn-sm btn-primary">Upload File</button>
+        </form>
+      </div>
+      
+      <div class="section-scroll">
+        {% if project.files %}
+          {% for file in project.files %}
+          <div class="item">
+            <div class="item-header">
+              <div class="item-content">
+                <strong>{{ file.original_name }}</strong>
+                <div class="item-meta">Uploaded {{ file.uploaded_at.strftime('%b %d, %Y') }}</div>
+              </div>
+              <div class="item-actions">
+                <a href="{{ url_for('persprojects.download_file', file_id=file.id) }}" class="btn btn-sm">Download</a>
+                <form method="POST" action="{{ url_for('persprojects.delete_file', file_id=file.id) }}" style="display:inline;">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">×</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No files uploaded</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleAddPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  panel.classList.toggle('open');
+}
+</script>
+{% endblock %}

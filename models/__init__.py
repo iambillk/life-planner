@@ -2,15 +2,12 @@
 """
 Models initialization file
 Imports all models for easy access throughout the application
-
 CHANGELOG:
 v1.1.0 (2025-01-03)
 - Added Real Estate Management models (Property, PropertyMaintenance, etc.)
-
 v1.0.0 (Original)
 - Initial model imports for all existing modules
 """
-
 from .base import db
 from .daily import DailyTask
 from .equipment import (
@@ -30,7 +27,7 @@ from .projects import (
     TCHIdea,
     TCHMilestone,
     TCHProjectNote,
-    PersonalProject,
+    # PersonalProject,  <-- REMOVE THIS LINE
     ProjectFile
 )
 from .goals import Goal
@@ -44,6 +41,16 @@ from .realestate import (
     PropertyVendor,
     PropertyMaintenancePhoto,
     MaintenanceTemplate
+)
+
+# New Personal Projects
+from .persprojects import (
+    PersonalProject,  # <-- KEEP THIS ONE
+    PersonalTask,
+    PersonalIdea,
+    PersonalMilestone,
+    PersonalProjectNote,
+    PersonalProjectFile
 )
 
 __all__ = [
@@ -65,7 +72,7 @@ __all__ = [
     'TCHIdea', 
     'TCHMilestone',
     'TCHProjectNote',
-    'PersonalProject',
+    # 'PersonalProject',  <-- REMOVE OR COMMENT THIS LINE TOO
     'ProjectFile',
     # Other models
     'Goal',
@@ -77,5 +84,12 @@ __all__ = [
     'PropertyMaintenance',
     'PropertyVendor',
     'PropertyMaintenancePhoto',
-    'MaintenanceTemplate'
+    'MaintenanceTemplate',
+    # Personal Project Models
+    'PersonalProject',  # <-- KEEP THIS ONE
+    'PersonalTask',
+    'PersonalIdea',
+    'PersonalMilestone',
+    'PersonalProjectNote',
+    'PersonalProjectFile'
 ]

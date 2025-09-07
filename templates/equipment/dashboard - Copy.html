@@ -70,8 +70,7 @@
   }
   .stat-item.danger .number{ color:var(--em-danger); }
   .stat-item.warn .number{ color:var(--em-warn); }
-  .stat-item.primary .number{ color:var(--em-primary); }
-  .stat-item.info .number{ color:var(--em-info); }
+  .stat-item.success .number{ color:var(--em-success); }
 
   /* ======= Alert Sections ======= */
   .alerts-grid{
@@ -308,27 +307,28 @@
   <div class="alerts-grid">
     
     <!-- Overdue Section -->
-    {% if overdue %}
+    {% if overdue_reminders %}
     <div class="alert-section danger">
       <div class="alert-header">
         <div class="alert-title">
           <span aria-hidden="true">🚨</span> Overdue Maintenance
-          <span class="alert-count">{{ overdue|length }}</span>
+          <span class="alert-count">{{ overdue_reminders|length }}</span>
         </div>
       </div>
       <div class="alert-body">
-        {% for reminder in overdue[:10] %}
+        {% for reminder in overdue_reminders[:10] %}
         <div class="alert-item">
           <div class="alert-item-header">
             <div>
               <div class="alert-item-name">{{ reminder.equipment.name }}</div>
-              <div class="alert-item-service">{{ reminder.service }}</div>
+              <div class="alert-item-service">{{ reminder.service_type }}</div>
             </div>
             <span class="days-badge days-overdue">
-              {{ reminder.days_overdue }} days overdue
+              {{ (datetime.now().date() - reminder.due_date).days }} days overdue
             </span>
           </div>
           <div class="alert-item-meta">
+            <span>📅 Due: {{ reminder.due_date.strftime('%b %d, %Y') }}</span>
             {% if reminder.equipment.mileage %}
             <span>📏 {{ "{:,}".format(reminder.equipment.mileage) }} miles</span>
             {% endif %}
@@ -346,27 +346,28 @@
     {% endif %}
 
     <!-- Upcoming Section -->
-    {% if upcoming %}
+    {% if upcoming_reminders %}
     <div class="alert-section warn">
       <div class="alert-header">
         <div class="alert-title">
           <span aria-hidden="true">⏰</span> Due Soon
-          <span class="alert-count">{{ upcoming|length }}</span>
+          <span class="alert-count">{{ upcoming_reminders|length }}</span>
         </div>
       </div>
       <div class="alert-body">
-        {% for reminder in upcoming[:10] %}
+        {% for reminder in upcoming_reminders[:10] %}
         <div class="alert-item">
           <div class="alert-item-header">
             <div>
               <div class="alert-item-name">{{ reminder.equipment.name }}</div>
-              <div class="alert-item-service">{{ reminder.service }}</div>
+              <div class="alert-item-service">{{ reminder.service_type }}</div>
             </div>
             <span class="days-badge days-soon">
-              {{ reminder.days_until }} days
+              {{ (reminder.due_date - datetime.now().date()).days }} days
             </span>
           </div>
           <div class="alert-item-meta">
+            <span>📅 Due: {{ reminder.due_date.strftime('%b %d, %Y') }}</span>
             {% if reminder.equipment.mileage %}
             <span>📏 {{ "{:,}".format(reminder.equipment.mileage) }} miles</span>
             {% endif %}

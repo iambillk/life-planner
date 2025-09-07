@@ -1,0 +1,306 @@
+<!-- templates/persprojects/edit.html - Dark theme matching TCH Edit -->
+{% extends "base.html" %}
+{% block title %}Edit: {{ project.name }}{% endblock %}
+{% block header %}Edit Personal Project{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --ep-card: var(--card, #0f1625);
+    --ep-line: var(--line, #1f2a3d);
+    --ep-text: var(--text, #e6eaf2);
+    --ep-muted: var(--text-muted, #9fb0c8);
+    --ep-primary: var(--primary, #6ea8ff);
+    --ep-primary-700: var(--primary-700, #3f7fe6);
+    --ep-danger: var(--danger, #ef4444);
+    --ep-radius: var(--radius, 14px);
+    --ep-radius-sm: var(--radius-sm, 10px);
+    --ep-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .form-container{
+    max-width: 980px; margin: 0 auto; padding: 14px; display:grid; gap:14px;
+  }
+
+  /* Sticky header */
+  .form-header{
+    position: sticky; top: 12px; z-index: 5;
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--ep-line); border-radius: var(--ep-radius);
+    padding:10px 12px; box-shadow: var(--ep-shadow); backdrop-filter: blur(6px);
+  }
+  .form-header h1{ margin:0; font-size:1.1rem; letter-spacing:.2px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ep-line);
+    background: var(--ep-card); color: var(--ep-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ transform: translateY(-1px); border-color: var(--ep-primary); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary[disabled]{ opacity:.6; cursor:progress; }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#2a0f15; border-color:#7f1d1d; color:#fecaca; }
+  .btn-danger:hover{ border-color: var(--ep-danger); color: #fee2e2; }
+
+  /* Carded form */
+  .project-form{
+    background: var(--ep-card); border:1px solid var(--ep-line);
+    border-radius: var(--ep-radius); box-shadow: var(--ep-shadow);
+    padding:14px; display:grid; gap:18px;
+  }
+  .form-section{
+    border:1px dashed var(--ep-line); border-radius: var(--ep-radius-sm);
+    padding:12px; display:grid; gap:12px;
+  }
+  .form-section h2{
+    margin:0; font-size:1.02rem; padding-bottom:6px;
+    border-bottom:1px dashed var(--ep-line);
+  }
+
+  .form-row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  @media (max-width:820px){ .form-row{ grid-template-columns: 1fr; } }
+
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ color: var(--ep-muted); font-weight:600; font-size:.9rem; }
+  .required{ color: var(--ep-danger); }
+
+  /* Inputs */
+  .project-form input[type="text"],
+  .project-form input[type="date"],
+  .project-form select,
+  .project-form textarea{
+    width:100%; background:#0b1120; color: var(--ep-text);
+    border:1px solid var(--ep-line); border-radius:10px; padding:10px 12px;
+    font-size:.95rem;
+  }
+  .project-form input:focus,
+  .project-form select:focus,
+  .project-form textarea:focus{
+    outline:none; border-color: var(--ep-primary);
+  }
+  .project-form textarea{ resize: vertical; min-height: 80px; }
+  .counter{ color: var(--ep-muted); font-size:.8rem; text-align:right; margin-top:2px; }
+
+  /* Actions row */
+  .form-actions{ display:flex; gap:10px; justify-content:flex-start; }
+
+  /* Danger zone */
+  .danger-zone{
+    background:#160f12; border:1px solid rgba(239,68,68,.45);
+    border-radius: var(--ep-radius); padding:14px; box-shadow: var(--ep-shadow);
+  }
+  .danger-zone h3{ margin:0 0 6px 0; color:#fecaca; font-size:1rem; }
+  .danger-zone p{ margin:0 0 10px 0; color:#fca5a5; font-size:.9rem; }
+
+  /* Helper text */
+  .hint{ color: var(--ep-muted); font-size:.85rem; }
+
+  /* Metadata card */
+  .metadata-card{
+    background:#0c1322; border:1px solid var(--ep-line);
+    border-radius: var(--ep-radius-sm); padding:12px;
+  }
+  .metadata-card small{ color: var(--ep-muted); line-height:1.6; }
+
+  /* Responsive button stacking */
+  @media (max-width: 680px){
+    .form-actions{ flex-direction:column; }
+    .form-actions .btn, .header-actions .btn{ width:100%; justify-content:center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <!-- Sticky header -->
+  <div class="form-header">
+    <h1>Edit: {{ project.name }}</h1>
+    <div class="header-actions">
+      <a href="{{ url_for('persprojects.detail', id=project.id) }}" class="btn">← Back</a>
+      <button form="editProjectForm" class="btn btn-primary" id="saveTop">💾 Save</button>
+    </div>
+  </div>
+
+  <!-- Main form -->
+  <form id="editProjectForm" method="POST" action="{{ url_for('persprojects.edit', id=project.id) }}" class="project-form">
+    <!-- Basic Information -->
+    <div class="form-section">
+      <h2>📋 Basic Information</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Project Name <span class="required">*</span></label>
+          <input type="text" id="name" name="name" value="{{ project.name }}" required maxlength="100">
+          <div class="counter" data-for="name">{{ project.name|length }}/100</div>
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            <option value="">Select category...</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if project.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="3" maxlength="500">{{ project.description or '' }}</textarea>
+        <div class="counter" data-for="description">{{ (project.description|length if project.description else 0) }}/500</div>
+      </div>
+    </div>
+
+    <!-- Status & Priority -->
+    <div class="form-section">
+      <h2>⚙️ Status & Priority</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="status">Status <span class="required">*</span></label>
+          <select id="status" name="status" required>
+            {% for value, label in statuses %}
+            <option value="{{ value }}" {% if project.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="priority">Priority <span class="required">*</span></label>
+          <select id="priority" name="priority" required>
+            {% for value, label in priorities %}
+            <option value="{{ value }}" {% if project.priority == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="deadline">Deadline</label>
+        <input type="date" id="deadline" name="deadline" 
+               value="{{ project.deadline.strftime('%Y-%m-%d') if project.deadline else '' }}">
+        <span class="hint">Optional: Set a target completion date</span>
+      </div>
+    </div>
+
+    <!-- Planning Details -->
+    <div class="form-section">
+      <h2>🎯 Planning Details</h2>
+
+      <div class="form-group">
+        <label for="goal">Goal</label>
+        <textarea id="goal" name="goal" rows="3" maxlength="500" 
+                  placeholder="What do you want to achieve?">{{ project.goal or '' }}</textarea>
+        <div class="counter" data-for="goal">{{ (project.goal|length if project.goal else 0) }}/500</div>
+      </div>
+
+      <div class="form-group">
+        <label for="motivation">Motivation</label>
+        <textarea id="motivation" name="motivation" rows="3" maxlength="500"
+                  placeholder="Why is this important to you?">{{ project.motivation or '' }}</textarea>
+        <div class="counter" data-for="motivation">{{ (project.motivation|length if project.motivation else 0) }}/500</div>
+      </div>
+
+      <div class="form-group">
+        <label for="strategy">Strategy</label>
+        <textarea id="strategy" name="strategy" rows="3" maxlength="500"
+                  placeholder="How will you approach this?">{{ project.strategy or '' }}</textarea>
+        <div class="counter" data-for="strategy">{{ (project.strategy|length if project.strategy else 0) }}/500</div>
+      </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="metadata-card">
+      <small>
+        <strong>📅 Created:</strong> {{ project.created_at.strftime('%B %d, %Y at %I:%M %p') }}<br>
+        <strong>🔄 Last Updated:</strong> {{ project.updated_at.strftime('%B %d, %Y at %I:%M %p') }}<br>
+        <strong>📊 Current Progress:</strong> {{ project.progress }}%<br>
+        <strong>✅ Tasks:</strong> {{ project.tasks|length }} total
+        {% if project.tasks %}
+          ({{ project.tasks|selectattr('completed')|list|length }} completed)
+        {% endif %}<br>
+        <strong>💡 Ideas:</strong> {{ project.ideas|length }}<br>
+        <strong>🏁 Milestones:</strong> {{ project.milestones|length }}
+        {% if project.milestones %}
+          ({{ project.milestones|selectattr('completed')|list|length }} completed)
+        {% endif %}
+      </small>
+    </div>
+
+    <!-- Save Actions -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" id="saveBottom">💾 Save Changes</button>
+      <a href="{{ url_for('persprojects.detail', id=project.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+
+  <!-- Danger Zone -->
+  <div class="danger-zone">
+    <h3>⚠️ Danger Zone</h3>
+    <p>Deleting this project will remove all associated tasks, ideas, milestones, notes, and files. This action cannot be undone.</p>
+    <button type="button" class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete Project</button>
+  </div>
+
+  <!-- Hidden delete form -->
+  <form id="deleteForm" method="POST" action="{{ url_for('persprojects.delete', id=project.id) }}" style="display: none;">
+  </form>
+</div>
+
+<script>
+// Character counters
+document.querySelectorAll('input[maxlength], textarea[maxlength]').forEach(field => {
+  field.addEventListener('input', function() {
+    const counter = document.querySelector(`.counter[data-for="${this.id}"]`);
+    if (counter) {
+      counter.textContent = `${this.value.length}/${this.maxLength}`;
+    }
+  });
+});
+
+// Single submit guard
+let isSubmitting = false;
+document.getElementById('editProjectForm').addEventListener('submit', function(e) {
+  if (isSubmitting) {
+    e.preventDefault();
+    return false;
+  }
+  isSubmitting = true;
+  document.getElementById('saveTop').disabled = true;
+  document.getElementById('saveBottom').disabled = true;
+  document.getElementById('saveTop').textContent = '⏳ Saving...';
+  document.getElementById('saveBottom').textContent = '⏳ Saving...';
+});
+
+// Delete confirmation
+function confirmDelete() {
+  const projectName = "{{ project.name }}";
+  if (confirm(`Are you sure you want to delete "${projectName}"?\n\nThis will permanently delete:\n• All tasks\n• All ideas\n• All milestones\n• All notes\n• All attached files\n\nThis action cannot be undone.`)) {
+    document.getElementById('deleteForm').submit();
+  }
+}
+
+// Date validation (deadline should be in the future)
+document.getElementById('deadline').addEventListener('change', function() {
+  const selectedDate = new Date(this.value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (selectedDate < today) {
+    const hint = this.nextElementSibling;
+    hint.textContent = '⚠️ This date is in the past';
+    hint.style.color = 'var(--ep-danger)';
+  } else {
+    const hint = this.nextElementSibling;
+    hint.textContent = 'Optional: Set a target completion date';
+    hint.style.color = 'var(--ep-muted)';
+  }
+});
+</script>
+{% endblock %}
