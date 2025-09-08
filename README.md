@@ -1,123 +1,143 @@
-# Life Management System
+# Life Management System - "Billas Planner 1.0 Beta"
 
-A comprehensive Flask-based personal management application for tracking equipment maintenance, projects, health metrics, daily tasks, and personal goals.
+A comprehensive Flask-based personal management application with drill sergeant motivation for tracking equipment maintenance, projects, health metrics, daily tasks, financial spending, real estate properties, and personal goals.
 
 ## 🎯 Overview
 
-This is a full-featured personal management system built with Flask and SQLAlchemy, designed to help track and manage various aspects of life including:
+This is a full-featured personal life management system built with Flask and SQLAlchemy. It features a unique "drill sergeant" motivation system with customizable harassment levels to keep you accountable and productive.
 
-- **Equipment Maintenance** - Track vehicles, tools, and equipment with detailed maintenance logs
-- **Project Management** - Manage both work (TCH) and personal projects
-- **Health Tracking** - Weight tracking with goals and analytics
-- **Daily Tasks** - Day-to-day task management
-- **Goal Setting** - Personal goal tracking and achievement
-- **Todo Lists** - General todo list management
+### Core Modules
 
-## 🚀 Features
+- **Daily Command Center** - Daily planner with lockout system and human maintenance tracking
+- **Equipment Management** - Comprehensive vehicle and tool maintenance tracking
+- **Project Management** - Dual system for work (TCH) and personal projects
+- **Health Tracking** - Weight tracking with accountability features
+- **Financial Tracking** - Spending analysis and budget management
+- **Real Estate Management** - Property and maintenance tracking
+- **Goal Setting** - Personal goal tracking with progress monitoring
+- **Todo Lists** - Multi-list todo management system
+- **Weekly Planning** - Week-based planning and review tools
+
+## 🚀 Key Features
+
+### Daily Command Center (The Drill Sergeant System)
+- **Lockout System**: Must complete morning biological minimums (meds, shower, teeth, breakfast) to unlock projects
+- **Project Rotation**: Automatically selects 5 projects daily based on neglect and deadlines
+- **Calendar System**: 
+  - Week and month views
+  - Event management with edit/delete
+  - Recurring events support
+  - Family member tracking (Me/Wife/Kids/Family)
+- **Human Maintenance Tracking**: Medications, meals, hygiene, water intake
+- **Evening Review**: Daily grading system with performance metrics
+- **Harassment Levels**: GENTLE, FIRM, BRUTAL, SAVAGE messaging
+- **Quick Notes Capture**: Categorized note-taking system
 
 ### Equipment Management Module
-- **Equipment Tracking**
-  - Multiple categories (Auto, ATV, Marine, Tools, etc.)
-  - Profile photos and galleries
-  - Purchase history and TCO analysis
-  - Current mileage/hours tracking
-  
-- **Maintenance Records**
-  - Service history with costs
-  - Multi-photo support (before/after/receipts)
-  - Parts tracking
-  - Next service reminders
-  - Service interval calculations
-  
-- **Fuel Tracking**
-  - MPG calculations
-  - Station locations
-  - Trip purpose categorization
-  - Receipt photo storage
-  
-- **Consumables & Supplies**
-  - Oil, filters, fluids tracking
-  - Vendor management
-  - Cost analysis
-  
-- **Car Wash Logs** (Auto category only)
-  - Service types and locations
-  - Monthly spending analysis
+- **Equipment Categories**: Auto, ATV, Marine, Tools, Motorcycle, Industrial, Farm
+- **Comprehensive Tracking**:
+  - Service history with photo documentation
+  - Fuel logs with MPG calculations
+  - Consumables and parts inventory
+  - Car wash logs (Auto only)
+  - Total Cost of Ownership (TCO) analysis
+- **Multi-photo Support**: Before/after photos, receipts, documentation
+- **Maintenance Reminders**: Service interval calculations
+- **Vendor Management**: Track service providers and locations
 
 ### Project Management
-- **TCH Projects** (Work projects)
-  - Task management
+- **Dual Project Systems**:
+  - TCH Projects (Work/Professional)
+  - Personal Projects (Home/Hobby)
+- **Features per Project**:
+  - Task management with categories
   - Milestone tracking
-  - Ideas capture
+  - Ideas capture board
   - Project notes
   - File attachments
-  
-- **Personal Projects**
-  - Same features as work projects
-  - Separate tracking
+  - Progress tracking
+  - Deadline management
 
-### Health Module
-- Weight entry and tracking
-- Weekly/monthly change calculations
-- Historical data views
-- Basic statistics
+### Health Module (The Accountability System)
+- **Weight Tracking**:
+  - Daily weigh-ins with time tracking
+  - Failure logging system
+  - Weekly/monthly statistics
+  - Goal setting with daily targets
+- **Accountability Features**:
+  - Soda consumption tracking
+  - Exercise logging
+  - Water intake monitoring
+  - BMI calculations
+  - Trend analysis
 
-### Other Modules
-- **Daily Tasks** - Daily task planning and tracking
-- **Goals** - Personal goal setting and monitoring
-- **Todo Lists** - General todo management
-- **Weekly Planning** - Week-based planning tools
+### Financial Module
+- **Transaction Management**: Income and expense tracking
+- **Category System**: Customizable spending categories
+- **Merchant Management**: Alias system for consistent naming
+- **Analytics**: Monthly summaries and spending patterns
+- **Receipt Storage**: Photo documentation support
+
+### Real Estate Management
+- **Property Tracking**: Multiple properties with details
+- **Maintenance Records**: Service history with photos
+- **Vendor Database**: Contractor and service provider management
+- **Template System**: Recurring maintenance templates
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Flask 2.x
-- **Database**: SQLAlchemy ORM with SQLite
+- **Backend**: Flask 3.0.0
+- **Database**: SQLAlchemy 3.1.1 with SQLite
 - **Frontend**: Jinja2 templates, vanilla JavaScript
-- **Styling**: Custom CSS with dark theme
-- **File Handling**: Local file storage for photos/documents
+- **Styling**: Custom dark theme CSS with gradient effects
+- **File Handling**: Local storage for photos/documents
+- **Python**: 3.8+ required
 
 ## 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.8 or higher
 - pip package manager
-- Virtual environment (recommended)
+- Virtual environment (strongly recommended)
+- 500MB free disk space for database and uploads
 
 ## 🔧 Installation
 
-1. **Clone the repository**
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/yourusername/life-management-system.git
 cd life-management-system
 ```
 
-2. **Create and activate virtual environment**
+### 2. Create Virtual Environment
 ```bash
 python -m venv venv
 
-# On Windows
+# Activate on Windows
 venv\Scripts\activate
 
-# On macOS/Linux
+# Activate on macOS/Linux
 source venv/bin/activate
 ```
 
-3. **Install dependencies**
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Initialize the database**
+### 4. Initialize Database
 ```bash
 python
 >>> from app import create_app
+>>> from models.base import db
 >>> app = create_app()
 >>> with app.app_context():
-...     from models.base import db
 ...     db.create_all()
+...     from models.daily_planner import init_daily_planner
+...     init_daily_planner()
 >>> exit()
 ```
 
-5. **Run the application**
+### 5. Run the Application
 ```bash
 python app.py
 ```
@@ -128,163 +148,174 @@ The application will be available at `http://localhost:5000`
 
 ```
 life-management-system/
+├── app.py                      # Application factory and main entry
+├── config.py                   # Configuration settings
+├── requirements.txt            # Python dependencies
+├── README.md                   # This file
+├── API_DOCUMENTATION.txt       # API endpoint documentation
 │
-├── app.py                 # Application factory and configuration
-├── config.py             # Configuration settings
-├── requirements.txt      # Python dependencies
+├── models/                     # Database models
+│   ├── __init__.py            # Model initialization
+│   ├── base.py                # Base database config
+│   ├── daily_planner.py       # Daily planner models
+│   ├── equipment.py           # Equipment models
+│   ├── projects.py            # TCH project models
+│   ├── persprojects.py        # Personal project models
+│   ├── health.py              # Health tracking models
+│   ├── financial.py           # Financial models
+│   ├── realestate.py          # Real estate models
+│   ├── goals.py               # Goal models
+│   └── todo.py                # Todo list models
 │
-├── models/               # Database models
-│   ├── __init__.py
-│   ├── base.py          # Base database configuration
-│   ├── equipment.py     # Equipment-related models
-│   ├── projects.py      # Project models
-│   ├── health.py        # Health tracking models
-│   ├── daily.py         # Daily task models
-│   ├── goals.py         # Goal models
-│   └── todo.py          # Todo list models
-│
-├── modules/              # Application modules (blueprints)
-│   ├── equipment/       # Equipment management
+├── modules/                    # Application modules (blueprints)
+│   ├── daily/                 # Daily command center
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   ├── equipment/             # Equipment management
 │   │   ├── __init__.py
 │   │   ├── routes.py
 │   │   ├── utils.py
 │   │   └── constants.py
-│   ├── projects/        # Project management
-│   ├── health/          # Health tracking
-│   ├── daily/           # Daily tasks
-│   ├── goals/           # Goal tracking
-│   ├── todo/            # Todo lists
-│   └── weekly/          # Weekly planning
+│   ├── projects/              # TCH projects
+│   ├── persprojects/          # Personal projects
+│   ├── health/                # Health tracking
+│   ├── financial/             # Financial tracking
+│   ├── realestate/            # Real estate
+│   ├── goals/                 # Goal management
+│   ├── todo/                  # Todo lists
+│   └── weekly/                # Weekly planning
 │
-├── templates/            # Jinja2 templates
-│   ├── base.html        # Base template
-│   ├── dashboard.html   # Main dashboard
-│   ├── equipment/       # Equipment templates
-│   ├── projects/        # Project templates
-│   └── ...              # Other module templates
+├── templates/                  # Jinja2 templates
+│   ├── base.html              # Base template
+│   ├── daily/                 # Daily planner templates
+│   │   ├── dashboard.html
+│   │   ├── calendar_week.html
+│   │   ├── calendar_month.html
+│   │   ├── add_event.html
+│   │   ├── edit_event.html
+│   │   └── settings.html
+│   ├── equipment/             # Equipment templates
+│   ├── projects/              # Project templates
+│   └── ...                    # Other module templates
 │
-└── static/              # Static files
-    ├── css/            # Stylesheets
-    ├── js/             # JavaScript files
-    └── uploads/        # User uploads
+└── static/                     # Static files
+    ├── css/                   # Stylesheets
+    ├── js/                    # JavaScript
+    └── uploads/               # User uploads
         ├── equipment_profiles/
         ├── maintenance_photos/
+        ├── property_profiles/
+        ├── property_maintenance/
+        ├── personal_project_files/
         └── receipts/
 ```
 
+## 🎮 Usage Guide
+
+### First Time Setup
+
+1. **Configure Settings**: Navigate to `/daily/settings` to customize:
+   - Harassment level (GENTLE to SAVAGE)
+   - Number of daily projects (default: 5)
+   - Morning lockout requirements
+   - Evening review hours
+
+2. **Add Base Data**:
+   - Create equipment entries for vehicles/tools
+   - Set up initial projects (work and personal)
+   - Configure health goals
+   - Add spending categories
+
+3. **Daily Workflow**:
+   - Complete morning biological minimums
+   - Review auto-selected projects
+   - Track progress throughout the day
+   - Complete evening review
+
+### Navigation
+
+- **Home**: `/` - Redirects to Daily Command Center
+- **Daily Planner**: `/daily` - Main dashboard
+- **Calendar**: `/daily/calendar` - Week/month views
+- **Equipment**: `/equipment` - Equipment management
+- **Projects**: `/projects` - Work projects
+- **Personal**: `/personal` - Personal projects
+- **Health**: `/health` - Health tracking
+- **Financial**: `/financial` - Spending tracker
+- **Properties**: `/property` - Real estate management
+
 ## 💾 Database Schema
 
-### Key Models
+The application uses SQLite with SQLAlchemy ORM. Key models include:
 
-- **Equipment**: Vehicles, tools, and equipment
-- **MaintenanceRecord**: Service history and maintenance logs
-- **FuelLog**: Fuel purchases and MPG tracking
-- **ConsumableLog**: Parts and supplies tracking
-- **CarWashLog**: Car wash history
+- **DailyConfig**: System configuration
+- **CalendarEvent**: Calendar events
+- **HumanMaintenance**: Daily biological tracking
+- **Equipment**: Equipment/vehicle records
+- **MaintenanceRecord**: Service history
 - **TCHProject/PersonalProject**: Project management
-- **WeightEntry**: Weight tracking data
-- **DailyTask**: Daily task items
-- **Goal**: Personal goals
-- **TodoList/TodoItem**: Todo management
+- **WeightEntry**: Health tracking
+- **Transaction**: Financial records
+- **Property**: Real estate records
 
-## 🎨 Features in Detail
+## 🔒 Security Notes
 
-### Equipment Dashboard
-- Visual alerts for overdue maintenance
-- Upcoming maintenance reminders
-- Equipment categorization
-- Quick access to add new records
+⚠️ **Important**: This application is designed for personal use and does not include authentication. Before deploying publicly:
 
-### Maintenance Tracking
-- Comprehensive service logging
-- Photo documentation (before/after/receipts)
-- Cost tracking and analysis
-- Service interval management
-- Parts and supplies tracking
+1. Add user authentication system
+2. Implement role-based access control
+3. Use environment variables for sensitive config
+4. Enable HTTPS in production
+5. Configure proper CORS headers
+6. Implement rate limiting
 
-### Cost Analysis
-- Total Cost of Ownership (TCO)
-- Cost per mile/hour calculations
-- Monthly spending breakdowns
-- Category-wise expense analysis
+## 🐛 Troubleshooting
 
-### File Management
-- Profile photos for equipment
-- Multiple photos per maintenance record
-- Receipt storage and organization
-- Secure file upload handling
+### Common Issues
 
-## 🔒 Security Considerations
+1. **Database not found**: Run the initialization script in step 4
+2. **Upload errors**: Check folder permissions in `/static/uploads/`
+3. **Module import errors**: Ensure virtual environment is activated
+4. **Port already in use**: Change port in `app.py` or kill existing process
 
-- File upload validation and sanitization
-- Secure filename generation
-- SQL injection prevention via SQLAlchemy ORM
-- XSS prevention in templates
+### Reset Database
+```bash
+rm planner.db
+python
+>>> from app import create_app
+>>> from models.base import db
+>>> app = create_app()
+>>> with app.app_context():
+...     db.create_all()
+```
 
-## 🚦 Usage
+## 📝 Contributing
 
-1. **Adding Equipment**
-   - Navigate to Equipment Center
-   - Click "Add Equipment"
-   - Fill in details and upload photo
-   - Save to create equipment profile
+This is a personal project, but suggestions are welcome:
 
-2. **Logging Maintenance**
-   - Select equipment from dashboard
-   - Click "Add Maintenance"
-   - Enter service details and costs
-   - Upload photos if desired
-   - Set next service reminder
-
-3. **Tracking Fuel**
-   - Go to equipment detail page
-   - Select "Add Fuel"
-   - Enter purchase details
-   - System calculates MPG automatically
-
-4. **Viewing Analytics**
-   - Access Cost Analysis from equipment page
-   - View TCO and spending trends
-   - Export maintenance history as PDF
-
-## 🐛 Recent Bug Fixes
-
-- Fixed maintenance edit button redirect issue (indentation error in routes.py)
-- Corrected next_service_date preservation during edits
-- Resolved photo upload handling in maintenance records
-
-## 📝 TODO / Roadmap
-
-- [ ] Enhanced weight tracking with body measurements
-- [ ] Progress photo management for health module
-- [ ] Mobile responsive design improvements
-- [ ] Data export functionality (CSV/Excel)
-- [ ] Backup and restore features
-- [ ] User authentication system
-- [ ] Multi-user support
-- [ ] API development for mobile apps
-- [ ] Integration with smart devices (scales, fitness trackers)
-- [ ] Advanced reporting and analytics
-
-## 🤝 Contributing
-
-This is currently a personal project, but suggestions and feedback are welcome!
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a pull request
 
 ## 📄 License
 
-This project is for personal use. Please contact the author for any usage beyond personal reference.
-
-## 👤 Author
-
-IamBiLkY
+This project is for personal use. Please contact the author for licensing information.
 
 ## 🙏 Acknowledgments
 
 - Flask community for excellent documentation
-- SQLAlchemy for robust ORM functionality
-- All open-source contributors whose libraries made this possible
+- SQLAlchemy for powerful ORM capabilities
+- Dark theme inspiration from modern development tools
+
+## 📞 Support
+
+For issues or questions:
+- call your pimp, bitches!
 
 ---
 
-**Last Updated**: September 2025
-**Version**: 1.2.0
+**Version**: 1.3.1  
+**Last Updated**: September 2025  
+**Status**: Beta - Active Dev

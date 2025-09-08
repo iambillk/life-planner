@@ -600,11 +600,16 @@
         border-radius: 8px;
         transition: all 0.3s ease;
         position: relative;
+        cursor: pointer;
     }
     
     .event-item:hover {
         transform: translateX(4px);
         box-shadow: 0 4px 15px rgba(0,0,0,.3);
+    }
+    
+    .event-item:hover .event-actions {
+        opacity: 1;
     }
     
     .event-time {
@@ -631,6 +636,54 @@
         border-radius: 12px;
         color: var(--dash-muted);
         border: 1px solid var(--dash-line);
+    }
+    
+    /* ==================== EVENT ACTIONS (NEW) ==================== */
+    .event-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .event-action-btn {
+        background: var(--dash-card);
+        border: 1px solid var(--dash-line);
+        border-radius: 4px;
+        padding: 4px 6px;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s ease;
+        color: var(--dash-text);
+        text-decoration: none;
+    }
+    
+    .event-action-btn:hover {
+        background: var(--dash-panel);
+        transform: scale(1.1);
+    }
+    
+    .event-action-btn.edit {
+        color: var(--dash-primary);
+    }
+    
+    .event-action-btn.delete {
+        color: var(--dash-danger);
+    }
+    
+    .recurring-badge {
+        display: inline-block;
+        background: var(--dash-primary);
+        color: white;
+        padding: 1px 4px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 600;
+        margin-left: 4px;
+        vertical-align: middle;
     }
     
     .no-events {
@@ -1105,9 +1158,23 @@
                     {% if today_events %}
                     <div class="event-list">
                         {% for event in today_events %}
-                        <div class="event-item">
+                        <div class="event-item" onclick="showEventDetails({{ event.id }})">
+                            <div class="event-actions">
+                                <a href="{{ url_for('daily.edit_event', event_id=event.id) }}?return_to=dashboard" 
+                                   class="event-action-btn edit" 
+                                   onclick="event.stopPropagation();" 
+                                   title="Edit">✏️</a>
+                                <button class="event-action-btn delete" 
+                                        onclick="event.stopPropagation(); quickDeleteEvent({{ event.id }})" 
+                                        title="Delete">🗑️</button>
+                            </div>
                             <div class="event-time">{{ event.event_time or 'All Day' }}</div>
-                            <div class="event-title">{{ event.event_type }}</div>
+                            <div class="event-title">
+                                {{ event.event_type }}
+                                {% if event.recurring_id %}
+                                <span class="recurring-badge">↻</span>
+                                {% endif %}
+                            </div>
                             {% if event.who %}
                             <span class="event-who">{{ event.who }}</span>
                             {% endif %}
@@ -1126,9 +1193,23 @@
                     {% if tomorrow_events %}
                     <div class="event-list">
                         {% for event in tomorrow_events %}
-                        <div class="event-item">
+                        <div class="event-item" onclick="showEventDetails({{ event.id }})">
+                            <div class="event-actions">
+                                <a href="{{ url_for('daily.edit_event', event_id=event.id) }}?return_to=dashboard" 
+                                   class="event-action-btn edit" 
+                                   onclick="event.stopPropagation();" 
+                                   title="Edit">✏️</a>
+                                <button class="event-action-btn delete" 
+                                        onclick="event.stopPropagation(); quickDeleteEvent({{ event.id }})" 
+                                        title="Delete">🗑️</button>
+                            </div>
                             <div class="event-time">{{ event.event_time or 'All Day' }}</div>
-                            <div class="event-title">{{ event.event_type }}</div>
+                            <div class="event-title">
+                                {{ event.event_type }}
+                                {% if event.recurring_id %}
+                                <span class="recurring-badge">↻</span>
+                                {% endif %}
+                            </div>
                             {% if event.who %}
                             <span class="event-who">{{ event.who }}</span>
                             {% endif %}
@@ -1217,6 +1298,35 @@
 function completeProject(taskId) {
     if (confirm('Mark this project as worked on today?')) {
         window.location.href = `/daily/tasks/complete/${taskId}`;
+    }
+}
+
+function showEventDetails(eventId) {
+    // For dashboard, just go straight to edit
+    window.location.href = `{{ url_for('daily.edit_event', event_id=0) }}?return_to=dashboard`.replace('0', eventId);
+}
+
+function quickDeleteEvent(eventId) {
+    if (confirm('Are you sure you want to delete this event?')) {
+        fetch(`{{ url_for('daily.quick_delete_event', event_id=0) }}`.replace('0', eventId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to show changes
+                location.reload();
+            } else {
+                alert('Failed to delete event');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete event');
+        });
     }
 }
 

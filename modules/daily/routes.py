@@ -979,6 +979,152 @@ def add_event():
         active='daily'
     )
 
+# ============ ADD THESE ROUTES TO modules/daily/routes.py ============
+# Place these after the add_event route and before generate_recurring_instances function
+
+@daily_bp.route('/events/<int:event_id>/edit', methods=['GET', 'POST'])
+def edit_event(event_id):
+    """Edit an existing calendar event"""
+    event = CalendarEvent.query.get_or_404(event_id)
+    
+    if request.method == 'POST':
+        # Update event fields
+        event.event_date = datetime.strptime(request.form.get('event_date'), '%Y-%m-%d').date()
+        event.event_time = request.form.get('event_time')
+        event.event_type = request.form.get('event_type')
+        event.who = request.form.get('who')
+        event.description = request.form.get('description')
+        
+        # Update event type usage
+        EventType.get_or_create(event.event_type)
+        
+        # Handle recurring event updates
+        if event.recurring_id and request.form.get('update_all_recurring') == 'yes':
+            # Update all future instances of this recurring event
+            future_events = CalendarEvent.query.filter(
+                CalendarEvent.recurring_id == event.recurring_id,
+                CalendarEvent.event_date >= date.today()
+            ).all()
+            
+            for future_event in future_events:
+                future_event.event_time = event.event_time
+                future_event.event_type = event.event_type
+                future_event.who = event.who
+                future_event.description = event.description
+            
+            flash(f"Updated {len(future_events)} recurring events", "success")
+        else:
+            # Just update this single instance
+            flash(f"Event updated: {event.event_type} on {event.event_date.strftime('%B %d')}", "success")
+        
+        db.session.commit()
+        
+        # Redirect based on referrer
+        if request.form.get('return_to') == 'calendar':
+            return redirect(url_for('daily.calendar_view'))
+        else:
+            return redirect(url_for('daily.index'))
+    
+    # GET request - show edit form
+    event_types = EventType.query.order_by(EventType.usage_count.desc()).all()
+    
+    # Check if this is part of a recurring series
+    is_recurring = event.recurring_id is not None
+    recurring_count = 0
+    if is_recurring:
+        recurring_count = CalendarEvent.query.filter(
+            CalendarEvent.recurring_id == event.recurring_id,
+            CalendarEvent.event_date >= date.today()
+        ).count()
+    
+    return render_template(
+        'daily/edit_event.html',
+        event=event,
+        event_types=event_types,
+        is_recurring=is_recurring,
+        recurring_count=recurring_count,
+        active='daily'
+    )
+
+
+@daily_bp.route('/events/<int:event_id>/delete', methods=['POST'])
+def delete_event(event_id):
+    """Delete a calendar event"""
+    event = CalendarEvent.query.get_or_404(event_id)
+    
+    # Store info for flash message
+    event_type = event.event_type
+    event_date = event.event_date.strftime('%B %d')
+    
+    # Check if this is part of a recurring series
+    if event.recurring_id and request.form.get('delete_all_recurring') == 'yes':
+        # Delete all future instances of this recurring event
+        future_events = CalendarEvent.query.filter(
+            CalendarEvent.recurring_id == event.recurring_id,
+            CalendarEvent.event_date >= date.today()
+        ).all()
+        
+        count = len(future_events)
+        for future_event in future_events:
+            db.session.delete(future_event)
+        
+        # Also mark the recurring pattern as inactive
+        recurring = RecurringEvent.query.get(event.recurring_id)
+        if recurring:
+            recurring.active = False
+        
+        flash(f"Deleted {count} recurring events", "success")
+    else:
+        # Just delete this single instance
+        db.session.delete(event)
+        flash(f"Event deleted: {event_type} on {event_date}", "success")
+    
+    db.session.commit()
+    
+    # Redirect based on referrer
+    if request.form.get('return_to') == 'calendar':
+        return redirect(url_for('daily.calendar_view'))
+    else:
+        return redirect(url_for('daily.index'))
+
+
+@daily_bp.route('/events/<int:event_id>/quick-delete', methods=['POST'])
+def quick_delete_event(event_id):
+    """Quick delete without confirmation - for AJAX calls"""
+    event = CalendarEvent.query.get_or_404(event_id)
+    
+    # Store info for response
+    event_info = {
+        'id': event.id,
+        'type': event.event_type,
+        'date': event.event_date.strftime('%Y-%m-%d')
+    }
+    
+    db.session.delete(event)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f"Deleted {event_info['type']}",
+        'deleted_event': event_info
+    })
+
+
+@daily_bp.route('/api/events/<int:event_id>')
+def api_get_event(event_id):
+    """API endpoint to get single event details"""
+    event = CalendarEvent.query.get_or_404(event_id)
+    
+    return jsonify({
+        'id': event.id,
+        'date': event.event_date.strftime('%Y-%m-%d'),
+        'time': event.event_time or '',
+        'type': event.event_type,
+        'who': event.who,
+        'description': event.description or '',
+        'recurring_id': event.recurring_id,
+        'is_recurring': event.recurring_id is not None
+    })
 
 def generate_recurring_instances(recurring):
     """Generate event instances from recurring pattern"""

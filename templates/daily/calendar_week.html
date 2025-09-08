@@ -199,11 +199,16 @@
         padding: 10px;
         transition: all 0.3s ease;
         cursor: pointer;
+        position: relative;
     }
     
     .event-card:hover {
         transform: translateX(2px);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .event-card:hover .event-actions {
+        opacity: 1;
     }
     
     .event-card.wife {
@@ -261,7 +266,7 @@
         color: white;
     }
     
-    .event-who.kids {
+    .event-who.kids, .event-who.ziggy, .event-who.gus {
         background: #10b981;
         color: white;
     }
@@ -269,6 +274,42 @@
     .event-who.family {
         background: #f59e0b;
         color: white;
+    }
+    
+    /* ==================== EVENT ACTIONS (NEW) ==================== */
+    .event-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .event-action-btn {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 4px 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s ease;
+        color: var(--text);
+        text-decoration: none;
+    }
+    
+    .event-action-btn:hover {
+        background: var(--panel);
+        transform: scale(1.1);
+    }
+    
+    .event-action-btn.edit {
+        color: var(--primary);
+    }
+    
+    .event-action-btn.delete {
+        color: var(--danger);
     }
     
     .no-events {
@@ -332,6 +373,169 @@
     
     .action-btn.warning:hover {
         box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+    
+    /* ==================== EVENT MODAL (NEW) ==================== */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 998;
+        animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-overlay.active {
+        display: block;
+    }
+    
+    .event-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 25px;
+        max-width: 500px;
+        width: 90%;
+        z-index: 999;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .event-modal.active {
+        display: block;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    .modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: color 0.2s ease;
+    }
+    
+    .modal-close:hover {
+        color: var(--danger);
+    }
+    
+    .modal-content {
+        margin-bottom: 20px;
+    }
+    
+    .event-detail {
+        margin-bottom: 15px;
+    }
+    
+    .event-detail-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    
+    .event-detail-value {
+        font-size: 16px;
+        color: var(--text);
+        font-weight: 500;
+    }
+    
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 15px;
+        border-top: 2px solid var(--line);
+    }
+    
+    .modal-btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        border: none;
+    }
+    
+    .modal-btn.edit {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .modal-btn.edit:hover {
+        background: var(--primary-hover);
+    }
+    
+    .modal-btn.delete {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .modal-btn.delete:hover {
+        background: #dc2626;
+    }
+    
+    .modal-btn.cancel {
+        background: var(--panel);
+        color: var(--text);
+        border: 2px solid var(--line);
+    }
+    
+    .modal-btn.cancel:hover {
+        background: var(--card);
+    }
+    
+    /* ==================== ANIMATIONS ==================== */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -45%);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+    }
+    
+    /* ==================== RECURRING INDICATOR (NEW) ==================== */
+    .recurring-badge {
+        display: inline-block;
+        background: var(--info);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 4px;
+        text-transform: uppercase;
     }
 </style>
 {% endblock %}
@@ -428,10 +632,24 @@
                     {% for event in events %}
                     <div class="event-card {% if event.who == 'Wife' %}wife{% elif event.who in ['Ziggy', 'Gus'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
                          onclick="showEventDetails('{{ event.id }}')">
+                        <div class="event-actions">
+                            <a href="{{ url_for('daily.edit_event', event_id=event.id) }}?return_to=calendar" 
+                               class="event-action-btn edit" 
+                               onclick="event.stopPropagation();" 
+                               title="Edit">✏️</a>
+                            <button class="event-action-btn delete" 
+                                    onclick="event.stopPropagation(); quickDeleteEvent({{ event.id }})" 
+                                    title="Delete">🗑️</button>
+                        </div>
                         {% if event.event_time %}
                         <div class="event-time">{{ event.event_time }}</div>
                         {% endif %}
-                        <div class="event-title">{{ event.event_type }}</div>
+                        <div class="event-title">
+                            {{ event.event_type }}
+                            {% if event.recurring_id %}
+                            <span class="recurring-badge">↻</span>
+                            {% endif %}
+                        </div>
                         {% if event.description %}
                         <div class="event-description">{{ event.description|truncate(50) }}</div>
                         {% endif %}
@@ -461,10 +679,153 @@
     
 </div>
 
+<!-- EVENT DETAILS MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeEventModal()"></div>
+<div class="event-modal" id="eventModal">
+    <div class="modal-header">
+        <h3 class="modal-title" id="modalEventTitle">Event Details</h3>
+        <button class="modal-close" onclick="closeEventModal()">×</button>
+    </div>
+    <div class="modal-content">
+        <div class="event-detail">
+            <div class="event-detail-label">Date</div>
+            <div class="event-detail-value" id="modalEventDate"></div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Time</div>
+            <div class="event-detail-value" id="modalEventTime"></div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Type</div>
+            <div class="event-detail-value" id="modalEventType"></div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Who</div>
+            <div class="event-detail-value" id="modalEventWho"></div>
+        </div>
+        <div class="event-detail" id="modalDescriptionSection" style="display: none;">
+            <div class="event-detail-label">Description</div>
+            <div class="event-detail-value" id="modalEventDescription"></div>
+        </div>
+        <div class="event-detail" id="modalRecurringSection" style="display: none;">
+            <div class="event-detail-label">Recurring</div>
+            <div class="event-detail-value">This is a recurring event</div>
+        </div>
+    </div>
+    <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeEventModal()">Close</button>
+        <a href="#" id="modalEditBtn" class="modal-btn edit">Edit Event</a>
+        <button class="modal-btn delete" id="modalDeleteBtn" onclick="deleteEventWithConfirm()">Delete</button>
+    </div>
+</div>
+
+<!-- Hidden form for delete -->
+<form id="deleteForm" method="POST" style="display: none;">
+    <input type="hidden" name="return_to" value="calendar">
+    <input type="hidden" name="delete_all_recurring" id="deleteAllRecurring" value="no">
+</form>
+
 <script>
+    let currentEventId = null;
+    let currentEventData = null;
+    
     function showEventDetails(eventId) {
-        // Could expand to show more details in a modal
-        console.log('Event clicked:', eventId);
+        currentEventId = eventId;
+        
+        // Fetch event details
+        fetch(`{{ url_for('daily.api_get_event', event_id=0) }}`.replace('0', eventId))
+            .then(response => response.json())
+            .then(data => {
+                currentEventData = data;
+                
+                // Populate modal
+                document.getElementById('modalEventTitle').textContent = data.type;
+                document.getElementById('modalEventDate').textContent = new Date(data.date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                document.getElementById('modalEventTime').textContent = data.time || 'All Day';
+                document.getElementById('modalEventType').textContent = data.type;
+                document.getElementById('modalEventWho').textContent = data.who;
+                
+                // Description
+                if (data.description) {
+                    document.getElementById('modalEventDescription').textContent = data.description;
+                    document.getElementById('modalDescriptionSection').style.display = 'block';
+                } else {
+                    document.getElementById('modalDescriptionSection').style.display = 'none';
+                }
+                
+                // Recurring indicator
+                if (data.is_recurring) {
+                    document.getElementById('modalRecurringSection').style.display = 'block';
+                } else {
+                    document.getElementById('modalRecurringSection').style.display = 'none';
+                }
+                
+                // Update edit button
+                document.getElementById('modalEditBtn').href = 
+                    `{{ url_for('daily.edit_event', event_id=0) }}?return_to=calendar`.replace('0', eventId);
+                
+                // Show modal
+                document.getElementById('modalOverlay').classList.add('active');
+                document.getElementById('eventModal').classList.add('active');
+            })
+            .catch(error => {
+                console.error('Error fetching event details:', error);
+                alert('Failed to load event details');
+            });
+    }
+    
+    function closeEventModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+        document.getElementById('eventModal').classList.remove('active');
+        currentEventId = null;
+        currentEventData = null;
+    }
+    
+    function quickDeleteEvent(eventId) {
+        if (confirm('Are you sure you want to delete this event?')) {
+            fetch(`{{ url_for('daily.quick_delete_event', event_id=0) }}`.replace('0', eventId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show changes
+                    location.reload();
+                } else {
+                    alert('Failed to delete event');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete event');
+            });
+        }
+    }
+    
+    function deleteEventWithConfirm() {
+        if (!currentEventId) return;
+        
+        let confirmMsg = 'Are you sure you want to delete this event?';
+        
+        if (currentEventData && currentEventData.is_recurring) {
+            const choice = confirm('This is a recurring event.\n\nClick OK to delete ALL future occurrences\nClick Cancel to delete only this instance');
+            document.getElementById('deleteAllRecurring').value = choice ? 'yes' : 'no';
+            confirmMsg = choice ? 'Delete ALL future occurrences of this event?' : 'Delete only this instance?';
+        }
+        
+        if (confirm(confirmMsg)) {
+            const form = document.getElementById('deleteForm');
+            form.action = `{{ url_for('daily.delete_event', event_id=0) }}`.replace('0', currentEventId);
+            form.submit();
+        }
     }
     
     function checkTimeTree() {
@@ -474,5 +835,12 @@
             alert('Go check TimeTree now and add any missing events!\n\nYour wife will NOT be happy if you miss something.');
         }
     }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEventModal();
+        }
+    });
 </script>
 {% endblock %}
