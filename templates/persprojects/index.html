@@ -1,4 +1,4 @@
-<!-- templates/persprojects/index.html - KILLER VERSION matching TCH exactly -->
+<!-- templates/persprojects/index.html - FIXED VERSION with status_counts -->
 {% extends "base.html" %}
 {% block title %}Personal Projects{% endblock %}
 {% block header %}Personal Projects{% endblock %}
@@ -298,17 +298,17 @@
   <div class="stats-bar">
     <div class="stat-item">
       <span aria-hidden="true">📊</span>
-      <span class="number">{{ projects|length }}</span>
+      <span class="number">{{ (status_counts.planning|default(0)) + (status_counts.active|default(0)) + (status_counts.on_hold|default(0)) + (status_counts.completed|default(0)) }}</span>
       <span>Total Projects</span>
     </div>
     <div class="stat-item">
       <span aria-hidden="true">🚀</span>
-      <span class="number">{{ projects|selectattr('status', 'equalto', 'active')|list|length }}</span>
+      <span class="number">{{ status_counts.active|default(0) }}</span>
       <span>Active</span>
     </div>
     <div class="stat-item">
       <span aria-hidden="true">✅</span>
-      <span class="number">{{ projects|selectattr('status', 'equalto', 'completed')|list|length }}</span>
+      <span class="number">{{ status_counts.completed|default(0) }}</span>
       <span>Completed</span>
     </div>
     <div class="stat-item">
@@ -345,29 +345,25 @@
          class="tab {% if status_filter == 'planning' %}active{% endif %}" 
          role="tab">
         📝 Planning
-        {% set planning_count = projects|selectattr('status', 'equalto', 'planning')|list|length %}
-        {% if planning_count > 0 %}<span class="badge">{{ planning_count }}</span>{% endif %}
+        {% if status_counts.planning > 0 %}<span class="badge">{{ status_counts.planning }}</span>{% endif %}
       </a>
       <a href="{{ url_for('persprojects.index', status='active') }}"
          class="tab {% if status_filter == 'active' %}active{% endif %}" 
          role="tab">
         🚀 Active
-        {% set active_count = projects|selectattr('status', 'equalto', 'active')|list|length %}
-        {% if active_count > 0 %}<span class="badge">{{ active_count }}</span>{% endif %}
+        {% if status_counts.active > 0 %}<span class="badge">{{ status_counts.active }}</span>{% endif %}
       </a>
       <a href="{{ url_for('persprojects.index', status='on_hold') }}"
          class="tab {% if status_filter == 'on_hold' %}active{% endif %}" 
          role="tab">
         ⏸️ On Hold
-        {% set hold_count = projects|selectattr('status', 'equalto', 'on_hold')|list|length %}
-        {% if hold_count > 0 %}<span class="badge">{{ hold_count }}</span>{% endif %}
+        {% if status_counts.on_hold > 0 %}<span class="badge">{{ status_counts.on_hold }}</span>{% endif %}
       </a>
       <a href="{{ url_for('persprojects.index', status='completed') }}"
          class="tab {% if status_filter == 'completed' %}active{% endif %}" 
          role="tab">
         ✅ Completed
-        {% set complete_count = projects|selectattr('status', 'equalto', 'completed')|list|length %}
-        {% if complete_count > 0 %}<span class="badge">{{ complete_count }}</span>{% endif %}
+        {% if status_counts.completed > 0 %}<span class="badge">{{ status_counts.completed }}</span>{% endif %}
       </a>
     </div>
 

@@ -12,15 +12,22 @@ def index():
     """Personal projects dashboard"""
     status_filter = request.args.get('status', 'active')
     
-    # Build query
-    query = PersonalProject.query
+    # Get ALL projects first for counting
+    all_projects = PersonalProject.query.order_by(PersonalProject.created_at.desc()).all()
     
-    # Apply status filter
+    # Calculate status counts from ALL projects
+    status_counts = {
+        'planning': len([p for p in all_projects if p.status == 'planning']),
+        'active': len([p for p in all_projects if p.status == 'active']),
+        'on_hold': len([p for p in all_projects if p.status == 'on_hold']),
+        'completed': len([p for p in all_projects if p.status == 'completed'])
+    }
+    
+    # Filter projects for display
     if status_filter != 'all':
-        query = query.filter_by(status=status_filter)
-    
-    # Get filtered projects
-    projects = query.order_by(PersonalProject.created_at.desc()).all()
+        projects = [p for p in all_projects if p.status == status_filter]
+    else:
+        projects = all_projects
     
     # Calculate progress based on tasks
     for project in projects:
@@ -30,8 +37,9 @@ def index():
         else:
             project.progress = 0
     
-    return render_template('persprojects/index.html', 
+    return render_template('persprojects/index.html',
                          projects=projects,
+                         status_counts=status_counts,
                          status_filter=status_filter,
                          categories=PERSONAL_PROJECT_CATEGORIES)
 
