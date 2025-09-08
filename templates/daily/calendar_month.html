@@ -403,7 +403,7 @@
             <div class="stat-label">Wife's Events</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ events|selectattr('who', 'in', ['Tommy', 'Sarah'])|list|length }}</div>
+            <div class="stat-value">{{ events|selectattr('who', 'in', ['Ziggy', 'Sarah'])|list|length }}</div>
             <div class="stat-label">Kid Events</div>
         </div>
         <div class="stat-card">
@@ -432,7 +432,7 @@
                 
                 <!-- Show first 3 events -->
                 {% for event in day_info.events[:3] %}
-                <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
+                <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Ziggy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
                      title="{{ event.event_time or '' }} - {{ event.event_type }} ({{ event.who }})">
                     {% if event.event_time %}{{ event.event_time|truncate(8, True, '') }} {% endif %}{{ event.event_type|truncate(20, True, '') }}
                 </div>

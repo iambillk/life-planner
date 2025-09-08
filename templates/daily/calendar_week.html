@@ -398,7 +398,7 @@
             <div class="stat-number">
                 {% set kid_events = namespace(count=0) %}
                 {% for day_events in events_by_day.values() %}
-                    {% for event in day_events if event.who in ['Tommy', 'Sarah'] %}
+                    {% for event in day_events if event.who in ['Ziggy', 'Gus'] %}
                         {% set kid_events.count = kid_events.count + 1 %}
                     {% endfor %}
                 {% endfor %}
@@ -426,7 +426,7 @@
             <div class="events-container">
                 {% if events %}
                     {% for event in events %}
-                    <div class="event-card {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
+                    <div class="event-card {% if event.who == 'Wife' %}wife{% elif event.who in ['Ziggy', 'Gus'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
                          onclick="showEventDetails('{{ event.id }}')">
                         {% if event.event_time %}
                         <div class="event-time">{{ event.event_time }}</div>

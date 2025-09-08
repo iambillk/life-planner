@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block title %}Log Weight - Face the Truth{% endblock %}
+{% block header %}Daily Accountability Check{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .accountability-form {
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 30px;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+    }
+    
+    .weight-input-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .weight-input {
+        font-size: 48px;
+        font-weight: 700;
+        background: var(--card);
+        border: 3px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        width: 200px;
+        color: var(--text);
+    }
+    
+    .weight-input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .weight-comparison {
+        flex: 1;
+        padding: 20px;
+        background: var(--card);
+        border-radius: 12px;
+    }
+    
+    .comparison-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    
+    .comparison-value {
+        font-size: 24px;
+        font-weight: 700;
+    }
+    
+    .change-up {
+        color: #ef4444;
+    }
+    
+    .change-down {
+        color: #22c55e;
+    }
+    
+    /* Accountability Questions */
+    .question-group {
+        margin-bottom: 25px;
+    }
+    
+    .question-label {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--text);
+    }
+    
+    .answer-options {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .answer-btn {
+        flex: 1;
+        padding: 15px;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .answer-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .answer-btn.yes {
+        border-color: #ef4444;
+    }
+    
+    .answer-btn.yes.selected {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: #ef4444;
+    }
+    
+    .answer-btn.no {
+        border-color: #22c55e;
+    }
+    
+    .answer-btn.no.selected {
+        background: rgba(34, 197, 94, 0.2);
+        border-color: #22c55e;
+    }
+    
+    .follow-up {
+        display: none;
+        background: var(--card);
+        border-left: 3px solid #ef4444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    
+    .follow-up.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .follow-up-label {
+        font-size: 14px;
+        color: #ef4444;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .follow-up input,
+    .follow-up select,
+    .follow-up textarea {
+        width: 100%;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        color: var(--text);
+        font-size: 14px;
+    }
+    
+    .number-input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .number-input input {
+        width: 80px;
+        text-align: center;
+    }
+    
+    /* Submit Section */
+    .submit-section {
+        text-align: center;
+        padding-top: 20px;
+    }
+    
+    .submit-btn {
+        background: linear-gradient(135deg, #6ea8ff, #3f7fe6);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 18px 40px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 30px rgba(110, 168, 255, 0.4);
+    }
+    
+    .warning-text {
+        color: #ef4444;
+        font-size: 14px;
+        margin-top: 15px;
+        font-weight: 600;
+    }
+    
+    .excuse-textarea {
+        width: 100%;
+        min-height: 100px;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--text);
+        font-size: 14px;
+        resize: vertical;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="log-container">
+    <form method="POST" class="accountability-form">
+        
+        <!-- Weight Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <span>⚖️</span>
+                <span>Step on the Scale</span>
+            </div>
+            
+            <div class="weight-input-group">
+                <input type="number" 
+                       name="weight" 
+                       class="weight-input" 
+                       step="0.1" 
+                       placeholder="000.0" 
+                       value="{{ today_entry.weight if today_entry.weight != 200.0 else '' }}"
+                       required 
+                       autofocus>
+                
+                {% if yesterday %}
+                <div class="weight-comparison">
+                    <div class="comparison-label">Yesterday</div>
+                    <div class="comparison-value">{{ "%.1f"|format(yesterday.weight) }} lbs</div>
+                    {% if today_entry.weight and today_entry.weight != 200.0 %}
+                    <div class="comparison-value {{ 'change-up' if today_entry.weight > yesterday.weight else 'change-down' }}">
+                        {{ "%+.1f"|format(today_entry.weight - yesterday.weight) }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <input type="hidden" name="date" value="{{ datetime.now().strftime('%Y-%m-%d') }}">
+        </div>
+        
+        <!-- Bad Habits Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <span>🚫</span>
+                <span>Confess Your Failures</span>
+            </div>
+            
+            <!-- Soda -->
+            <div class="question-group">
+                <div class="question-label">Did you drink soda today?</div>
+                <div class="answer-options">
+                    <label class="answer-btn yes">
+                        <input type="radio" name="had_soda" value="yes" hidden>
+                        <span>Yes 😔</span>
+                    </label>
+                    <label class="answer-btn no">
+                        <input type="radio" name="had_soda" value="no" hidden checked>
+                        <span>No 💪</span>
+                    </label>
+                </div>
+                <div class="follow-up" id="soda-follow-up">
+                    <div class="follow-up-label">How many? Don't lie.</div>
+                    <div class="number-input">
+                        <input type="number" name="soda_count" min="1" value="1">
+                        <span>sodas</span>
+                    </div>
+                    <div class="follow-up-label" style="margin-top: 10px;">What triggered this failure?</div>
+                    <select name="soda_trigger">
+                        <option value="craving">Craving</option>
+                        <option value="stress">Stress</option>
+                        <option value="social">Social pressure</option>
+                        <option value="boredom">Boredom</option>
+                        <option value="habit">Just habit</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Candy -->
+            <div class="question-group">
+                <div class="question-label">Did you eat candy?</div>
+                <div class="answer-options">
+                    <label class="answer-btn yes">
+                        <input type="radio" name="had_candy" value="yes" hidden>
+                        <span>Yes 🍬</span>
+                    </label>
+                    <label class="answer-btn no">
+                        <input type="radio" name="had_candy" value="no" hidden checked>
+                        <span>No 🎯</span>
+                    </label>
+                </div>
+                <div class="follow-up" id="candy-follow-up">
+                    <div class="follow-up-label">What's your excuse?</div>
+                    <input type="text" name="candy_excuse" placeholder="There is no good excuse...">
+                </div>
+            </div>
+            
+            <!-- Junk Food -->
+            <div class="question-group">
+                <div class="question-label">Did you eat junk food?</div>
+                <div class="answer-options">
+                    <label class="answer-btn yes">
+                        <input type="radio" name="had_junk" value="yes" hidden>
+                        <span>Yes 🍕</span>
+                    </label>
+                    <label class="answer-btn no">
+                        <input type="radio" name="had_junk" value="no" hidden checked>
+                        <span>No 🥗</span>
+                    </label>
+                </div>
+                <div class="follow-up" id="junk-follow-up">
+                    <div class="follow-up-label">What garbage did you eat?</div>
+                    <input type="text" name="junk_trigger" placeholder="Chips, cookies, pizza...">
+                </div>
+            </div>
+            
+            <!-- Fast Food -->
+            <div class="question-group">
+                <div class="question-label">Did you eat fast food?</div>
+                <div class="answer-options">
+                    <label class="answer-btn yes">
+                        <input type="radio" name="had_fast_food" value="yes" hidden>
+                        <span>Yes 🍔</span>
+                    </label>
+                    <label class="answer-btn no">
+                        <input type="radio" name="had_fast_food" value="no" hidden checked>
+                        <span>No 🏠</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Alcohol -->
+            <div class="question-group">
+                <div class="question-label">Did you drink alcohol?</div>
+                <div class="answer-options">
+                    <label class="answer-btn yes">
+                        <input type="radio" name="had_alcohol" value="yes" hidden>
+                        <span>Yes 🍺</span>
+                    </label>
+                    <label class="answer-btn no">
+                        <input type="radio" name="had_alcohol" value="no" hidden checked>
+                        <span>No 💧</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Good Habits Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <span>✅</span>
+                <span>Did You Even Try?</span>
+            </div>
+            
+            <!-- Exercise -->
+            <div class="question-group">
+                <div class="question-label">Did you exercise?</div>
+                <div class="answer-options">
+                    <label class="answer-btn no">
+                        <input type="radio" name="exercised" value="no" hidden checked>
+                        <span>No 🛋️</span>
+                    </label>
+                    <label class="answer-btn yes" style="border-color: #22c55e;">
+                        <input type="radio" name="exercised" value="yes" hidden>
+                        <span>Yes 🏃</span>
+                    </label>
+                </div>
+                <div class="follow-up" id="exercise-follow-up">
+                    <div class="follow-up-label" style="color: #22c55e;">How many minutes?</div>
+                    <div class="number-input">
+                        <input type="number" name="exercise_minutes" min="0" value="30">
+                        <span>minutes</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Water -->
+            <div class="question-group">
+                <div class="question-label">How many glasses of water?</div>
+                <div class="number-input">
+                    <input type="number" name="water_glasses" min="0" max="20" value="0" style="width: 100px;">
+                    <span>glasses (goal: 8)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Excuses Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <span>📝</span>
+                <span>What's Your Excuse Today?</span>
+            </div>
+            
+            <textarea name="excuse" 
+                      class="excuse-textarea" 
+                      placeholder="Why did you fail? Stress? Weak willpower? Just lazy? Be honest..."></textarea>
+            
+            <textarea name="notes" 
+                      class="excuse-textarea" 
+                      style="margin-top: 15px;"
+                      placeholder="Any other notes or observations..."></textarea>
+        </div>
+        
+        <!-- Submit -->
+        <div class="submit-section">
+            <button type="submit" class="submit-btn">
+                Face the Truth
+            </button>
+            <div class="warning-text">
+                No lying. The scale doesn't lie, and neither should you.
+            </div>
+        </div>
+        
+    </form>
+</div>
+
+<script>
+// Handle radio button styling and follow-ups
+document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Update button styling
+        const name = this.name;
+        document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+            r.closest('.answer-btn').classList.remove('selected');
+        });
+        this.closest('.answer-btn').classList.add('selected');
+        
+        // Show/hide follow-ups
+        const followUpMap = {
+            'had_soda': 'soda-follow-up',
+            'had_candy': 'candy-follow-up',
+            'had_junk': 'junk-follow-up',
+            'exercised': 'exercise-follow-up'
+        };
+        
+        if (followUpMap[name]) {
+            const followUp = document.getElementById(followUpMap[name]);
+            if (followUp) {
+                if ((name === 'exercised' && this.value === 'yes') || 
+                    (name !== 'exercised' && this.value === 'yes')) {
+                    followUp.classList.add('show');
+                } else {
+                    followUp.classList.remove('show');
+                }
+            }
+        }
+    });
+});
+
+// Initialize selected states
+document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+    radio.closest('.answer-btn').classList.add('selected');
+});
+</script>
+{% endblock %}

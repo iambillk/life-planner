@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+{% block title %}Health Settings - Configure Your Accountability{% endblock %}
+{% block header %}Settings - Calibrate the Drill Sergeant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    /* Settings Sections */
+    .settings-section {
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    /* Setting Rows */
+    .setting-row {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 20px;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid var(--line);
+    }
+    
+    .setting-row:last-child {
+        border-bottom: none;
+    }
+    
+    .setting-info {
+        flex: 1;
+    }
+    
+    .setting-label {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: var(--text);
+    }
+    
+    .setting-description {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+    
+    .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Form Controls */
+    .setting-input,
+    .setting-select {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 15px;
+        color: var(--text);
+        font-size: 15px;
+        width: 100%;
+    }
+    
+    .setting-input:focus,
+    .setting-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    /* Range Slider */
+    .range-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .range-slider {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--card);
+        outline: none;
+    }
+    
+    .range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+    }
+    
+    .range-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+    }
+    
+    .range-value {
+        min-width: 50px;
+        text-align: center;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    /* Toggle Switch */
+    .toggle-switch {
+        position: relative;
+        width: 60px;
+        height: 30px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--card);
+        border: 2px solid var(--line);
+        transition: 0.3s;
+        border-radius: 15px;
+    }
+    
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background: var(--text-muted);
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+        background: rgba(110, 168, 255, 0.2);
+        border-color: var(--primary);
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(30px);
+        background: var(--primary);
+    }
+    
+    /* Harassment Preview */
+    .harassment-preview {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .harassment-preview.gentle {
+        border-color: #22c55e;
+        background: rgba(34, 197, 94, 0.05);
+    }
+    
+    .harassment-preview.firm {
+        border-color: #f59e0b;
+        background: rgba(245, 158, 11, 0.05);
+    }
+    
+    .harassment-preview.brutal {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.05);
+    }
+    
+    .harassment-preview.savage {
+        border-color: #dc2626;
+        background: rgba(220, 38, 38, 0.1);
+        animation: shake 0.5s;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .preview-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+    
+    .preview-message {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+    
+    /* Warning Box */
+    .warning-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 2px solid #ef4444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .warning-title {
+        font-weight: 700;
+        color: #ef4444;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .warning-text {
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    
+    /* Buttons */
+    .button-container {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+    
+    .btn-save {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+    }
+    
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+    }
+    
+    .btn-reset {
+        background: var(--card);
+        color: #ef4444;
+        border: 2px solid #ef4444;
+        border-radius: 8px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-reset:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    
+    <form method="POST" action="{{ url_for('health.health_settings') }}">
+        
+        <!-- Harassment Settings -->
+        <div class="settings-section">
+            <div class="section-title">
+                <span>😤</span>
+                <span>Drill Sergeant Intensity</span>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Harassment Level</div>
+                    <div class="setting-description">
+                        How aggressive should the motivation be? Higher levels are more effective but brutal.
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <select name="harassment_level" class="setting-select" id="harassmentLevel" onchange="updatePreview()">
+                        <option value="OFF" {% if settings.harassment_level == 'OFF' %}selected{% endif %}>OFF - No harassment</option>
+                        <option value="GENTLE" {% if settings.harassment_level == 'GENTLE' %}selected{% endif %}>GENTLE - Polite reminders</option>
+                        <option value="FIRM" {% if settings.harassment_level == 'FIRM' %}selected{% endif %}>FIRM - Direct feedback</option>
+                        <option value="BRUTAL" {% if settings.harassment_level == 'BRUTAL' %}selected{% endif %}>BRUTAL - Harsh truth</option>
+                        <option value="SAVAGE" {% if settings.harassment_level == 'SAVAGE' %}selected{% endif %}>SAVAGE - No mercy</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="harassment-preview" id="harassmentPreview">
+                <div class="preview-title">Sample Message</div>
+                <div class="preview-message" id="previewMessage">
+                    <!-- Updated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">AI-Powered Harassment</div>
+                    <div class="setting-description">
+                        Use AI to generate personalized harassment based on your failure patterns
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="ai_harassment" value="true" 
+                               {% if settings.ai_harassment == 'true' %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Weight Tracking Settings -->
+        <div class="settings-section">
+            <div class="section-title">
+                <span>⚖️</span>
+                <span>Weight Tracking Rules</span>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Morning Weigh-In Deadline</div>
+                    <div class="setting-description">
+                        You must log your weight before this time or face extra harassment
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <input type="time" name="morning_weigh_time" class="setting-input" 
+                           value="{{ settings.morning_weigh_time }}">
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Weight Goal (lbs)</div>
+                    <div class="setting-description">
+                        Your target weight - be realistic but ambitious
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <input type="number" name="weight_goal" step="0.1" class="setting-input" 
+                           value="{{ settings.weight_goal }}">
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Weekly Loss Target (lbs)</div>
+                    <div class="setting-description">
+                        Expected weight loss per week (1-2 lbs is sustainable)
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <div class="range-container">
+                        <input type="range" name="weekly_loss_goal" class="range-slider" 
+                               min="0.5" max="5" step="0.5" 
+                               value="{{ settings.weekly_loss_goal }}"
+                               oninput="document.getElementById('weeklyValue').textContent = this.value">
+                        <span class="range-value" id="weeklyValue">{{ settings.weekly_loss_goal }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Daily Limits -->
+        <div class="settings-section">
+            <div class="section-title">
+                <span>🚫</span>
+                <span>Daily Limits & Goals</span>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Soda Limit (per day)</div>
+                    <div class="setting-description">
+                        Maximum sodas allowed before severe harassment (0 recommended)
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <input type="number" name="soda_limit" min="0" max="5" class="setting-input" 
+                           value="{{ settings.soda_limit }}">
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Water Goal (glasses)</div>
+                    <div class="setting-description">
+                        Minimum glasses of water per day (8 recommended)
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <div class="range-container">
+                        <input type="range" name="water_goal" class="range-slider" 
+                               min="4" max="16" step="1" 
+                               value="{{ settings.water_goal }}"
+                               oninput="document.getElementById('waterValue').textContent = this.value">
+                        <span class="range-value" id="waterValue">{{ settings.water_goal }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Exercise Minimum (minutes)</div>
+                    <div class="setting-description">
+                        Minimum daily exercise before being called lazy
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <div class="range-container">
+                        <input type="range" name="exercise_minimum" class="range-slider" 
+                               min="0" max="120" step="15" 
+                               value="{{ settings.exercise_minimum }}"
+                               oninput="document.getElementById('exerciseValue').textContent = this.value">
+                        <span class="range-value" id="exerciseValue">{{ settings.exercise_minimum }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Future Features (Disabled) -->
+        <div class="settings-section" style="opacity: 0.6;">
+            <div class="section-title">
+                <span>🔮</span>
+                <span>Future Features (Coming Soon)</span>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Public Shame Mode</div>
+                    <div class="setting-description">
+                        Post your failures to a public shame board for extra accountability
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" disabled>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">SMS Harassment</div>
+                    <div class="setting-description">
+                        Get text messages when you haven't logged weight or are failing
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" disabled>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-label">Photo Requirements</div>
+                    <div class="setting-description">
+                        Require progress photos for accountability
+                    </div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" disabled>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Warning -->
+        <div class="warning-box">
+            <div class="warning-title">
+                <span>⚠️</span>
+                <span>WARNING</span>
+            </div>
+            <div class="warning-text">
+                Higher harassment levels are more effective but can be brutal. The system will call out 
+                your failures, mock your excuses, and push you hard. This is by design. If you can't handle 
+                honest feedback about your weight and habits, keep it on GENTLE.
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="button-container">
+            <button type="submit" class="btn-save">
+                Save Settings
+            </button>
+            <button type="button" class="btn-reset" onclick="resetToDefaults()">
+                Reset to Defaults
+            </button>
+        </div>
+        
+    </form>
+    
+</div>
+
+<script>
+function updatePreview() {
+    const level = document.getElementById('harassmentLevel').value;
+    const preview = document.getElementById('harassmentPreview');
+    const message = document.getElementById('previewMessage');
+    
+    const messages = {
+        'OFF': 'Harassment disabled. Good luck with that.',
+        'GENTLE': 'You had soda today. Consider water instead next time.',
+        'FIRM': "Soda again? That's not helping your goals. Stop it.",
+        'BRUTAL': "Another soda? You're literally drinking liquid diabetes, moron.",
+        'SAVAGE': "SODA?! You pathetic weakling! Enjoy getting fatter while making excuses. You disgust me."
+    };
+    
+    // Update preview class
+    preview.className = 'harassment-preview ' + level.toLowerCase();
+    
+    // Update message
+    message.textContent = messages[level] || messages['BRUTAL'];
+}
+
+function resetToDefaults() {
+    if (confirm('Reset all settings to defaults? This cannot be undone.')) {
+        // Set form values to defaults
+        document.querySelector('[name="harassment_level"]').value = 'BRUTAL';
+        document.querySelector('[name="morning_weigh_time"]').value = '10:00';
+        document.querySelector('[name="weight_goal"]').value = '180';
+        document.querySelector('[name="weekly_loss_goal"]').value = '2';
+        document.querySelector('[name="soda_limit"]').value = '0';
+        document.querySelector('[name="water_goal"]').value = '8';
+        document.querySelector('[name="exercise_minimum"]').value = '30';
+        document.querySelector('[name="ai_harassment"]').checked = true;
+        
+        // Update displays
+        document.getElementById('weeklyValue').textContent = '2';
+        document.getElementById('waterValue').textContent = '8';
+        document.getElementById('exerciseValue').textContent = '30';
+        
+        updatePreview();
+    }
+}
+
+// Initialize preview on load
+updatePreview();
+</script>
+{% endblock %}
