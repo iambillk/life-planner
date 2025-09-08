@@ -67,6 +67,14 @@ from models.daily_planner import (
     init_daily_planner
 )
 
+from .financial import (
+    SpendingCategory,
+    Transaction,
+    MerchantAlias
+)
+
+
+
 __all__ = [
     'db',
     # Equipment models
@@ -115,5 +123,8 @@ __all__ = [
     'CapturedNote',
     'HarassmentLog',
     'ProjectRotation',
-    'init_daily_planner'
+    'init_daily_planner',
+    'SpendingCategory',
+    'Transaction', 
+    'MerchantAlias'
 ]

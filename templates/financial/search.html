@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}Search Transactions{% endblock %}
+{% block header %}Search Transactions{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ==================== SEARCH STYLES ==================== */
+    :root {
+        --fin-bg: var(--bg, #0b0f1a);
+        --fin-card: var(--card, #121a2a);
+        --fin-panel: var(--panel, #1a2234);
+        --fin-line: var(--line, #1f2a3d);
+        --fin-text: var(--text, #e6eaf2);
+        --fin-muted: var(--text-muted, #9fb0c8);
+        --fin-primary: var(--primary, #6ea8ff);
+        --fin-radius: 14px;
+        --fin-radius-sm: 10px;
+    }
+
+    .search-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Search Form */
+    .search-card {
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .search-form {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .search-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .search-label {
+        color: var(--fin-text);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .search-input,
+    .search-select {
+        padding: 10px;
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        color: var(--fin-text);
+        font-size: 1rem;
+    }
+
+    .search-input:focus,
+    .search-select:focus {
+        outline: none;
+        border-color: var(--fin-primary);
+        box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
+    }
+
+    .search-btn {
+        padding: 10px 20px;
+        background: var(--fin-primary);
+        color: white;
+        border: none;
+        border-radius: var(--fin-radius-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .search-btn:hover {
+        background: #5a94eb;
+        transform: translateY(-1px);
+    }
+
+    .clear-btn {
+        padding: 10px 20px;
+        background: var(--fin-panel);
+        color: var(--fin-text);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .clear-btn:hover {
+        background: var(--fin-card);
+        border-color: var(--fin-primary);
+    }
+
+    /* Results Summary */
+    .results-summary {
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius);
+        padding: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .results-info {
+        color: var(--fin-text);
+        font-weight: 600;
+    }
+
+    .results-total {
+        font-size: 1.25rem;
+        color: var(--fin-primary);
+        font-weight: 700;
+    }
+
+    /* Results List */
+    .results-card {
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius);
+        padding: 20px;
+    }
+
+    .result-item {
+        display: grid;
+        grid-template-columns: 100px 1fr auto auto auto 120px;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .result-item:hover {
+        background: #1f2a3d;
+        border-color: var(--fin-primary);
+        transform: translateX(5px);
+    }
+
+    .result-date {
+        color: var(--fin-muted);
+        font-size: 0.875rem;
+    }
+
+    .result-merchant {
+        font-weight: 600;
+        color: var(--fin-text);
+    }
+
+    .result-notes {
+        font-size: 0.875rem;
+        color: var(--fin-muted);
+        margin-top: 4px;
+    }
+
+    .result-category {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: 20px;
+        font-size: 0.875rem;
+        color: var(--fin-muted);
+    }
+
+    .result-card {
+        padding: 4px 10px;
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: 8px;
+        font-size: 0.825rem;
+        color: var(--fin-muted);
+    }
+
+    .result-amount {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--fin-text);
+        text-align: right;
+    }
+
+    .result-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .action-btn {
+        padding: 4px 8px;
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: 6px;
+        color: var(--fin-muted);
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .action-btn:hover {
+        color: var(--fin-primary);
+        border-color: var(--fin-primary);
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--fin-muted);
+    }
+
+    .no-results-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    /* Back button */
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: var(--fin-panel);
+        color: var(--fin-text);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+
+    .btn-back:hover {
+        background: var(--fin-card);
+        border-color: var(--fin-primary);
+        transform: translateX(-5px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .search-form {
+            grid-template-columns: 1fr;
+        }
+
+        .result-item {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    
+    <a href="{{ url_for('financial.dashboard') }}" class="btn-back">
+        ← Back to Dashboard
+    </a>
+
+    <!-- SEARCH FORM -->
+    <div class="search-card">
+        <form method="GET" class="search-form">
+            <div class="search-group">
+                <label class="search-label">Search</label>
+                <input type="text" 
+                       name="q" 
+                       value="{{ query }}" 
+                       placeholder="Merchant or notes..."
+                       class="search-input">
+            </div>
+
+            <div class="search-group">
+                <label class="search-label">Category</label>
+                <select name="category" class="search-select">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" 
+                                {% if category_filter == category.id|string %}selected{% endif %}>
+                            {{ category.icon }} {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="search-group">
+                <label class="search-label">Card</label>
+                <select name="card" class="search-select">
+                    <option value="">All Cards</option>
+                    {% for card in cards %}
+                        <option value="{{ card }}" 
+                                {% if card_filter == card %}selected{% endif %}>
+                            {{ card }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="search-btn">🔍 Search</button>
+            <a href="{{ url_for('financial.search') }}" class="clear-btn">Clear</a>
+        </form>
+    </div>
+
+    <!-- RESULTS SUMMARY -->
+    {% if transactions %}
+    <div class="results-summary">
+        <div class="results-info">
+            Found {{ transactions|length }} transaction{{ 's' if transactions|length != 1 }}
+        </div>
+        <div class="results-total">
+            Total: ${{ "%.2f"|format(transactions|sum(attribute='amount')) }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- RESULTS LIST -->
+    <div class="results-card">
+        {% if transactions %}
+            {% for transaction in transactions %}
+            <div class="result-item">
+                <div class="result-date">
+                    {{ transaction.date.strftime('%b %d, %Y') }}
+                </div>
+                <div>
+                    <div class="result-merchant">{{ transaction.merchant }}</div>
+                    {% if transaction.notes %}
+                        <div class="result-notes">{{ transaction.notes }}</div>
+                    {% endif %}
+                </div>
+                <div class="result-category">
+                    {% if transaction.category %}
+                        <span>{{ transaction.category.icon }}</span>
+                        <span>{{ transaction.category.name }}</span>
+                    {% else %}
+                        <span>📌</span>
+                        <span>Uncategorized</span>
+                    {% endif %}
+                </div>
+                <div class="result-card">
+                    {{ transaction.card }}
+                </div>
+                <div class="result-amount">
+                    ${{ "%.2f"|format(transaction.amount) }}
+                </div>
+                <div class="result-actions">
+                    <a href="{{ url_for('financial.edit_transaction', id=transaction.id) }}" 
+                       class="action-btn">
+                        ✏️
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-results">
+                <div class="no-results-icon">🔍</div>
+                <h3>No transactions found</h3>
+                <p>Try adjusting your search criteria</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

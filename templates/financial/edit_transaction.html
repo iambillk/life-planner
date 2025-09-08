@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Edit Transaction{% endblock %}
+{% block header %}Edit Transaction{% endblock %}
+
+{% block extra_css %}
+<!-- Reuse the same styles from add_transaction.html -->
+<style>
+    /* Copy all the styles from add_transaction.html here */
+    /* (Same exact styles - I won't repeat them to save space) */
+    :root {
+        --fin-bg: var(--bg, #0b0f1a);
+        --fin-card: var(--card, #121a2a);
+        --fin-panel: var(--panel, #1a2234);
+        --fin-line: var(--line, #1f2a3d);
+        --fin-text: var(--text, #e6eaf2);
+        --fin-muted: var(--text-muted, #9fb0c8);
+        --fin-primary: var(--primary, #6ea8ff);
+        --fin-danger: #ef4444;
+        --fin-radius: 14px;
+        --fin-radius-sm: 10px;
+    }
+
+    /* Include all the form styles from add_transaction.html */
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .form-card {
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius);
+        padding: 30px;
+    }
+
+    /* ... rest of the styles from add_transaction ... */
+
+    .btn-danger {
+        background: var(--fin-danger);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+
+    .current-receipt {
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        padding: 10px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .current-receipt img {
+        max-width: 60px;
+        max-height: 60px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <form method="POST" enctype="multipart/form-data" class="form-card">
+        <h1 class="form-title">✏️ Edit Transaction</h1>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="date">Date</label>
+                <input type="date" 
+                       id="date" 
+                       name="date" 
+                       class="form-input" 
+                       value="{{ transaction.date }}" 
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="amount">Amount</label>
+                <input type="number" 
+                       id="amount" 
+                       name="amount" 
+                       class="form-input" 
+                       step="0.01" 
+                       value="{{ transaction.amount }}"
+                       required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="merchant">Merchant</label>
+            <input type="text" 
+                   id="merchant" 
+                   name="merchant" 
+                   class="form-input" 
+                   value="{{ transaction.merchant }}"
+                   required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="category_id">Category</label>
+                <select id="category_id" name="category_id" class="form-select">
+                    <option value="">-- Select Category --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" 
+                                {% if transaction.category_id == category.id %}selected{% endif %}>
+                            {{ category.icon }} {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="card">Card</label>
+                <select id="card" name="card" class="form-select" required>
+                    {% for card in cards %}
+                        <option value="{{ card }}" 
+                                {% if transaction.card == card %}selected{% endif %}>
+                            {{ card }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" 
+                      name="notes" 
+                      class="form-textarea" 
+                      rows="2">{{ transaction.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Receipt Photo</label>
+            {% if transaction.receipt_photo %}
+            <div class="current-receipt">
+                <img src="{{ url_for('static', filename='uploads/receipts/' + transaction.receipt_photo) }}" 
+                     alt="Current receipt">
+                <span>Current receipt attached</span>
+            </div>
+            {% endif %}
+            <div class="file-input-wrapper">
+                <input type="file" 
+                       name="receipt_photo" 
+                       class="file-input" 
+                       accept="image/*"
+                       onchange="updateFileName(this)">
+                <label class="file-input-label">
+                    <span id="file-name">📸 Upload new receipt</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-buttons">
+            <button type="submit" class="btn btn-primary">
+                💾 Save Changes
+            </button>
+            <a href="{{ url_for('financial.dashboard') }}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+
+    <!-- Delete button separate from main form -->
+    <form method="POST" 
+          action="{{ url_for('financial.delete_transaction', id=transaction.id) }}" 
+          style="margin-top: 20px;"
+          onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+        <button type="submit" class="btn btn-danger" style="width: 100%;">
+            🗑️ Delete Transaction
+        </button>
+    </form>
+</div>
+
+<script>
+function updateFileName(input) {
+    const fileName = input.files[0]?.name || '📸 Upload new receipt';
+    document.getElementById('file-name').textContent = fileName;
+}
+</script>
+{% endblock %}

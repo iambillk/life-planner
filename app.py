@@ -42,6 +42,8 @@ def create_app():
 
     # In app.py, in the create_app() function where other directories are created, add:
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'personal_project_files'), exist_ok=True)
+
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'receipts'), exist_ok=True) 
     
     # Context processors
     @app.context_processor
@@ -72,8 +74,9 @@ def register_blueprints(app):
     from modules.weekly import weekly_bp
     from modules.goals import goals_bp
     from modules.todo import todo_bp
-    from modules.realestate import realestate_bp  
-    
+    from modules.realestate import realestate_bp
+    from modules.financial import financial_bp
+        
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
     app.register_blueprint(projects_bp, url_prefix='/projects')
@@ -82,6 +85,7 @@ def register_blueprints(app):
     app.register_blueprint(weekly_bp, url_prefix='/weekly')
     app.register_blueprint(goals_bp, url_prefix='/goals')
     app.register_blueprint(todo_bp, url_prefix='/todo')
+    app.register_blueprint(financial_bp, url_prefix='/financial')
     
     # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)
