@@ -1,176 +1,332 @@
 <!-- templates/daily/dashboard.html -->
 {% extends "base.html" %}
-{% block title %}Daily Planner - Command Center{% endblock %}
-{% block header %}DAILY COMMAND CENTER{% endblock %}
+{% block title %}Daily Command Center{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ==================== CORE LAYOUT ==================== */
+    /* ==================== CSS VARIABLES ==================== */
+    :root {
+        --dash-bg: var(--bg, #0b0f1a);
+        --dash-panel: var(--panel, #121a2a);
+        --dash-card: var(--card, #0f1625);
+        --dash-line: var(--line, #1f2a3d);
+        --dash-text: var(--text, #e6eaf2);
+        --dash-muted: var(--text-muted, #9fb0c8);
+        --dash-primary: var(--primary, #6ea8ff);
+        --dash-success: var(--success, #22c55e);
+        --dash-warning: var(--warning, #f59e0b);
+        --dash-danger: var(--danger, #ef4444);
+        --dash-radius: 14px;
+        --dash-radius-sm: 10px;
+        --dash-shadow: 0 6px 18px rgba(0,0,0,.35);
+        --dash-shadow-lg: 0 10px 40px rgba(0,0,0,.5);
+        --dash-gradient: linear-gradient(135deg, rgba(110,168,255,.1), rgba(110,168,255,.05));
+    }
+
+    /* ==================== LAYOUT ==================== */
     .dashboard-container {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 16px;
+        display: grid;
+        gap: 20px;
     }
     
-    /* ==================== HARASSMENT BAR ==================== */
-    .harassment-bar {
-        background: linear-gradient(135deg, #dc2626, #7f1d1d);
+    /* ==================== HEADER SECTION ==================== */
+    .header-row {
+        display: flex;
+        gap: 16px;
+        align-items: stretch;
+    }
+    
+    @media (max-width: 768px) {
+        .header-row {
+            flex-direction: column;
+        }
+    }
+    
+    .dashboard-header {
+        flex: 1;
+        background: linear-gradient(135deg, rgba(110,168,255,.15), rgba(139,92,246,.15));
+        border: 1px solid var(--dash-line);
+        border-radius: var(--dash-radius);
+        padding: 24px;
+        box-shadow: var(--dash-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--dash-primary), #8b5cf6, var(--dash-primary));
+        animation: shimmer 3s ease-in-out infinite;
+    }
+    
+    @keyframes shimmer {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    
+    .dashboard-title {
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--dash-text), var(--dash-primary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+    }
+    
+    .dashboard-subtitle {
+        font-size: 16px;
+        color: var(--dash-muted);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .dashboard-subtitle::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--dash-line), transparent);
+    }
+    
+    /* ==================== EVENING REVIEW ALERT ==================== */
+    .evening-review-alert {
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        border: 1px solid rgba(239,68,68,.6);
+        border-radius: var(--dash-radius);
+        padding: 20px;
+        box-shadow: var(--dash-shadow);
+        min-width: 250px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        animation: pulseRed 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulseRed {
+        0%, 100% { 
+            box-shadow: 0 0 20px rgba(239,68,68,.4);
+        }
+        50% { 
+            box-shadow: 0 0 40px rgba(239,68,68,.6);
+        }
+    }
+    
+    .evening-review-alert h3 {
         color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        text-shadow: 0 2px 10px rgba(0,0,0,.3);
+    }
+    
+    .evening-review-alert p {
+        color: rgba(255,255,255,.9);
+        margin: 0 0 12px 0;
+        font-size: 13px;
+    }
+    
+    .evening-review-alert .review-btn {
+        background: white;
+        color: #dc2626;
+        padding: 10px 24px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,.2);
+        display: inline-block;
+    }
+    
+    .evening-review-alert .review-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    }
+    
+    /* ==================== HARASSMENT MESSAGE ==================== */
+    .harassment-message {
+        background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(239,68,68,.1));
+        border: 1px solid rgba(239,68,68,.4);
+        backdrop-filter: blur(10px);
+        color: #ff6b6b;
+        padding: 16px 20px;
+        border-radius: var(--dash-radius-sm);
         font-weight: 600;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        animation: pulseGlow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulseGlow {
+        0%, 100% { 
+            box-shadow: 0 0 20px rgba(239,68,68,.2);
+        }
+        50% { 
+            box-shadow: 0 0 30px rgba(239,68,68,.4);
+        }
+    }
+    
+    /* ==================== LOCKOUT OVERLAY ==================== */
+    .lockout-overlay {
+        background: linear-gradient(135deg, rgba(239,68,68,.15), rgba(239,68,68,.05));
+        border: 2px solid rgba(239,68,68,.6);
+        backdrop-filter: blur(8px);
+        padding: 40px;
+        border-radius: var(--dash-radius);
+        text-align: center;
+        position: relative;
+        box-shadow: var(--dash-shadow-lg);
+    }
+    
+    .lockout-overlay::before {
+        content: '🔒';
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 60px;
+        opacity: 0.2;
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(-10px); }
+    }
+    
+    .lockout-title {
+        font-size: 32px;
+        color: var(--dash-danger);
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-shadow: 0 2px 10px rgba(239,68,68,.3);
+    }
+    
+    .lockout-message {
+        white-space: pre-line;
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--dash-text);
+    }
+    
+    /* ==================== BIOLOGICAL TRACKER ==================== */
+    .bio-tracker {
+        background: var(--dash-card);
+        border: 1px solid var(--dash-line);
+        padding: 20px;
+        border-radius: var(--dash-radius);
+        box-shadow: var(--dash-shadow);
+        position: relative;
+    }
+    
+    .bio-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: var(--dash-primary);
         display: flex;
         align-items: center;
         gap: 10px;
-        animation: pulse 3s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.85; }
-    }
-    
-    /* ==================== LOCKOUT WARNING ==================== */
-    .lockout-warning {
-        background: linear-gradient(135deg, #dc2626, #7f1d1d);
-        border: 2px solid var(--danger);
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        animation: pulse-danger 2s infinite;
-    }
-    
-    @keyframes pulse-danger {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.85; }
-    }
-    
-    .lockout-icon {
-        font-size: 32px;
-    }
-    
-    .lockout-text {
-        font-size: 16px;
-    }
-    
-    .lockout-text strong {
-        font-size: 18px;
-        display: block;
-        margin-bottom: 4px;
-    }
-    
-    /* ==================== STATS GRID ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
-    }
-    
-    .stat-card {
-        background: var(--card);
-        border: 2px solid var(--line);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-    }
-    
-    .stat-value {
-        font-size: 32px;
-        font-weight: bold;
-        color: var(--primary);
-        line-height: 1;
-        margin-bottom: 8px;
-    }
-    
-    .stat-label {
-        font-size: 13px;
-        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
-    .stat-card.danger .stat-value {
-        color: var(--danger);
+    .bio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 12px;
     }
     
-    .stat-card.success .stat-value {
-        color: var(--success);
-    }
-    
-    /* ==================== ACTION BUTTONS ==================== */
-    .action-bar {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 25px;
-        flex-wrap: wrap;
-    }
-    
-    .action-btn {
-        background: var(--primary);
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 6px;
-        font-weight: 600;
+    .bio-item {
+        background: linear-gradient(135deg, var(--dash-panel), rgba(30,41,59,.5));
+        border: 1px solid var(--dash-line);
+        padding: 16px 10px;
+        border-radius: var(--dash-radius-sm);
+        text-align: center;
         cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
     }
     
-    .action-btn:hover {
-        background: var(--primary-hover);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(98, 0, 238, 0.2);
-        color: white;
-        text-decoration: none;
+    .bio-item::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(110,168,255,.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
     }
     
-    .action-btn.secondary {
-        background: var(--panel);
-        color: var(--text);
-        border: 2px solid var(--line);
+    .bio-item:hover::before {
+        width: 150px;
+        height: 150px;
     }
     
-    .action-btn.secondary:hover {
-        background: var(--card);
-        border-color: var(--primary);
-        color: var(--text);
+    .bio-item:hover:not(.completed) {
+        transform: translateY(-3px) scale(1.02);
+        border-color: var(--dash-primary);
+        box-shadow: 0 8px 25px rgba(110,168,255,.25);
     }
     
-    .action-btn.warning {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        animation: glow 2s infinite;
+    .bio-item.completed {
+        background: linear-gradient(135deg, rgba(34,197,94,.2), rgba(34,197,94,.1));
+        border-color: rgba(34,197,94,.5);
     }
     
-    @keyframes glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
-        50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.5); }
+    .bio-item.completed::after {
+        content: '✓';
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        color: var(--dash-success);
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .bio-icon {
+        font-size: 26px;
+        margin-bottom: 8px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+    }
+    
+    .bio-name {
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .bio-status {
+        font-size: 10px;
+        color: var(--dash-muted);
+        font-weight: 500;
     }
     
     /* ==================== MAIN GRID ==================== */
     .main-grid {
         display: grid;
-        grid-template-columns: 1fr 400px;
+        grid-template-columns: 1fr 1fr;
         gap: 20px;
-        margin-bottom: 20px;
     }
     
-    @media (max-width: 1024px) {
+    @media (max-width: 992px) {
         .main-grid {
             grid-template-columns: 1fr;
         }
@@ -178,462 +334,616 @@
     
     /* ==================== SECTION CARDS ==================== */
     .section-card {
-        background: var(--card);
-        border: 2px solid var(--line);
-        border-radius: 12px;
+        background: var(--dash-card);
+        border: 1px solid var(--dash-line);
+        border-radius: var(--dash-radius);
         padding: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .section-card.locked-section {
-        opacity: 0.6;
+        box-shadow: var(--dash-shadow);
+        transition: all 0.3s ease;
         position: relative;
     }
     
-    .locked-content {
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--text-muted);
+    .section-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--dash-primary), transparent);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .section-card:hover::before {
+        opacity: 1;
     }
     
     .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--line);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--dash-line);
+        position: relative;
+    }
+    
+    .section-header::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 60px;
+        height: 2px;
+        background: var(--dash-primary);
     }
     
     .section-title {
-        font-size: 18px;
+        font-size: 14px;
         font-weight: 700;
-        color: var(--primary);
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--dash-text);
     }
     
     .section-actions {
         display: flex;
-        gap: 8px;
-    }
-    
-    /* ==================== BIOLOGICAL MAINTENANCE ==================== */
-    .bio-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 10px;
+        align-items: center;
     }
     
-    .bio-item {
-        background: var(--panel);
-        border: 2px solid var(--line);
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-    }
-    
-    .bio-item:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-    }
-    
-    .bio-item.complete {
-        background: rgba(34, 197, 94, 0.1);
-        border-color: var(--success);
-    }
-    
-    .bio-item.critical {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: var(--danger);
-        animation: shake 2s infinite;
-    }
-    
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        10% { transform: translateX(-2px); }
-        20% { transform: translateX(2px); }
-    }
-    
-    .bio-icon {
-        font-size: 28px;
-        margin-bottom: 8px;
-    }
-    
-    .bio-name {
+    .section-actions a {
+        color: var(--dash-primary);
+        text-decoration: none;
         font-size: 13px;
         font-weight: 600;
-        margin-bottom: 4px;
+        transition: all 0.2s;
+        padding: 4px 8px;
+        border-radius: 6px;
     }
     
-    .bio-status {
-        font-size: 11px;
-        color: var(--text-muted);
+    .section-actions a:hover {
+        background: rgba(110,168,255,.1);
+        transform: translateX(2px);
     }
     
-    .bio-status.success {
-        color: var(--success);
-        font-weight: 600;
+    /* ==================== PROJECT FOCUS SECTION ==================== */
+    .projects-focus-list {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 8px;
     }
     
-    .bio-status.danger {
-        color: var(--danger);
-        font-weight: 600;
+    .projects-focus-list::-webkit-scrollbar {
+        width: 6px;
     }
     
-    /* ==================== TASK LIST ==================== */
-    .task-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+    .projects-focus-list::-webkit-scrollbar-track {
+        background: var(--dash-panel);
+        border-radius: 3px;
     }
     
-    .task-link {
-        text-decoration: none !important;
-        color: inherit !important;
-        display: block;
+    .projects-focus-list::-webkit-scrollbar-thumb {
+        background: var(--dash-primary);
+        border-radius: 3px;
     }
     
-    .task-item {
-        background: var(--panel);
-        border: 2px solid var(--line);
-        border-radius: 8px;
-        padding: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        transition: all 0.3s ease;
-        cursor: pointer;
+    .project-focus-card {
+        background: linear-gradient(135deg, var(--dash-panel), rgba(30,41,59,.5));
+        border: 1px solid var(--dash-line);
+        padding: 16px;
+        border-radius: var(--dash-radius-sm);
+        margin-bottom: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
     }
     
-    .task-link:hover .task-item {
-        border-color: var(--primary);
-        transform: translateX(4px);
-        background: var(--card);
+    .project-focus-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--dash-primary);
+        transform: scaleY(0);
+        transition: transform 0.3s;
     }
     
-    .task-content {
-        flex: 1;
+    .project-focus-card:hover {
+        transform: translateX(6px);
+        box-shadow: 0 8px 25px rgba(0,0,0,.4);
+        border-color: var(--dash-primary);
     }
     
-    .task-project {
-        font-size: 11px;
-        color: var(--primary);
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-bottom: 2px;
+    .project-focus-card:hover::before {
+        transform: scaleY(1);
     }
     
-    .task-description {
-        font-size: 14px;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+    .locked-section {
+        opacity: 0.4;
+        filter: blur(2px);
+        pointer-events: none;
     }
     
-    .deadline-badge {
+    .locked-content {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--dash-muted);
+    }
+    
+    /* Status badges */
+    .status-badge {
         display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-right: 6px;
     }
     
-    .deadline-badge.overdue {
-        background: #dc2626;
-        color: white;
+    .status-badge.overdue {
+        background: rgba(239,68,68,.2);
+        color: #ff6b6b;
+        border: 1px solid rgba(239,68,68,.3);
+        animation: blink 1.5s ease-in-out infinite;
     }
     
-    .deadline-badge.approaching {
-        background: #f59e0b;
-        color: white;
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
     }
     
-    .task-priority {
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
+    .status-badge.due-today {
+        background: rgba(245,158,11,.2);
+        color: var(--dash-warning);
+        border: 1px solid rgba(245,158,11,.3);
+    }
+    
+    .status-badge.deadline-soon {
+        background: rgba(59,130,246,.2);
+        color: #60a5fa;
+        border: 1px solid rgba(59,130,246,.3);
+    }
+    
+    .status-badge.neglected {
+        background: rgba(107,114,128,.2);
+        color: #9ca3af;
+        border: 1px solid rgba(107,114,128,.3);
+    }
+    
+    /* Priority indicators */
+    .priority-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
     
-    .task-priority.high {
-        background: rgba(239, 68, 68, 0.2);
-        color: var(--danger);
+    .priority-badge.critical {
+        background: rgba(239,68,68,.15);
+        color: #ff6b6b;
     }
     
-    .task-priority.medium {
-        background: rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
+    .priority-badge.high {
+        background: rgba(245,158,11,.15);
+        color: var(--dash-warning);
     }
     
-    .task-priority.low {
-        background: rgba(34, 197, 94, 0.2);
-        color: var(--success);
+    .priority-badge.medium {
+        background: rgba(59,130,246,.15);
+        color: #60a5fa;
+    }
+    
+    /* Action buttons */
+    .project-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+    }
+    
+    .project-btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: none;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .project-btn.primary {
+        background: linear-gradient(135deg, var(--dash-primary), #8b5cf6);
+        color: white;
+    }
+    
+    .project-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(110,168,255,.4);
+    }
+    
+    .project-btn.success {
+        background: linear-gradient(135deg, var(--dash-success), #16a34a);
+        color: white;
+    }
+    
+    .project-btn.success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(34,197,94,.4);
     }
     
     /* ==================== CALENDAR SECTION ==================== */
     .event-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
     }
     
     .event-item {
-        background: var(--panel);
-        border-left: 3px solid var(--primary);
-        padding: 10px;
-        border-radius: 4px;
+        background: linear-gradient(135deg, var(--dash-panel), rgba(30,41,59,.5));
+        border-left: 3px solid var(--dash-primary);
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .event-item:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 15px rgba(0,0,0,.3);
     }
     
     .event-time {
-        font-size: 12px;
-        color: var(--primary);
-        font-weight: 600;
-        margin-bottom: 2px;
+        font-size: 11px;
+        color: var(--dash-primary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
     }
     
     .event-title {
         font-size: 14px;
-        color: var(--text);
-        margin-bottom: 2px;
+        color: var(--dash-text);
+        font-weight: 600;
+        margin-bottom: 4px;
     }
     
     .event-who {
         display: inline-block;
-        font-size: 11px;
-        background: var(--card);
-        padding: 2px 6px;
-        border-radius: 3px;
-        color: var(--text-muted);
+        font-size: 10px;
+        background: var(--dash-card);
+        padding: 2px 8px;
+        border-radius: 12px;
+        color: var(--dash-muted);
+        border: 1px solid var(--dash-line);
     }
     
     .no-events {
         text-align: center;
-        color: var(--text-muted);
-        padding: 20px;
+        color: var(--dash-muted);
+        padding: 30px;
         font-style: italic;
+        opacity: 0.7;
     }
     
     /* ==================== NOTES SECTION ==================== */
     .note-input-group {
         display: flex;
-        gap: 8px;
-        margin-bottom: 15px;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .note-category-select,
+    .note-input {
+        background: var(--dash-panel);
+        border: 1px solid var(--dash-line);
+        border-radius: 8px;
+        padding: 10px;
+        color: var(--dash-text);
+        transition: all 0.3s ease;
     }
     
     .note-category-select {
-        background: var(--panel);
-        border: 2px solid var(--line);
-        border-radius: 6px;
-        padding: 8px;
-        color: var(--text);
-        min-width: 100px;
+        min-width: 120px;
     }
     
     .note-input {
         flex: 1;
-        background: var(--panel);
-        border: 2px solid var(--line);
-        border-radius: 6px;
-        padding: 8px 12px;
-        color: var(--text);
     }
     
     .note-input:focus,
     .note-category-select:focus {
         outline: none;
-        border-color: var(--primary);
+        border-color: var(--dash-primary);
+        box-shadow: 0 0 0 3px rgba(110,168,255,.1);
     }
     
     .note-add-btn {
-        background: var(--primary);
+        background: linear-gradient(135deg, var(--dash-primary), #8b5cf6);
         color: white;
         border: none;
-        border-radius: 6px;
-        padding: 8px 16px;
+        border-radius: 8px;
+        padding: 10px 20px;
         font-weight: 600;
         cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .note-add-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(110,168,255,.4);
     }
     
     .notes-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 8px;
     }
     
-    .note-item {
-        background: var(--panel);
-        padding: 10px;
-        border-radius: 6px;
-        border-left: 3px solid var(--primary);
+    .notes-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .notes-list::-webkit-scrollbar-track {
+        background: var(--dash-panel);
+        border-radius: 3px;
+    }
+    
+    .notes-list::-webkit-scrollbar-thumb {
+        background: var(--dash-primary);
+        border-radius: 3px;
     }
     
     .note-category {
-        display: inline-block;
-        font-size: 10px;
-        background: var(--card);
-        padding: 2px 6px;
-        border-radius: 3px;
-        color: var(--primary);
-        font-weight: 600;
-        margin-bottom: 4px;
+        margin-bottom: 16px;
+    }
+    
+    .note-category-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--dash-primary);
+        margin-bottom: 8px;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .note-item {
+        background: linear-gradient(135deg, var(--dash-panel), rgba(30,41,59,.5));
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--dash-line);
+        transition: all 0.3s ease;
+    }
+    
+    .note-item:hover {
+        transform: translateX(4px);
+        border-color: var(--dash-primary);
     }
     
     .note-text {
+        flex: 1;
         font-size: 13px;
-        color: var(--text);
+        color: var(--dash-text);
+    }
+    
+    .note-resolve {
+        color: var(--dash-success);
+        text-decoration: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0 8px;
+        transition: all 0.2s;
+    }
+    
+    .note-resolve:hover {
+        transform: scale(1.2);
+        filter: drop-shadow(0 2px 8px rgba(34,197,94,.5));
+    }
+    
+    /* ==================== ACTION GRID ==================== */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 30px;
+    }
+    
+    .action-card {
+        background: linear-gradient(135deg, var(--dash-card), rgba(30,41,59,.5));
+        border: 1px solid var(--dash-line);
+        padding: 24px;
+        border-radius: var(--dash-radius);
+        text-align: center;
+        text-decoration: none;
+        color: var(--dash-text);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(110,168,255,.1) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .action-card:hover::before {
+        opacity: 1;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--dash-primary);
+        box-shadow: 0 10px 30px rgba(110,168,255,.3);
+    }
+    
+    .action-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+    }
+    
+    .action-title {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* ==================== RESPONSIVE ADJUSTMENTS ==================== */
+    @media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 24px;
+        }
+        
+        .bio-grid {
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        }
+        
+        .action-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-    
-    {% if lockout %}
-    <!-- LOCKOUT WARNING (non-blocking) -->
-    <div class="lockout-warning">
-        <div class="lockout-icon">🚫</div>
-        <div class="lockout-text">
-            <strong>PROJECTS LOCKED</strong>
-            Complete at least 2 of 3 morning tasks to unlock project access
+    <!-- HEADER WITH EVENING REVIEW ALERT -->
+    <div class="header-row">
+        <div class="dashboard-header">
+            <div class="dashboard-title">📋 DAILY COMMAND CENTER</div>
+            <div class="dashboard-subtitle">{{ today.strftime('%A, %B %d, %Y') }}</div>
         </div>
-    </div>
-    {% endif %}
-    
-    {% if harassment and not lockout %}
-    <!-- HARASSMENT BAR -->
-    <div class="harassment-bar">
-        <span>⚠️</span>
-        <span>{{ harassment }}</span>
-    </div>
-    {% endif %}
-    
-    <!-- STATS GRID -->
-    <div class="stats-grid">
-        <div class="stat-card {% if human.days_since_shower >= 2 %}danger{% endif %}">
-            <div class="stat-value">{{ human.days_since_shower }}</div>
-            <div class="stat-label">Days Since Shower</div>
-        </div>
-        <div class="stat-card {% if human.water_glasses < 4 %}danger{% elif human.water_glasses >= 6 %}success{% endif %}">
-            <div class="stat-value">{{ human.water_glasses }}/8</div>
-            <div class="stat-label">Water Glasses</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ daily_tasks|length }}</div>
-            <div class="stat-label">Tasks Today</div>
-        </div>
-        <div class="stat-card {% if human.morning_complete == 3 %}success{% elif human.morning_complete < 2 %}danger{% endif %}">
-            <div class="stat-value">{{ human.morning_complete }}/3</div>
-            <div class="stat-label">Morning Tasks</div>
-        </div>
-    </div>
-    
-    <!-- ACTION BAR -->
-    <div class="action-bar">
-        {% set current_hour = datetime.now().hour %}
+        
+        <!-- EVENING REVIEW ALERT (shows when active) -->
+        {% if show_evening_review %}
         {% if evening_review_end_hour == 99 or 
-              (evening_review_end_hour > evening_review_hour and current_hour >= evening_review_hour and current_hour < evening_review_end_hour) or
-              (evening_review_end_hour < evening_review_hour and (current_hour >= evening_review_hour or current_hour < evening_review_end_hour)) %}
-        <a href="{{ url_for('daily.evening_review') }}" class="action-btn warning">
-            🌙 Evening Review Available
-        </a>
+              (evening_review_end_hour < evening_review_hour and 
+               (datetime.now().hour >= evening_review_hour or datetime.now().hour <= evening_review_end_hour)) or
+              (evening_review_end_hour >= evening_review_hour and 
+               evening_review_hour <= datetime.now().hour <= evening_review_end_hour) %}
+        <div class="evening-review-alert">
+            <h3>🌙 EVENING REVIEW TIME</h3>
+            <p>Grade your day & plan tomorrow</p>
+            <a href="{{ url_for('daily.evening_review') }}" class="review-btn">
+                Start Review →
+            </a>
+        </div>
         {% endif %}
-        <a href="{{ url_for('daily.select_tasks') }}" class="action-btn">
-            📋 Select Tasks
-        </a>
-        <a href="{{ url_for('daily.calendar_view') }}" class="action-btn secondary">
-            📅 Full Calendar
-        </a>
-        <a href="{{ url_for('daily.add_event') }}" class="action-btn secondary">
-            ➕ Add Event
-        </a>
-        <a href="{{ url_for('daily.settings') }}" class="action-btn secondary">
-            ⚙️ Settings
-        </a>
+        {% endif %}
     </div>
     
-    <!-- BIOLOGICAL MAINTENANCE -->
-    <div class="section-card">
-        <div class="section-header">
-            <div class="section-title">
-                <span>🚿</span>
-                <span>BIOLOGICAL MAINTENANCE</span>
-            </div>
+    <!-- HARASSMENT MESSAGE -->
+    {% if harassment %}
+    <div class="harassment-message">
+        ⚠️ {{ harassment }} ⚠️
+    </div>
+    {% endif %}
+    
+    <!-- LOCKOUT OVERLAY -->
+    {% if lockout %}
+    <div class="lockout-overlay">
+        <div class="lockout-title">SYSTEM LOCKED</div>
+        <div class="lockout-message">{{ lockout_message }}</div>
+    </div>
+    {% endif %}
+    
+    <!-- BIOLOGICAL TRACKER -->
+    <div class="bio-tracker">
+        <div class="bio-title">
+            <span>🧬</span>
+            <span>BIOLOGICAL MINIMUMS</span>
+            <span style="margin-left: auto; font-size: 13px; color: var(--dash-muted);">
+                {{ human.morning_complete }}/3 to unlock
+            </span>
         </div>
         <div class="bio-grid">
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
                 <input type="hidden" name="task" value="meds">
-                <button type="submit" class="bio-item {% if human.meds_taken %}complete{% elif not human.meds_taken %}critical{% endif %}">
+                <button type="submit" class="bio-item {% if human.meds_taken %}completed{% endif %}">
                     <div class="bio-icon">💊</div>
-                    <div class="bio-name">Morning Meds</div>
-                    <div class="bio-status {% if human.meds_taken %}success{% else %}danger{% endif %}">
-                        {% if human.meds_taken %}✅ Taken{% else %}❌ NOT TAKEN{% endif %}
-                    </div>
+                    <div class="bio-name">Meds</div>
+                    <div class="bio-status">{% if human.meds_taken %}✓{% else %}TAKE NOW{% endif %}</div>
                 </button>
             </form>
             
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
                 <input type="hidden" name="task" value="shower">
-                <button type="submit" class="bio-item {% if human.shower_taken %}complete{% elif human.days_since_shower >= 2 %}critical{% endif %}">
+                <button type="submit" class="bio-item {% if human.shower_taken %}completed{% endif %}">
                     <div class="bio-icon">🚿</div>
                     <div class="bio-name">Shower</div>
-                    <div class="bio-status {% if human.shower_taken %}success{% elif human.days_since_shower >= 2 %}danger{% endif %}">
-                        {% if human.shower_taken %}✅ Clean{% else %}Day {{ human.days_since_shower }}{% endif %}
-                    </div>
+                    <div class="bio-status">{% if human.shower_taken %}✓{% else %}{{ human.days_since_shower }} days{% endif %}</div>
                 </button>
             </form>
             
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
-                <input type="hidden" name="task" value="teeth">
-                <button type="submit" class="bio-item {% if human.teeth_brushed_am %}complete{% endif %}">
+                <input type="hidden" name="task" value="teeth_am">
+                <button type="submit" class="bio-item {% if human.teeth_brushed_am %}completed{% endif %}">
                     <div class="bio-icon">🦷</div>
-                    <div class="bio-name">Brush Teeth</div>
-                    <div class="bio-status {% if human.teeth_brushed_am %}success{% endif %}">
-                        {% if human.teeth_brushed_am %}✅ Brushed{% else %}❌ Not Done{% endif %}
-                    </div>
+                    <div class="bio-name">Teeth AM</div>
+                    <div class="bio-status">{% if human.teeth_brushed_am %}✓{% else %}DO IT{% endif %}</div>
                 </button>
             </form>
             
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
                 <input type="hidden" name="task" value="breakfast">
-                <button type="submit" class="bio-item {% if human.breakfast %}complete{% endif %}">
+                <button type="submit" class="bio-item {% if human.breakfast %}completed{% endif %}">
                     <div class="bio-icon">🍳</div>
                     <div class="bio-name">Breakfast</div>
-                    <div class="bio-status {% if human.breakfast %}success{% endif %}">
-                        {% if human.breakfast %}✅ Ate{% else %}⚪ Skipped{% endif %}
-                    </div>
+                    <div class="bio-status">{% if human.breakfast %}✓{% else %}EAT{% endif %}</div>
                 </button>
             </form>
             
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
                 <input type="hidden" name="task" value="lunch">
-                <button type="submit" class="bio-item {% if human.lunch %}complete{% endif %}">
+                <button type="submit" class="bio-item {% if human.lunch %}completed{% endif %}">
                     <div class="bio-icon">🥪</div>
                     <div class="bio-name">Lunch</div>
-                    <div class="bio-status {% if human.lunch %}success{% endif %}">
-                        {% if human.lunch %}✅ Ate{% else %}⚪ Skipped{% endif %}
-                    </div>
+                    <div class="bio-status">{% if human.lunch %}✓{% else %}NOON{% endif %}</div>
                 </button>
             </form>
             
             <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
                 <input type="hidden" name="task" value="dinner">
-                <button type="submit" class="bio-item {% if human.dinner %}complete{% endif %}">
+                <button type="submit" class="bio-item {% if human.dinner %}completed{% endif %}">
                     <div class="bio-icon">🍽️</div>
                     <div class="bio-name">Dinner</div>
-                    <div class="bio-status {% if human.dinner %}success{% endif %}">
-                        {% if human.dinner %}✅ Ate{% else %}⚪ Skipped{% endif %}
-                    </div>
+                    <div class="bio-status">{% if human.dinner %}✓{% else %}6PM{% endif %}</div>
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('daily.update_human') }}" style="display: contents;">
+                <input type="hidden" name="task" value="teeth_pm">
+                <button type="submit" class="bio-item {% if human.teeth_brushed_pm %}completed{% endif %}">
+                    <div class="bio-icon">🦷</div>
+                    <div class="bio-name">Teeth PM</div>
+                    <div class="bio-status">{% if human.teeth_brushed_pm %}✓{% else %}NIGHT{% endif %}</div>
                 </button>
             </form>
             
@@ -652,17 +962,20 @@
     <div class="main-grid">
         <!-- LEFT COLUMN -->
         <div>
-            <!-- PROJECT TASKS -->
+            <!-- TODAY'S PROJECTS -->
             <div class="section-card {% if lockout %}locked-section{% endif %}">
                 <div class="section-header">
                     <div class="section-title">
-                        <span>{% if lockout %}🔒{% else %}⚔️{% endif %}</span>
-                        <span>TODAY'S PROJECT BATTLES</span>
+                        <span>{% if lockout %}🔒{% else %}🎯{% endif %}</span>
+                        <span>TODAY'S PROJECT FOCUS</span>
                     </div>
                     {% if not lockout %}
                     <div class="section-actions">
-                        <span style="color: var(--text-muted); font-size: 14px;">
-                            {{ daily_tasks|length }} tasks
+                        <a href="{{ url_for('daily.refresh_tasks') }}">
+                            🔄 Refresh
+                        </a>
+                        <span style="color: var(--dash-muted); font-size: 13px;">
+                            {{ daily_tasks|length }} projects
                         </span>
                     </div>
                     {% endif %}
@@ -677,40 +990,93 @@
                     </div>
                 </div>
                 {% elif daily_tasks %}
-                <div class="task-list">
+                <div class="projects-focus-list">
                     {% for task in daily_tasks %}
-                    <a href="{{ url_for('projects.tch_detail' if task.project_type == 'TCH' else 'persprojects.detail', id=task.project_id) }}" 
-                       class="task-link">
-                        <div class="task-item">
-                            <div class="task-content">
-                                <div class="task-project">[{{ task.project_type }}] {{ task.project_name }}</div>
-                                <div class="task-description">
-                                    {% set desc_parts = task.task_description.split(' - ') %}
-                                    {{ desc_parts[0] }}
-                                    {% if desc_parts|length > 1 %}
-                                        {% if 'OVERDUE' in desc_parts[1] %}
-                                        <span class="deadline-badge overdue">OVERDUE</span>
-                                        {% elif 'DEADLINE APPROACHING' in desc_parts[1] %}
-                                        <span class="deadline-badge approaching">DUE SOON</span>
-                                        {% elif 'DEADLINE PASSED' in desc_parts[1] %}
-                                        <span class="deadline-badge overdue">OVERDUE</span>
-                                        {% endif %}
+                    <div class="project-focus-card" style="border-left: 4px solid {% if 'TCH' in task.project_type %}#6ea8ff{% else %}#22c55e{% endif %};">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <!-- Project Name and Type -->
+                                <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: var(--dash-text);">
+                                    {{ task.project_name }}
+                                </div>
+                                
+                                <!-- Status/Priority Indicator -->
+                                <div style="margin-bottom: 10px;">
+                                    {% if 'OVERDUE' in task.task_description %}
+                                    <span class="status-badge overdue">
+                                        ⚠️ OVERDUE
+                                    </span>
+                                    {% elif 'DUE TODAY' in task.task_description %}
+                                    <span class="status-badge due-today">
+                                        🔥 DUE TODAY
+                                    </span>
+                                    {% elif 'Due in' in task.task_description %}
+                                    <span class="status-badge deadline-soon">
+                                        📅 DEADLINE SOON
+                                    </span>
+                                    {% elif 'Neglected for' in task.task_description %}
+                                    <span class="status-badge neglected">
+                                        📌 NEGLECTED
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <!-- Priority indicator -->
+                                    {% if task.priority == 1 %}
+                                    <span class="priority-badge critical">
+                                        CRITICAL
+                                    </span>
+                                    {% elif task.priority == 2 %}
+                                    <span class="priority-badge high">
+                                        HIGH
+                                    </span>
+                                    {% elif task.priority == 3 %}
+                                    <span class="priority-badge medium">
+                                        MEDIUM
+                                    </span>
                                     {% endif %}
                                 </div>
+                                
+                                <!-- Quick action area -->
+                                <div class="project-actions">
+                                    <a href="{{ url_for('projects.tch_detail' if 'TCH' in task.project_type else 'persprojects.detail', id=task.project_id) }}" 
+                                       class="project-btn primary">
+                                        View Project →
+                                    </a>
+                                    <button onclick="completeProject({{ task.id }})" 
+                                            class="project-btn success">
+                                        ✓ Worked On It
+                                    </button>
+                                </div>
                             </div>
-                            {% if task.priority %}
-                            <div class="task-priority {{ 'high' if task.priority == 1 else 'medium' if task.priority == 2 else 'low' }}">
-                                P{{ task.priority }}
+                            
+                            <!-- Project type indicator -->
+                            <div style="text-align: center; padding: 10px;">
+                                <div style="font-size: 24px; margin-bottom: 5px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));">
+                                    {% if 'TCH' in task.project_type %}💼{% else %}🏠{% endif %}
+                                </div>
+                                <div style="font-size: 10px; color: var(--dash-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    {{ task.project_type }}
+                                </div>
                             </div>
-                            {% endif %}
                         </div>
-                    </a>
+                    </div>
                     {% endfor %}
+                    
+                    <!-- Add more projects link -->
+                    <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--dash-line);">
+                        <a href="{{ url_for('daily.select_tasks') }}" style="color: var(--dash-primary); text-decoration: none; font-weight: 600;">
+                            + Add More Projects
+                        </a>
+                        <span style="margin: 0 12px; color: var(--dash-muted);">|</span>
+                        <a href="{{ url_for('daily.task_stats') }}" style="color: var(--dash-muted); text-decoration: none; font-size: 13px;">
+                            View Stats
+                        </a>
+                    </div>
                 </div>
                 {% else %}
                 <div class="no-events">
-                    No tasks selected for today.<br>
-                    <a href="{{ url_for('daily.select_tasks') }}" style="color: var(--primary);">Select tasks from projects →</a>
+                    No projects selected for today.<br>
+                    <a href="{{ url_for('daily.select_tasks') }}" style="color: var(--dash-primary);">Select projects to focus on →</a>
                 </div>
                 {% endif %}
             </div>
@@ -725,10 +1091,15 @@
                         <span>📅</span>
                         <span>SCHEDULE</span>
                     </div>
+                    <div class="section-actions">
+                        <a href="{{ url_for('daily.calendar_view') }}">
+                            View Full →
+                        </a>
+                    </div>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                    <div style="font-weight: 600; margin-bottom: 10px; color: var(--primary);">
+                    <div style="font-weight: 600; margin-bottom: 10px; color: var(--dash-primary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
                         Today ({{ today.strftime('%A, %b %d') }})
                     </div>
                     {% if today_events %}
@@ -749,7 +1120,9 @@
                 </div>
                 
                 <div>
-                    <div style="font-weight: 600; margin-bottom: 10px; color: var(--primary);">Tomorrow</div>
+                    <div style="font-weight: 600; margin-bottom: 10px; color: var(--dash-primary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Tomorrow
+                    </div>
                     {% if tomorrow_events %}
                     <div class="event-list">
                         {% for event in tomorrow_events %}
@@ -763,51 +1136,93 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="no-events">No events tomorrow</div>
+                    <div class="no-events">Nothing scheduled</div>
                     {% endif %}
+                </div>
+                
+                <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--dash-line);">
+                    <a href="{{ url_for('daily.add_event') }}" style="color: var(--dash-primary); text-decoration: none; font-weight: 600;">
+                        + Add Event
+                    </a>
                 </div>
             </div>
             
-            <!-- CAPTURED NOTES -->
+            <!-- NOTES -->
             <div class="section-card">
                 <div class="section-header">
                     <div class="section-title">
                         <span>📝</span>
-                        <span>CAPTURED NOTES</span>
+                        <span>QUICK NOTES</span>
                     </div>
                 </div>
                 
-                <form method="POST" action="{{ url_for('daily.add_note') }}">
-                    <div class="note-input-group">
-                        <select name="category" class="note-category-select">
-                            <option value="Work">Work</option>
-                            <option value="Personal">Personal</option>
-                            <option value="Kids">Kids</option>
-                            <option value="Crisis">Crisis</option>
-                            <option value="Random">Random</option>
-                        </select>
-                        <input type="text" name="note" class="note-input" placeholder="Quick note..." required>
-                        <button type="submit" class="note-add-btn">Add</button>
-                    </div>
+                <form method="POST" action="{{ url_for('daily.add_note') }}" class="note-input-group">
+                    <select name="category" class="note-category-select">
+                        <option value="Idea">💡 Idea</option>
+                        <option value="Todo">✅ Todo</option>
+                        <option value="Remember">🧠 Remember</option>
+                        <option value="Bug">🐛 Bug</option>
+                        <option value="Random">🎲 Random</option>
+                    </select>
+                    <input type="text" name="note" class="note-input" placeholder="Capture a thought..." required>
+                    <button type="submit" class="note-add-btn">Add</button>
                 </form>
                 
                 {% if notes_by_category %}
                 <div class="notes-list">
                     {% for category, notes in notes_by_category.items() %}
+                    <div class="note-category">
+                        <div class="note-category-title">{{ category }}</div>
                         {% for note in notes %}
                         <div class="note-item">
-                            <span class="note-category">{{ category }}</span>
                             <div class="note-text">{{ note.note }}</div>
+                            <a href="{{ url_for('daily.resolve_note', note_id=note.id) }}" class="note-resolve">✓</a>
                         </div>
                         {% endfor %}
+                    </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="no-events">No notes captured today</div>
+                <div class="no-events">No notes yet today</div>
                 {% endif %}
             </div>
         </div>
     </div>
     
+    <!-- ACTION BUTTONS -->
+    <div class="action-grid">
+        <a href="{{ url_for('daily.calendar_view') }}" class="action-card">
+            <div class="action-icon">📆</div>
+            <div class="action-title">Calendar</div>
+        </a>
+        
+        <a href="{{ url_for('daily.select_tasks') }}" class="action-card">
+            <div class="action-icon">🎯</div>
+            <div class="action-title">Select Projects</div>
+        </a>
+        
+        <a href="{{ url_for('daily.settings') }}" class="action-card">
+            <div class="action-icon">⚙️</div>
+            <div class="action-title">Settings</div>
+        </a>
+        
+        <a href="{{ url_for('daily.task_stats') }}" class="action-card">
+            <div class="action-icon">📊</div>
+            <div class="action-title">Rotation Stats</div>
+        </a>
+    </div>
 </div>
+
+<script>
+function completeProject(taskId) {
+    if (confirm('Mark this project as worked on today?')) {
+        window.location.href = `/daily/tasks/complete/${taskId}`;
+    }
+}
+
+// Auto-refresh harassment message every 30 minutes
+setInterval(function() {
+    location.reload();
+}, 30 * 60 * 1000);
+</script>
 {% endblock %}

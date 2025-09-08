@@ -127,9 +127,7 @@
         margin: 8px 0;
         background: var(--card);
         border-radius: 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        border-left: 4px solid var(--primary);
     }
     
     .final-message {
@@ -286,24 +284,24 @@
         <h3>📅 TOMORROW'S BATTLE PLAN</h3>
         
         <div class="suggested-tasks">
-            <h4>Suggested Project Tasks (based on deadlines and neglect):</h4>
-            {% for suggestion in task_suggestions %}
-            <div class="task-suggestion">
-                <div>
-                    <strong>[{{ suggestion.type }}] {{ suggestion.project.name }}</strong><br>
-                    <small>{{ suggestion.reason }}</small>
+            <h4>Improvements for Tomorrow:</h4>
+            {% if task_suggestions %}
+                {% for suggestion in task_suggestions %}
+                <div class="task-suggestion">
+                    <strong>• {{ suggestion }}</strong>
                 </div>
-                <button class="btn btn-sm btn-primary" onclick="acceptTask({{ suggestion.project.id }}, '{{ suggestion.type }}')">
-                    Accept
-                </button>
-            </div>
-            {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="task-suggestion">
+                    <strong>• Great job today! Keep up the good work tomorrow.</strong>
+                </div>
+            {% endif %}
         </div>
         
         <div class="mt-4">
-            <h4>Or manually select tasks:</h4>
+            <h4>Select tomorrow's projects to work on:</h4>
             <a href="{{ url_for('daily.select_tasks') }}" class="btn btn-primary">
-                Select Tomorrow's Tasks
+                Select Tomorrow's Projects
             </a>
         </div>
     </div>
@@ -365,12 +363,6 @@
     
     function saveTomorrowEvents() {
         alert('Events saved! (Feature to be implemented)');
-    }
-    
-    function acceptTask(projectId, projectType) {
-        alert(`Task from project ${projectId} accepted for tomorrow!`);
-        event.target.disabled = true;
-        event.target.textContent = 'Added';
     }
     
     function completeReview() {

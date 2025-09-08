@@ -1,0 +1,238 @@
+<!-- templates/daily/task_stats.html -->
+{% extends "base.html" %}
+
+{% block title %}Project Rotation Statistics{% endblock %}
+
+{% block content %}
+<style>
+    .stats-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .stats-header {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+    }
+    
+    .stats-table {
+        background: var(--card);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: var(--shadow-2);
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th {
+        background: var(--panel);
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--line);
+    }
+    
+    td {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--line);
+    }
+    
+    tr:hover {
+        background: var(--hover);
+    }
+    
+    .type-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .type-badge.tch {
+        background: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+    }
+    
+    .type-badge.personal {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    
+    .priority-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .priority-badge.critical {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+    
+    .priority-badge.high {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+    
+    .priority-badge.medium {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+    }
+    
+    .priority-badge.low {
+        background: rgba(107, 114, 128, 0.2);
+        color: #6b7280;
+    }
+    
+    .neglected {
+        color: #ef4444;
+        font-weight: 600;
+    }
+    
+    .never-shown {
+        color: #f59e0b;
+        font-weight: 600;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .btn-warning {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: var(--panel);
+        color: var(--text);
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-2);
+    }
+    
+    .deadline-soon {
+        color: #ef4444;
+        font-weight: 600;
+    }
+</style>
+
+<div class="stats-container">
+    <div class="stats-header">
+        <h1>📊 Project Rotation Statistics</h1>
+        <p>Track which projects are being shown and which need attention</p>
+    </div>
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('daily.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        <a href="{{ url_for('daily.refresh_tasks') }}" class="btn btn-primary">🔄 Refresh Today's Selection</a>
+        <a href="{{ url_for('daily.force_rotate') }}" class="btn btn-warning" 
+           onclick="return confirm('This will reset all rotation tracking. Continue?')">⚡ Force Complete Rotation</a>
+    </div>
+    
+    <div class="stats-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Project Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Deadline</th>
+                    <th>Last Shown</th>
+                    <th>Days Since</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td><strong>{{ project.name }}</strong></td>
+                    <td>
+                        <span class="type-badge {{ project.type|lower }}">
+                            {{ project.type }}
+                        </span>
+                    </td>
+                    <td>{{ project.status|upper }}</td>
+                    <td>
+                        <span class="priority-badge {{ project.priority }}">
+                            {{ project.priority }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if project.deadline %}
+                            {% set days_until = (project.deadline - today).days %}
+                            {% if days_until < 0 %}
+                                <span class="deadline-soon">OVERDUE</span>
+                            {% elif days_until <= 7 %}
+                                <span class="deadline-soon">{{ project.deadline.strftime('%b %d') }}</span>
+                            {% else %}
+                                {{ project.deadline.strftime('%b %d') }}
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if project.last_shown %}
+                            {{ project.last_shown.strftime('%b %d') }}
+                        {% else %}
+                            <span class="never-shown">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if project.days_since == 999 %}
+                            <span class="never-shown">Never shown</span>
+                        {% elif project.days_since >= 7 %}
+                            <span class="neglected">{{ project.days_since }} days</span>
+                        {% else %}
+                            {{ project.days_since }} days
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: var(--panel); border-radius: 10px;">
+        <h3>📋 How Rotation Works</h3>
+        <ul style="line-height: 1.8;">
+            <li>Projects are scored based on: deadline urgency, priority level, and days since last shown</li>
+            <li>Overdue projects get highest priority (score +1000)</li>
+            <li>Projects not shown for 7+ days get increasing priority</li>
+            <li>The top {{ projects|length }} projects by score are selected each day</li>
+            <li>Use "Force Complete Rotation" if you want to reset and see different projects tomorrow</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -181,68 +181,49 @@
         font-size: 16px;
         font-weight: 700;
         color: var(--text);
-        margin-bottom: 8px;
-    }
-    
-    .day-cell.today .day-number {
-        color: var(--primary);
-        display: inline-block;
-        background: white;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 24px;
+        margin-bottom: 5px;
     }
     
     /* ==================== EVENT CHIPS ==================== */
     .event-chip {
-        font-size: 11px;
-        padding: 2px 6px;
-        border-radius: 4px;
+        font-size: 10px;
+        padding: 2px 4px;
         margin: 2px 0;
+        border-radius: 3px;
+        background: var(--primary);
+        color: white;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        background: var(--card);
-        border-left: 2px solid var(--primary);
     }
     
     .event-chip.wife {
-        border-left-color: #ec4899;
-        background: linear-gradient(to right, rgba(236, 72, 153, 0.15), var(--card));
+        background: #ec4899;
     }
     
     .event-chip.kids {
-        border-left-color: #10b981;
-        background: linear-gradient(to right, rgba(16, 185, 129, 0.15), var(--card));
+        background: #f59e0b;
     }
     
     .event-chip.family {
-        border-left-color: #f59e0b;
-        background: linear-gradient(to right, rgba(245, 158, 11, 0.15), var(--card));
+        background: #10b981;
     }
     
     .event-chip.deadline {
-        border-left-color: var(--danger);
-        background: linear-gradient(to right, rgba(239, 68, 68, 0.15), var(--card));
-        font-weight: 600;
+        background: #ef4444;
+        font-weight: bold;
     }
     
     .more-events {
         font-size: 10px;
-        color: var(--primary);
-        font-weight: 600;
-        margin-top: 4px;
+        color: var(--text-muted);
         text-align: center;
+        margin-top: 4px;
+        font-style: italic;
     }
     
     /* ==================== ACTION BAR ==================== */
     .action-bar {
-        background: var(--card);
-        border: 2px solid var(--line);
-        border-radius: 12px;
-        padding: 20px;
         display: flex;
         justify-content: center;
         gap: 15px;
@@ -250,45 +231,35 @@
     }
     
     .action-btn {
-        background: var(--primary);
-        color: white;
+        background: var(--card);
+        color: var(--text);
         padding: 12px 24px;
-        border: none;
-        border-radius: 6px;
+        border: 2px solid var(--line);
+        border-radius: 8px;
         font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
         text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
     
     .action-btn:hover {
-        background: var(--primary-hover);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(98, 0, 238, 0.2);
-        color: white;
+        transform: translateY(-2px);
+        border-color: var(--primary);
         text-decoration: none;
+        color: var(--text);
     }
     
     .action-btn.secondary {
         background: var(--panel);
-        color: var(--text);
-        border: 2px solid var(--line);
-    }
-    
-    .action-btn.secondary:hover {
-        background: var(--card);
-        border-color: var(--primary);
-        color: var(--text);
     }
     
     .action-btn.warning {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: #f59e0b;
+        color: white;
+        border-color: #f59e0b;
     }
     
-    /* ==================== DAY MODAL ==================== */
+    /* ==================== MODAL ==================== */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -296,8 +267,12 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.7);
         z-index: 999;
+    }
+    
+    .modal-overlay.show {
+        display: block;
     }
     
     .day-modal {
@@ -317,6 +292,10 @@
         z-index: 1000;
     }
     
+    .day-modal.show {
+        display: block;
+    }
+    
     .modal-header {
         display: flex;
         justify-content: space-between;
@@ -327,36 +306,35 @@
     }
     
     .modal-title {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 700;
         color: var(--primary);
     }
     
     .close-btn {
-        background: var(--danger);
-        color: white;
+        background: none;
         border: none;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
+        font-size: 28px;
+        color: var(--text-muted);
         cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        transition: color 0.3s ease;
+    }
+    
+    .close-btn:hover {
+        color: var(--danger);
     }
     
     .modal-events {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
     
     .modal-event {
         background: var(--panel);
         padding: 12px;
-        border-radius: 8px;
-        border-left: 3px solid var(--primary);
+        border-radius: 6px;
+        border-left: 4px solid var(--primary);
     }
     
     .modal-event.wife {
@@ -364,11 +342,11 @@
     }
     
     .modal-event.kids {
-        border-left-color: #10b981;
+        border-left-color: #f59e0b;
     }
     
     .modal-event.family {
-        border-left-color: #f59e0b;
+        border-left-color: #10b981;
     }
     
     .modal-actions {
@@ -447,50 +425,31 @@
         </div>
         
         <div class="month-days">
-            {% set current_date = month_start - timedelta(days=month_start.weekday() + 1) %}
-            {% if month_start.weekday() != 6 %}
-                {% set current_date = month_start - timedelta(days=month_start.weekday() + 1) %}
-            {% else %}
-                {% set current_date = month_start %}
-            {% endif %}
-            
-            {% for week in range(6) %}
-                {% for day in range(7) %}
-                    {% set is_current_month = current_date.month == month_start.month %}
-                    {% set is_today = current_date == today %}
-                    {% set is_weekend = current_date.weekday() in [5, 6] %}
-                    
-                    <div class="day-cell {% if not is_current_month %}other-month{% endif %} {% if is_today %}today{% endif %} {% if is_weekend %}weekend{% endif %}"
-                         onclick="showDayDetails('{{ current_date.strftime('%Y-%m-%d') }}')">
-                        <div class="day-number">{{ current_date.day }}</div>
-                        
-                        <!-- Events for this day -->
-                        {% set day_events = events|selectattr('event_date', 'equalto', current_date)|list %}
-                        {% set day_deadlines = project_deadlines|selectattr('deadline', 'equalto', current_date)|list if project_deadlines else [] %}
-                        
-                        <!-- Show first 3 events -->
-                        {% for event in day_events[:3] %}
-                        <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
-                             title="{{ event.event_time or '' }} - {{ event.event_type }} ({{ event.who }})">
-                            {% if event.event_time %}{{ event.event_time|truncate(8, True, '') }} {% endif %}{{ event.event_type|truncate(20, True, '') }}
-                        </div>
-                        {% endfor %}
-                        
-                        <!-- Show project deadlines -->
-                        {% for project in day_deadlines %}
-                        <div class="event-chip deadline" title="DEADLINE: {{ project.name }}">
-                            ⚠️ {{ project.name|truncate(15, True, '') }}
-                        </div>
-                        {% endfor %}
-                        
-                        <!-- Show more indicator if needed -->
-                        {% if (day_events|length + day_deadlines|length) > 3 %}
-                        <div class="more-events">+{{ (day_events|length + day_deadlines|length) - 3 }} more</div>
-                        {% endif %}
-                    </div>
-                    
-                    {% set current_date = current_date + timedelta(days=1) %}
+            {% for day_info in calendar_days %}
+            <div class="day-cell {% if not day_info.is_current_month %}other-month{% endif %} {% if day_info.is_today %}today{% endif %} {% if day_info.is_weekend %}weekend{% endif %}"
+                 onclick="showDayDetails('{{ day_info.date.strftime('%Y-%m-%d') }}')">
+                <div class="day-number">{{ day_info.day }}</div>
+                
+                <!-- Show first 3 events -->
+                {% for event in day_info.events[:3] %}
+                <div class="event-chip {% if event.who == 'Wife' %}wife{% elif event.who in ['Tommy', 'Sarah'] %}kids{% elif event.who == 'Family' %}family{% endif %}"
+                     title="{{ event.event_time or '' }} - {{ event.event_type }} ({{ event.who }})">
+                    {% if event.event_time %}{{ event.event_time|truncate(8, True, '') }} {% endif %}{{ event.event_type|truncate(20, True, '') }}
+                </div>
                 {% endfor %}
+                
+                <!-- Show project deadlines -->
+                {% for project in day_info.deadlines %}
+                <div class="event-chip deadline" title="DEADLINE: {{ project.name }}">
+                    ⚠️ {{ project.name|truncate(15, True, '') }}
+                </div>
+                {% endfor %}
+                
+                <!-- Show more indicator if needed -->
+                {% if (day_info.events|length + day_info.deadlines|length) > 3 %}
+                <div class="more-events">+{{ (day_info.events|length + day_info.deadlines|length) - 3 }} more</div>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
     </div>
@@ -527,80 +486,72 @@
 </div>
 
 <script>
-    // Store events data for modal
-    const eventsData = {
-        {% for event in events %}
-        '{{ event.event_date.strftime('%Y-%m-%d') }}': '{{ event.event_date.strftime('%Y-%m-%d') }}',
-        {% endfor %}
-    };
-    
-    // Store all events for display
-    const allEvents = [
-        {% for event in events %}
-        {
-            date: '{{ event.event_date.strftime('%Y-%m-%d') }}',
-            time: '{{ event.event_time or "All Day" }}',
-            type: '{{ event.event_type }}',
-            who: '{{ event.who }}',
-            description: '{{ event.description or "" }}'
-        },
-        {% endfor %}
-    ];
-    
-    function showDayDetails(date) {
-        const modal = document.getElementById('dayModal');
-        const overlay = document.querySelector('.modal-overlay');
-        const content = document.getElementById('modalContent');
-        const dateObj = new Date(date + 'T00:00:00');
-        
-        // Format date nicely
+    function showDayDetails(dateStr) {
+        // Parse the date
+        const date = new Date(dateStr);
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('modalDate').textContent = dateObj.toLocaleDateString('en-US', options);
+        const formattedDate = date.toLocaleDateString('en-US', options);
         
-        // Get events for this day
-        const dayEvents = allEvents.filter(e => e.date === date);
+        // Update modal title
+        document.getElementById('modalDate').textContent = formattedDate;
         
-        if (dayEvents.length > 0) {
-            content.innerHTML = dayEvents.map(event => {
-                const whoClass = event.who.toLowerCase().replace(' ', '');
-                return `
-                    <div class="modal-event ${whoClass}">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="color: var(--primary);">${event.time}</strong>
-                            <span class="event-who ${whoClass}" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--primary); color: white;">
-                                ${event.who}
-                            </span>
-                        </div>
-                        <div style="font-weight: 600; margin-bottom: 4px;">${event.type}</div>
-                        ${event.description ? `<div style="font-size: 13px; color: var(--text-muted);">${event.description}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
-        } else {
-            content.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No events scheduled for this day.</p>';
-        }
-        
-        // Set add event button
+        // Update add event button
         document.getElementById('addEventBtn').onclick = function() {
-            window.location.href = `{{ url_for('daily.add_event') }}?date=${date}`;
+            window.location.href = `{{ url_for('daily.add_event') }}?date=${dateStr}`;
         };
         
+        // Fetch events for this day
+        fetch(`{{ url_for('daily.api_get_events', date_str='') }}${dateStr}`)
+            .then(response => response.json())
+            .then(data => {
+                const content = document.getElementById('modalContent');
+                content.innerHTML = '';
+                
+                if (data.events.length === 0 && data.deadlines.length === 0) {
+                    content.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No events scheduled</p>';
+                } else {
+                    // Add events
+                    data.events.forEach(event => {
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = `modal-event ${event.who.toLowerCase()}`;
+                        eventDiv.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 4px;">${event.time} - ${event.type}</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">Who: ${event.who}</div>
+                            ${event.description ? `<div style="font-size: 13px; margin-top: 4px;">${event.description}</div>` : ''}
+                        `;
+                        content.appendChild(eventDiv);
+                    });
+                    
+                    // Add deadlines
+                    data.deadlines.forEach(deadline => {
+                        const deadlineDiv = document.createElement('div');
+                        deadlineDiv.className = 'modal-event';
+                        deadlineDiv.style.borderLeftColor = '#ef4444';
+                        deadlineDiv.innerHTML = `
+                            <div style="font-weight: 600; color: #ef4444;">⚠️ DEADLINE: ${deadline.name}</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">Priority: ${deadline.priority}</div>
+                        `;
+                        content.appendChild(deadlineDiv);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                document.getElementById('modalContent').innerHTML = '<p style="color: var(--danger);">Error loading events</p>';
+            });
+        
         // Show modal
-        modal.style.display = 'block';
-        overlay.style.display = 'block';
+        document.querySelector('.modal-overlay').classList.add('show');
+        document.getElementById('dayModal').classList.add('show');
     }
     
     function closeDayModal() {
-        document.getElementById('dayModal').style.display = 'none';
-        document.querySelector('.modal-overlay').style.display = 'none';
+        document.querySelector('.modal-overlay').classList.remove('show');
+        document.getElementById('dayModal').classList.remove('show');
     }
     
     function checkTimeTree() {
-        if (confirm('Have you checked TimeTree for any family events not shown here?\n\nMake sure all important family events are synchronized!')) {
-            alert('Good! Remember to add any important family events to this calendar too.');
-        } else {
-            alert('Go check TimeTree now and add any missing events!\n\nYour wife will NOT be happy if you miss something.');
-        }
+        alert('Remember to sync with TimeTree for family events!');
     }
 </script>
 {% endblock %}
