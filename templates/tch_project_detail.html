@@ -570,13 +570,19 @@
           <div class="idea-footer">
             <form method="POST" action="{{ url_for('projects.update_idea_status', idea_id=idea.id) }}">
               <select name="status" onchange="this.form.submit()">
-                <option value="new"         {% if idea.status == 'new' %}selected{% endif %}>New</option>
-                <option value="considered"  {% if idea.status == 'considered' %}selected{% endif %}>Considered</option>
-                <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
-                <option value="rejected"    {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="new" {% if idea.status=='new' %}selected{% endif %}>New</option>
+                <option value="considered" {% if idea.status=='considered' %}selected{% endif %}>Considered</option>
+                <option value="implemented" {% if idea.status=='implemented' %}selected{% endif %}>Implemented</option>
+                <option value="rejected" {% if idea.status=='rejected' %}selected{% endif %}>Rejected</option>
               </select>
             </form>
-            <span class="idea-date">{{ idea.created_at.strftime('%b %d') }}</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <a href="{{ url_for('projects.edit_tch_idea', idea_id=idea.id) }}" class="btn btn-sm">✏️</a>
+              <form method="POST" action="{{ url_for('projects.delete_tch_idea', idea_id=idea.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this idea?')">🗑️</button>
+              </form>
+              <span class="idea-date">{{ idea.created_at.strftime('%b %d') }}</span>
+            </div>
           </div>
         </div>
         {% else %}
@@ -622,13 +628,20 @@
         <div class="milestone-item {% if milestone.completed %}completed{% endif %}">
           <div class="milestone-header">
             <h4>{{ milestone.title }}</h4>
-            {% if not milestone.completed %}
-            <form method="POST" action="{{ url_for('projects.complete_milestone', milestone_id=milestone.id) }}">
-              <button type="submit" class="btn btn-success btn-sm">Complete</button>
-            </form>
-            {% else %}
-            <span class="completed-badge">Completed</span>
-            {% endif %}
+            <div style="display:flex; gap:6px; align-items:center;">
+              {% if not milestone.completed %}
+              <form method="POST" action="{{ url_for('projects.complete_milestone', milestone_id=milestone.id) }}">
+                <button type="submit" class="btn btn-success btn-sm">Complete</button>
+              </form>
+              {% else %}
+              <span class="completed-badge">Completed</span>
+              {% endif %}
+              <a href="{{ url_for('projects.edit_tch_milestone', milestone_id=milestone.id) }}" class="btn btn-sm">✏️</a>
+              <form method="POST" action="{{ url_for('projects.delete_tch_milestone', milestone_id=milestone.id) }}"
+                style="display:inline;">
+                <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this milestone?')">🗑️</button>
+              </form>
+            </div>
           </div>
           {% if milestone.description %}<p>{{ milestone.description }}</p>{% endif %}
           {% if milestone.target_date %}
@@ -681,7 +694,13 @@
         <div class="note-item">
           <div class="note-header">
             <span class="note-category">{{ note.category|title }}</span>
-            <span class="note-date">{{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <a href="{{ url_for('projects.edit_tch_note', note_id=note.id) }}" class="btn btn-sm">✏️</a>
+              <form method="POST" action="{{ url_for('projects.delete_tch_note', note_id=note.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this note?')">🗑️</button>
+              </form>
+              <span class="note-date">{{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+            </div>
           </div>
           <div class="note-content">{{ note.content }}</div>
         </div>

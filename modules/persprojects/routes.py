@@ -121,6 +121,45 @@ def delete_task(task_id):
     flash('Task deleted!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
 
+# Add this route after the existing task routes (around line 56-75)
+
+@persprojects_bp.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
+def edit_task(task_id):
+    """Edit a personal project task"""
+    task = PersonalTask.query.get_or_404(task_id)
+    project = PersonalProject.query.get_or_404(task.project_id)
+    
+    if request.method == 'POST':
+        # Update task fields
+        task.content = request.form.get('content')
+        task.category = request.form.get('category')
+        task.priority = request.form.get('priority', 'medium')
+        task.due_date_str = request.form.get('due_date')
+        
+        # Handle due date
+        if task.due_date_str:
+            try:
+                task.due_date = datetime.strptime(task.due_date_str, '%Y-%m-%d').date()
+            except:
+                task.due_date = None
+        else:
+            task.due_date = None
+        
+        # Update notes if provided
+        task.notes = request.form.get('notes', '')
+        
+        db.session.commit()
+        flash('Task updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_task.html', 
+                         task=task, 
+                         project=project,
+                         categories=['planning', 'research', 'development', 
+                                   'testing', 'documentation', 'other'],
+                         priorities=['low', 'medium', 'high'])
+
 # ==================== IDEAS ====================
 
 @persprojects_bp.route('/<int:project_id>/idea/add', methods=['POST'])
@@ -153,6 +192,27 @@ def delete_idea(idea_id):
     db.session.commit()
     flash('Idea deleted!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/idea/<int:idea_id>/edit', methods=['GET', 'POST'])
+def edit_idea(idea_id):
+    """Edit a personal project idea"""
+    idea = PersonalIdea.query.get_or_404(idea_id)
+    project = PersonalProject.query.get_or_404(idea.project_id)
+    
+    if request.method == 'POST':
+        # Update idea fields
+        idea.content = request.form.get('content')
+        idea.status = request.form.get('status', 'new')
+        
+        db.session.commit()
+        flash('Idea updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_idea.html', 
+                         idea=idea, 
+                         project=project,
+                         statuses=['new', 'considering', 'planned', 'rejected'])
 
 # ==================== MILESTONES ====================
 
@@ -193,6 +253,33 @@ def delete_milestone(milestone_id):
     flash('Milestone deleted!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
 
+@persprojects_bp.route('/milestone/<int:milestone_id>/edit', methods=['GET', 'POST'])
+def edit_milestone(milestone_id):
+    """Edit a personal project milestone"""
+    milestone = PersonalMilestone.query.get_or_404(milestone_id)
+    project = PersonalProject.query.get_or_404(milestone.project_id)
+    
+    if request.method == 'POST':
+        # Update milestone fields
+        milestone.title = request.form.get('title')
+        milestone.description = request.form.get('description', '')
+        
+        # Handle target date
+        target_date_str = request.form.get('target_date')
+        if target_date_str:
+            milestone.target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        else:
+            milestone.target_date = None
+        
+        db.session.commit()
+        flash('Milestone updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_milestone.html', 
+                         milestone=milestone, 
+                         project=project)
+
 # ==================== NOTES ====================
 
 @persprojects_bp.route('/<int:project_id>/note/add', methods=['POST'])
@@ -217,6 +304,25 @@ def delete_note(note_id):
     db.session.commit()
     flash('Note deleted!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/note/<int:note_id>/edit', methods=['GET', 'POST'])
+def edit_note(note_id):
+    """Edit a personal project note"""
+    note = PersonalProjectNote.query.get_or_404(note_id)
+    project = PersonalProject.query.get_or_404(note.project_id)
+    
+    if request.method == 'POST':
+        note.content = request.form.get('content')
+        note.category = request.form.get('category', 'general')
+        
+        db.session.commit()
+        flash('Note updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    return render_template('persprojects/edit_note.html', 
+                         note=note, 
+                         project=project,
+                         categories=['general', 'progress', 'issue', 'research', 'reference'])
     
 # ==================== Edit ====================
 

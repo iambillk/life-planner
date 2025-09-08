@@ -447,6 +447,9 @@
               </div>
             </div>
             <div class="task-actions">
+              <a href="{{ url_for('persprojects.edit_task', task_id=task.id) }}" class="btn-icon" title="Edit task">
+                ✏️
+              </a>
               <form method="POST" action="{{ url_for('persprojects.delete_task', task_id=task.id) }}" style="display:inline;">
                 <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this task?')">🗑️</button>
               </form>
@@ -493,17 +496,26 @@
         <div class="idea-item status-{{ idea.status }}">
           <div class="idea-content">{{ idea.content }}</div>
           <div class="idea-footer">
-            <form method="POST" action="{{ url_for('persprojects.update_idea_status', idea_id=idea.id) }}">
+            <form method="POST" action="{{ url_for('persprojects.update_idea_status', idea_id=idea.id) }}"
+              style="display:inline;">
               <select name="status" onchange="this.form.submit()">
-                <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
-                <option value="considering" {% if idea.status == 'considering' %}selected{% endif %}>Considering</option>
-                <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
-                <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="new" {% if idea.status=='new' %}selected{% endif %}>New</option>
+                <option value="considering" {% if idea.status=='considering' %}selected{% endif %}>Considering</option>
+                <option value="implemented" {% if idea.status=='implemented' %}selected{% endif %}>Implemented</option>
+                <option value="rejected" {% if idea.status=='rejected' %}selected{% endif %}>Rejected</option>
               </select>
             </form>
             <span class="idea-date">{{ idea.created_at.strftime('%b %d') }}</span>
+            <div style="display: inline-flex; gap: 6px;">
+              <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit idea">
+                ✏️
+              </a>
+              <form method="POST" action="{{ url_for('persprojects.delete_idea', idea_id=idea.id) }}" style="display:inline;"
+                onsubmit="return confirm('Delete this idea?');">
+                <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
+              </form>
+            </div>
           </div>
-        </div>
         {% else %}
         <p class="empty-state">No ideas yet. Use Add ⌄ to add one.</p>
         {% endfor %}
@@ -559,12 +571,23 @@
           {% if milestone.target_date %}
           <div class="milestone-date">📅 Target: {{ milestone.target_date.strftime('%b %d, %Y') }}</div>
           {% endif %}
+          <!-- ADD THIS PART FOR EDIT AND DELETE -->
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <a href="{{ url_for('persprojects.edit_milestone', milestone_id=milestone.id) }}" class="btn-icon"
+              title="Edit milestone">
+              ✏️
+            </a>
+            <form method="POST" action="{{ url_for('persprojects.delete_milestone', milestone_id=milestone.id) }}"
+              onsubmit="return confirm('Delete this milestone?');" style="display:inline;">
+              <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
+            </form>
+          </div>
         </div>
         {% else %}
         <p class="empty-state">No milestones set. Use Add ⌄ to create one.</p>
         {% endfor %}
       </div>
-    </section>
+      </section>
 
     <!-- ===== Notes ===== -->
     <section class="content-section" id="notes" aria-labelledby="notes-title">
@@ -610,6 +633,16 @@
             <span class="note-date">{{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
           </div>
           <div class="note-content">{{ note.content }}</div>
+          <!-- ADD THIS PART FOR EDIT AND DELETE -->
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" class="btn-icon" title="Edit note">
+              ✏️
+            </a>
+            <form method="POST" action="{{ url_for('persprojects.delete_note', note_id=note.id) }}"
+              onsubmit="return confirm('Delete this note?');" style="display:inline;">
+              <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
+            </form>
+          </div>
         </div>
         {% else %}
         <p class="empty-state">No notes yet. Use Add ⌄ to add one.</p>

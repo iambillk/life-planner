@@ -13,7 +13,8 @@ from models import (
     db,
     DailyConfig, 
     CalendarEvent, 
-    EventType, 
+    EventType,
+    RecurringEvent,
     DailyTask,
     HumanMaintenance, 
     CapturedNote, 
@@ -1132,31 +1133,24 @@ def generate_recurring_instances(recurring):
     days = recurring.days_of_week.split(',')
     day_map = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6}
     
-    # Generate for next 30 days or until end date
+    # Generate for next 365 days (1 year) or until end date for "indefinite" events
     start = date.today()
-    end = recurring.until_date if recurring.until_date else start + timedelta(days=30)
+    end = recurring.until_date if recurring.until_date else start + timedelta(days=365)  # Changed from 30 to 365
     
     current = start
     while current <= end:
-        if any(current.weekday() == day_map.get(d.strip()) for d in days):
-            # Check if event already exists
-            existing = CalendarEvent.query.filter_by(
+        # Check if this day matches our pattern
+        if any(day_map.get(d) == current.weekday() for d in days):
+            # Create event instance
+            event = CalendarEvent(
                 event_date=current,
+                event_time=recurring.time,
                 event_type=recurring.event_type,
-                event_time=recurring.time
-            ).first()
-            
-            if not existing:
-                event = CalendarEvent(
-                    event_date=current,
-                    event_time=recurring.time,
-                    event_type=recurring.event_type,
-                    who=recurring.who,
-                    description=recurring.description,
-                    recurring_id=recurring.id
-                )
-                db.session.add(event)
-        
+                who=recurring.who,
+                description=recurring.description,
+                recurring_id=recurring.id
+            )
+            db.session.add(event)
         current += timedelta(days=1)
     
     db.session.commit()

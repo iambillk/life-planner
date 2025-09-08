@@ -386,6 +386,35 @@ def update_idea_status(idea_id):
     db.session.commit()
     return redirect(url_for('projects.tch_detail', id=idea.project_id))
 
+@projects_bp.route('/tch/idea/<int:idea_id>/edit', methods=['GET', 'POST'])
+def edit_tch_idea(idea_id):
+    """Edit a TCH project idea"""
+    idea = TCHIdea.query.get_or_404(idea_id)
+    project = TCHProject.query.get_or_404(idea.project_id)
+    
+    if request.method == 'POST':
+        idea.content = request.form.get('content')
+        idea.status = request.form.get('status', 'new')
+        
+        db.session.commit()
+        flash('Idea updated successfully!', 'success')
+        return redirect(url_for('projects.tch_detail', id=project.id))
+    
+    return render_template('tch_edit_idea.html', 
+                         idea=idea, 
+                         project=project,
+                         statuses=['new', 'considering', 'implemented', 'rejected'])
+
+@projects_bp.route('/tch/idea/<int:idea_id>/delete', methods=['POST'])
+def delete_tch_idea(idea_id):
+    """Delete TCH idea"""
+    idea = TCHIdea.query.get_or_404(idea_id)
+    project_id = idea.project_id
+    db.session.delete(idea)
+    db.session.commit()
+    flash('Idea deleted!', 'success')
+    return redirect(url_for('projects.tch_detail', id=project_id))
+
 # ==================== MILESTONES ====================
 
 @projects_bp.route('/tch/<int:project_id>/milestone/add', methods=['POST'])
@@ -412,6 +441,40 @@ def complete_milestone(milestone_id):
     flash('Milestone completed!', 'success')
     return redirect(url_for('projects.tch_detail', id=milestone.project_id))
 
+@projects_bp.route('/tch/milestone/<int:milestone_id>/edit', methods=['GET', 'POST'])
+def edit_tch_milestone(milestone_id):
+    """Edit a TCH project milestone"""
+    milestone = TCHMilestone.query.get_or_404(milestone_id)
+    project = TCHProject.query.get_or_404(milestone.project_id)
+    
+    if request.method == 'POST':
+        milestone.title = request.form.get('title')
+        milestone.description = request.form.get('description', '')
+        
+        target_date_str = request.form.get('target_date')
+        if target_date_str:
+            milestone.target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        else:
+            milestone.target_date = None
+        
+        db.session.commit()
+        flash('Milestone updated successfully!', 'success')
+        return redirect(url_for('projects.tch_detail', id=project.id))
+    
+    return render_template('tch_edit_milestone.html', 
+                         milestone=milestone, 
+                         project=project)
+
+@projects_bp.route('/tch/milestone/<int:milestone_id>/delete', methods=['POST'])
+def delete_tch_milestone(milestone_id):
+    """Delete TCH milestone"""
+    milestone = TCHMilestone.query.get_or_404(milestone_id)
+    project_id = milestone.project_id
+    db.session.delete(milestone)
+    db.session.commit()
+    flash('Milestone deleted!', 'success')
+    return redirect(url_for('projects.tch_detail', id=project_id))
+
 # ==================== NOTES ====================
 
 @projects_bp.route('/tch/<int:project_id>/note/add', methods=['POST'])
@@ -425,6 +488,39 @@ def add_tch_note(project_id):
     db.session.add(note)
     db.session.commit()
     flash('Note added!', 'success')
+    return redirect(url_for('projects.tch_detail', id=project_id))
+
+@projects_bp.route('/tch/note/<int:note_id>/edit', methods=['GET', 'POST'])
+def edit_tch_note(note_id):
+    """Edit note"""
+    note = TCHProjectNote.query.get_or_404(note_id)
+    project = note.project
+    
+    if request.method == 'POST':
+        note.content = request.form.get('content')
+        note.category = request.form.get('category', 'general')
+        
+        db.session.commit()
+        flash('Note updated!', 'success')
+        return redirect(url_for('projects.tch_detail', id=note.project_id))
+    
+    # Note categories for the dropdown
+    note_categories = ['general', 'meeting', 'technical', 'idea']
+    
+    return render_template('tch_edit_note.html', 
+                         note=note,
+                         project=project,
+                         note_categories=note_categories,
+                         active='tch')
+
+@projects_bp.route('/tch/note/<int:note_id>/delete', methods=['POST'])
+def delete_tch_note(note_id):
+    """Delete note"""
+    note = TCHProjectNote.query.get_or_404(note_id)
+    project_id = note.project_id
+    db.session.delete(note)
+    db.session.commit()
+    flash('Note deleted!', 'success')
     return redirect(url_for('projects.tch_detail', id=project_id))
 
 # ==================== PERSONAL PROJECTS ====================
