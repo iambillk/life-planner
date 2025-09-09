@@ -1,171 +1,478 @@
-{# ===================================================================
-   templates/realestate/cost_analysis.html
-   Cost Analysis - Placeholder Template
-   Version: 0.1.0 (Stub)
-   Created: 2025-01-03
-   
-   PLACEHOLDER: This template is a stub for future implementation
-=================================================================== #}
-
+<!-- templates/realestate/cost_analysis.html -->
 {% extends "base.html" %}
 {% block title %}Cost Analysis - {{ property.name }}{% endblock %}
 {% block header %}Cost Analysis{% endblock %}
 
 {% block extra_css %}
 <style>
-  .placeholder-container {
-    max-width: 900px;
+  :root {
+    --ca-bg: var(--bg, #0b0f1a);
+    --ca-card: var(--card, #0f1625);
+    --ca-panel: var(--panel, #121a2a);
+    --ca-line: var(--line, #1f2a3d);
+    --ca-text: var(--text, #e6eaf2);
+    --ca-muted: var(--text-muted, #9fb0c8);
+    --ca-primary: var(--primary, #6ea8ff);
+    --ca-success: var(--success, #22c55e);
+    --ca-warning: var(--warning, #f59e0b);
+    --ca-danger: var(--danger, #ef4444);
+  }
+
+  .cost-container {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
+    padding: 20px;
   }
-  
-  .placeholder-box {
-    background: var(--panel, #121a2a);
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  }
-  
-  .placeholder-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-  
-  .placeholder-title {
-    color: var(--text, #e6eaf2);
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-  }
-  
-  .placeholder-message {
-    color: var(--text-muted, #9fb0c8);
-    margin-bottom: 2rem;
-  }
-  
-  .feature-preview {
-    background: var(--card, #0f1625);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin: 2rem auto;
-    max-width: 600px;
-    text-align: left;
-  }
-  
-  .feature-preview h3 {
-    color: var(--text, #e6eaf2);
-    margin-bottom: 1rem;
-  }
-  
-  .feature-preview ul {
-    color: var(--text-muted, #9fb0c8);
-    list-style: none;
-    padding: 0;
-  }
-  
-  .feature-preview li {
-    padding: 0.5rem 0;
-    padding-left: 1.5rem;
-    position: relative;
-  }
-  
-  .feature-preview li::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: var(--success, #22c55e);
-  }
-  
-  .mock-charts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin: 2rem 0;
-  }
-  
-  .mock-chart {
-    background: var(--card, #0f1625);
-    padding: 1.5rem;
-    border-radius: 8px;
-    height: 150px;
+
+  /* Header with property name and back button */
+  .cost-header {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    opacity: 0.5;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ca-line);
   }
-  
-  .chart-title {
-    color: var(--text, #e6eaf2);
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
+
+  .cost-header h2 {
+    margin: 0;
+    color: var(--ca-primary);
+    font-size: 1.8rem;
   }
-  
-  .chart-placeholder {
-    font-size: 2rem;
-  }
-  
+
   .btn-back {
-    background: var(--primary, #6ea8ff);
-    color: white;
-    padding: 0.75rem 2rem;
-    border-radius: 8px;
+    background: var(--ca-card);
+    border: 1px solid var(--ca-line);
+    color: var(--ca-text);
+    padding: 10px 20px;
+    border-radius: 10px;
     text-decoration: none;
-    display: inline-block;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
   }
-  
+
   .btn-back:hover {
-    background: var(--primary-700, #3f7fe6);
-    transform: translateY(-1px);
+    border-color: var(--ca-primary);
+    transform: translateY(-2px);
+  }
+
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, var(--ca-card), var(--ca-panel));
+    border: 1px solid var(--ca-line);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .stat-label {
+    color: var(--ca-muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    color: var(--ca-text);
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .stat-card.primary .stat-value {
+    color: var(--ca-primary);
+  }
+
+  .stat-card.success .stat-value {
+    color: var(--ca-success);
+  }
+
+  .stat-card.warning .stat-value {
+    color: var(--ca-warning);
+  }
+
+  .stat-change {
+    font-size: 0.85rem;
+    margin-top: 5px;
+  }
+
+  .stat-change.up {
+    color: var(--ca-danger);
+  }
+
+  .stat-change.down {
+    color: var(--ca-success);
+  }
+
+  /* Charts Section */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    margin-bottom: 30px;
+  }
+
+  .chart-container {
+    background: var(--ca-card);
+    border: 1px solid var(--ca-line);
+    border-radius: 15px;
+    padding: 25px;
+  }
+
+  .chart-title {
+    color: var(--ca-primary);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* AI Insights Box */
+  .insights-container {
+    background: linear-gradient(135deg, rgba(110, 168, 255, 0.1), rgba(110, 168, 255, 0.05));
+    border: 2px solid var(--ca-primary);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+  }
+
+  .insights-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    color: var(--ca-primary);
+    font-size: 1.3rem;
+    font-weight: bold;
+  }
+
+  .insight-item {
+    background: var(--ca-card);
+    border-left: 3px solid var(--ca-primary);
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    color: var(--ca-text);
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Loading spinner */
+  .loading {
+    text-align: center;
+    color: var(--ca-muted);
+    padding: 20px;
+  }
+
+  .spinner {
+    border: 3px solid var(--ca-line);
+    border-top: 3px solid var(--ca-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+    .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="placeholder-container">
-  <div class="placeholder-box">
-    <div class="placeholder-icon">📊</div>
-    <h2 class="placeholder-title">Cost Analysis & Reporting</h2>
-    <p class="placeholder-message">
-      Coming soon! Detailed spending analysis and insights for {{ property.name }}.
-    </p>
-    
-    <div class="mock-charts">
-      <div class="mock-chart">
-        <div class="chart-title">Monthly Spending</div>
-        <div class="chart-placeholder">📈</div>
-      </div>
-      <div class="mock-chart">
-        <div class="chart-title">Category Breakdown</div>
-        <div class="chart-placeholder">🥧</div>
-      </div>
-      <div class="mock-chart">
-        <div class="chart-title">YTD Comparison</div>
-        <div class="chart-placeholder">📊</div>
-      </div>
-    </div>
-    
-    <div class="feature-preview">
-      <h3>Planned Features:</h3>
-      <ul>
-        <li>Monthly spending trends</li>
-        <li>Category breakdown (HVAC, Plumbing, Lawn, etc.)</li>
-        <li>DIY vs Professional costs</li>
-        <li>Year-over-year comparisons</li>
-        <li>Budget tracking and alerts</li>
-        <li>Cost per square foot analysis</li>
-        <li>Vendor cost comparisons</li>
-        <li>Export reports as PDF/Excel</li>
-        <li>Tax deduction summaries</li>
-        <li>ROI on improvements</li>
-      </ul>
-    </div>
-    
+<div class="cost-container">
+  <!-- Header -->
+  <div class="cost-header">
+    <h2>{{ property.name }} - Maintenance Costs</h2>
     <a href="{{ url_for('realestate.property_detail', id=property.id) }}" class="btn-back">
       ← Back to Property
     </a>
   </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card primary">
+      <div class="stat-label">{{ current_year }} Total</div>
+      <div class="stat-value">${{ "{:,.0f}".format(yearly_total) }}</div>
+      {% if last_year_total > 0 %}
+        {% set change = ((yearly_total - last_year_total) / last_year_total * 100) %}
+        <div class="stat-change {{ 'up' if change > 0 else 'down' }}">
+          {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}% vs last year
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="stat-card success">
+      <div class="stat-label">Monthly Average</div>
+      <div class="stat-value">${{ "{:,.0f}".format(monthly_avg) }}</div>
+      <div class="stat-change">YTD basis</div>
+    </div>
+
+    <div class="stat-card warning">
+      <div class="stat-label">Cost per Sq Ft</div>
+      <div class="stat-value">${{ "{:.2f}".format(cost_per_sqft) }}</div>
+      {% if property.square_footage %}
+        <div class="stat-change">{{ "{:,}".format(property.square_footage) }} sq ft</div>
+      {% endif %}
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Top Category</div>
+      <div class="stat-value" style="font-size: 1.3rem;">{{ top_category or "N/A" }}</div>
+      {% if top_category_amount > 0 %}
+        <div class="stat-change">${{ "{:,.0f}".format(top_category_amount) }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- AI Insights -->
+  <div class="insights-container">
+    <div class="insights-header">
+      <span style="font-size: 1.5rem;">🤖</span>
+      <span>AI Insights</span>
+    </div>
+    <div id="insights-content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Analyzing your maintenance data...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <!-- Category Breakdown -->
+    <div class="chart-container">
+      <div class="chart-title">
+        <span>📊</span>
+        <span>Category Breakdown ({{ current_year }})</span>
+      </div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+
+    <!-- Monthly Trend -->
+    <div class="chart-container">
+      <div class="chart-title">
+        <span>📈</span>
+        <span>Monthly Spending Trend</span>
+      </div>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Year over Year -->
+  <div class="chart-container">
+    <div class="chart-title">
+      <span>📅</span>
+      <span>12-Month Rolling View</span>
+    </div>
+    <canvas id="yearChart"></canvas>
+  </div>
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart defaults
+Chart.defaults.color = '#9fb0c8';
+Chart.defaults.borderColor = '#1f2a3d';
+
+// Category Pie Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ category_costs.keys()|list|tojson }},
+    datasets: [{
+      data: {{ category_costs.values()|list|tojson }},
+      backgroundColor: [
+        '#6ea8ff', '#22c55e', '#f59e0b', '#ef4444', 
+        '#a855f7', '#06b6d4', '#ec4899', '#8b5cf6',
+        '#10b981', '#f97316', '#3b82f6', '#64748b'
+      ],
+      borderWidth: 2,
+      borderColor: '#0f1625'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          font: { size: 12 }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = '$' + context.parsed.toLocaleString();
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = ((context.parsed / total) * 100).toFixed(1);
+            return label + ': ' + value + ' (' + percentage + '%)';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Monthly Line Chart
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+  type: 'line',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: [{
+      label: 'Monthly Costs',
+      data: {{ monthly_costs|tojson }},
+      borderColor: '#6ea8ff',
+      backgroundColor: 'rgba(110, 168, 255, 0.1)',
+      borderWidth: 3,
+      tension: 0.4,
+      fill: true,
+      pointRadius: 5,
+      pointBackgroundColor: '#6ea8ff',
+      pointBorderColor: '#0f1625',
+      pointBorderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return 'Spent: $' + context.parsed.y.toLocaleString();
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toLocaleString();
+          }
+        },
+        grid: {
+          color: 'rgba(31, 42, 61, 0.3)'
+        }
+      },
+      x: {
+        grid: {
+          color: 'rgba(31, 42, 61, 0.3)'
+        }
+      }
+    }
+  }
+});
+
+// Year Chart (Bar)
+const yearCtx = document.getElementById('yearChart').getContext('2d');
+new Chart(yearCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: [{
+      label: '{{ current_year }}',
+      data: {{ monthly_costs|tojson }},
+      backgroundColor: '#6ea8ff',
+      borderColor: '#4a7ed9',
+      borderWidth: 1
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return 'Spent: $' + context.parsed.y.toLocaleString();
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toLocaleString();
+          }
+        },
+        grid: {
+          color: 'rgba(31, 42, 61, 0.3)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+
+// Fetch AI Insights
+fetch("{{ url_for('realestate.cost_insights', property_id=property.id) }}")
+  .then(response => response.json())
+  .then(data => {
+    const container = document.getElementById('insights-content');
+    if (data.insights && data.insights.length > 0) {
+      container.innerHTML = data.insights.map(insight => 
+        `<div class="insight-item">${insight}</div>`
+      ).join('');
+    } else {
+      container.innerHTML = '<div class="insight-item">No insights available yet. Keep logging maintenance!</div>';
+    }
+  })
+  .catch(error => {
+    console.error('Error fetching insights:', error);
+    document.getElementById('insights-content').innerHTML = 
+      '<div class="insight-item">Unable to load insights at this time.</div>';
+  });
+</script>
 {% endblock %}

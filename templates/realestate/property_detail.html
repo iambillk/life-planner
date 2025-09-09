@@ -84,6 +84,48 @@
     </div>
   </section>
 
+  {# ============================== MAINTENANCE COSTS ======================= #}
+<section class="kcard" id="maintenance-costs">
+  <div class="kcard-head">
+    <div class="kcard-title">Maintenance Costs</div>
+  </div>
+  
+  <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year }} YTD</div>
+      <div style="font-size:1.8rem;font-weight:700;color:var(--primary);">
+        ${{ "{:,.0f}".format(property_ytd) }}
+      </div>
+      {% if property_last_year > 0 %}
+        {% set change = ((property_ytd - property_last_year) / property_last_year * 100) %}
+        <div style="margin-top:4px;font-size:.85rem;">
+          <span style="color:{{ 'var(--danger)' if change > 0 else 'var(--success)' }};">
+            {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}% vs last year
+          </span>
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year - 1 }} Total</div>
+      <div style="font-size:1.8rem;font-weight:700;color:var(--text);">
+        ${{ "{:,.0f}".format(property_last_year) }}
+      </div>
+    </div>
+    
+    {% set total_all_time = maintenance|selectattr('cost')|sum(attribute='cost') %}
+    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">All-Time Total</div>
+      <div style="font-size:1.8rem;font-weight:700;color:var(--text);">
+        ${{ "{:,.0f}".format(total_all_time) }}
+      </div>
+      <div style="margin-top:4px;font-size:.85rem;color:var(--text-muted);">
+        {{ maintenance|length }} records
+      </div>
+    </div>
+  </div>
+</section>
+
   {# ============================== OUTBUILDINGS ============================ #}
   <section class="kcard" id="outbuildings">
     <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">

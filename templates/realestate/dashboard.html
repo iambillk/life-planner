@@ -386,22 +386,37 @@
       {% endfor %}
     </div>
 
-    <!-- Maintenance Activity -->
-    <div class="overview-card">
-      <div class="overview-header">
-        <div class="overview-title">
-          <span aria-hidden="true">🔧</span> Maintenance
+    <!-- Portfolio Costs -->
+    <a href="{{ url_for('realestate.portfolio_costs') }}" style="text-decoration: none; color: inherit;">
+      <div class="overview-card" style="cursor: pointer; transition: all 0.3s ease;">
+        <div class="overview-header">
+          <div class="overview-title">
+            <span aria-hidden="true">💰</span> Portfolio Costs
+          </div>
+        </div>
+    
+        <div class="overview-value" style="font-size:1.8rem;">
+          ${{ "{:,.0f}".format(total_ytd) }}
+        </div>
+    
+        <div class="overview-detail">
+          {{ current_year }} YTD Maintenance
+          {% if total_last_year > 0 %}
+          {% set change = ((total_ytd - total_last_year) / total_last_year * 100) %}
+          <span
+            style="display: inline-block; margin-left: 8px; font-weight: bold; color: {{ 'var(--re-danger)' if change > 0 else 'var(--re-success)' }};">
+            {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}%
+          </span>
+          {% endif %}
+        </div>
+    
+        <div style="margin-top: 8px; font-size: 0.85rem; color: var(--re-muted);">
+          Click for detailed breakdown →
         </div>
       </div>
-      <div class="overview-value" style="font-size:1.2rem;">
-        Coming Soon
+    </a>
       </div>
-      <div class="overview-detail">
-        Track maintenance across all properties
-      </div>
-    </div>
-  </div>
-  {% endif %}
+      {% endif %}
 
   <!-- =================== CONTROLS =================== -->
   <div class="controls">

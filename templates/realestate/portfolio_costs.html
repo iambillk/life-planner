@@ -1,0 +1,453 @@
+<!-- templates/realestate/portfolio_costs.html -->
+{% extends "base.html" %}
+{% block title %}Portfolio Cost Analysis{% endblock %}
+{% block header %}Portfolio Cost Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --pc-bg: var(--bg, #0b0f1a);
+    --pc-card: var(--card, #0f1625);
+    --pc-panel: var(--panel, #121a2a);
+    --pc-line: var(--line, #1f2a3d);
+    --pc-text: var(--text, #e6eaf2);
+    --pc-muted: var(--text-muted, #9fb0c8);
+    --pc-primary: var(--primary, #6ea8ff);
+    --pc-success: var(--success, #22c55e);
+    --pc-warning: var(--warning, #f59e0b);
+    --pc-danger: var(--danger, #ef4444);
+  }
+
+  .portfolio-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Header */
+  .portfolio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--pc-line);
+  }
+
+  .portfolio-header h2 {
+    margin: 0;
+    color: var(--pc-primary);
+    font-size: 1.8rem;
+  }
+
+  .btn-back {
+    background: var(--pc-card);
+    border: 1px solid var(--pc-line);
+    color: var(--pc-text);
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .btn-back:hover {
+    border-color: var(--pc-primary);
+    transform: translateY(-2px);
+  }
+
+  /* Master Stats Cards */
+  .master-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .master-stat-card {
+    background: linear-gradient(135deg, var(--pc-card), var(--pc-panel));
+    border: 1px solid var(--pc-line);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .master-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  .stat-label {
+    color: var(--pc-muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    color: var(--pc-text);
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .master-stat-card.primary .stat-value {
+    color: var(--pc-primary);
+  }
+
+  .master-stat-card.success .stat-value {
+    color: var(--pc-success);
+  }
+
+  .master-stat-card.warning .stat-value {
+    color: var(--pc-warning);
+  }
+
+  .stat-sub {
+    font-size: 0.85rem;
+    color: var(--pc-muted);
+  }
+
+  /* Charts */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+  }
+
+  .chart-container {
+    background: var(--pc-card);
+    border: 1px solid var(--pc-line);
+    border-radius: 15px;
+    padding: 25px;
+  }
+
+  .chart-title {
+    color: var(--pc-primary);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Properties Table */
+  .properties-table-container {
+    background: var(--pc-card);
+    border: 1px solid var(--pc-line);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+  }
+
+  .properties-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .properties-table th {
+    background: var(--pc-panel);
+    color: var(--pc-primary);
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--pc-line);
+  }
+
+  .properties-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--pc-line);
+    color: var(--pc-text);
+  }
+
+  .properties-table tr:hover {
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .property-name {
+    font-weight: bold;
+    color: var(--pc-primary);
+    text-decoration: none;
+  }
+
+  .property-name:hover {
+    text-decoration: underline;
+  }
+
+  .category-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: var(--pc-panel);
+    border: 1px solid var(--pc-line);
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+
+  /* YoY indicator */
+  .yoy-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+
+  .yoy-indicator.up {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--pc-danger);
+  }
+
+  .yoy-indicator.down {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--pc-success);
+  }
+
+  .yoy-indicator.neutral {
+    background: rgba(110, 168, 255, 0.2);
+    color: var(--pc-primary);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .charts-row {
+      grid-template-columns: 1fr;
+    }
+    .master-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="portfolio-container">
+  <!-- Header -->
+  <div class="portfolio-header">
+    <h2>🏡 Portfolio Maintenance Costs</h2>
+    <a href="{{ url_for('realestate.dashboard') }}" class="btn-back">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Master Stats -->
+  <div class="master-stats">
+    <div class="master-stat-card primary">
+      <div class="stat-icon">💰</div>
+      <div class="stat-label">{{ current_year }} Total</div>
+      <div class="stat-value">${{ "{:,.0f}".format(portfolio_stats.total_spent_this_year) }}</div>
+      {% if yoy_change != 0 %}
+      <div class="yoy-indicator {{ 'up' if yoy_change > 0 else 'down' }}">
+        {{ "↑" if yoy_change > 0 else "↓" }} {{ "{:.0f}".format(abs(yoy_change)) }}% vs last year
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="master-stat-card success">
+      <div class="stat-icon">📊</div>
+      <div class="stat-label">Monthly Average</div>
+      <div class="stat-value">${{ "{:,.0f}".format(portfolio_stats.monthly_avg) }}</div>
+      <div class="stat-sub">YTD basis</div>
+    </div>
+
+    <div class="master-stat-card warning">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-label">Active Properties</div>
+      <div class="stat-value">{{ portfolio_stats.properties_with_maintenance }}/{{ portfolio_stats.total_properties }}</div>
+      <div class="stat-sub">With maintenance records</div>
+    </div>
+
+    <div class="master-stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-label">Highest Spending</div>
+      <div class="stat-value" style="font-size: 1.2rem;">{{ portfolio_stats.most_expensive_property or "N/A" }}</div>
+      <div class="stat-sub">${{ "{:,.0f}".format(portfolio_stats.most_expensive_amount) }} this year</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <!-- Category Breakdown -->
+    <div class="chart-container">
+      <div class="chart-title">
+        <span>📊</span>
+        <span>Category Breakdown (All Properties)</span>
+      </div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+
+    <!-- Monthly Trend -->
+    <div class="chart-container">
+      <div class="chart-title">
+        <span>📈</span>
+        <span>Monthly Portfolio Spending</span>
+      </div>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Properties Table -->
+  <div class="properties-table-container">
+    <div class="chart-title">
+      <span>🏘️</span>
+      <span>Property-by-Property Breakdown</span>
+    </div>
+    <table class="properties-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>{{ current_year }} Total</th>
+          <th>Last Year</th>
+          <th>All-Time</th>
+          <th>Top Category</th>
+          <th># Records</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in property_costs %}
+        <tr>
+          <td>
+            <a href="{{ url_for('realestate.property_detail', id=item.property.id) }}" class="property-name">
+              {{ item.property.name }}
+            </a>
+          </td>
+          <td><strong>${{ "{:,.0f}".format(item.total_this_year) }}</strong></td>
+          <td>${{ "{:,.0f}".format(item.total_last_year) }}</td>
+          <td>${{ "{:,.0f}".format(item.total_all_time) }}</td>
+          <td>
+            {% if item.top_category %}
+            <span class="category-badge">{{ item.top_category }}</span>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+          <td>{{ item.maintenance_count }}</td>
+          <td>
+            <a href="{{ url_for('realestate.cost_analysis', property_id=item.property.id) }}" 
+               style="color: var(--pc-primary); text-decoration: none;">
+              View Details →
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight: bold; background: var(--pc-panel);">
+          <td>TOTAL</td>
+          <td>${{ "{:,.0f}".format(portfolio_stats.total_spent_this_year) }}</td>
+          <td>${{ "{:,.0f}".format(portfolio_stats.total_spent_last_year) }}</td>
+          <td>${{ "{:,.0f}".format(portfolio_stats.total_spent_all_time) }}</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart defaults
+Chart.defaults.color = '#9fb0c8';
+Chart.defaults.borderColor = '#1f2a3d';
+
+// Category Pie Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ category_costs.keys()|list|tojson }},
+    datasets: [{
+      data: {{ category_costs.values()|list|tojson }},
+      backgroundColor: [
+        '#6ea8ff', '#22c55e', '#f59e0b', '#ef4444', 
+        '#a855f7', '#06b6d4', '#ec4899', '#8b5cf6',
+        '#10b981', '#f97316', '#3b82f6', '#64748b'
+      ],
+      borderWidth: 2,
+      borderColor: '#0f1625'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          font: { size: 12 }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = '$' + context.parsed.toLocaleString();
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = ((context.parsed / total) * 100).toFixed(1);
+            return label + ': ' + value + ' (' + percentage + '%)';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Monthly Line Chart
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: [{
+      label: 'Monthly Costs',
+      data: {{ monthly_costs|tojson }},
+      backgroundColor: 'rgba(110, 168, 255, 0.5)',
+      borderColor: '#6ea8ff',
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return 'Total: $' + context.parsed.y.toLocaleString();
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toLocaleString();
+          }
+        },
+        grid: {
+          color: 'rgba(31, 42, 61, 0.3)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}
