@@ -1,23 +1,8 @@
 {# =============================================================================
   FILE: templates/projects_tch_detail.html
   PURPOSE: TCH Project — Detail view (tasks, ideas, milestones, notes, files)
-  TEMPLATE VERSION: v1.3.0
-  LAST UPDATED: 2025-09-08
-
-  v1.3.0
-  - FIX: Reduced card heights from 40vh to 200px for compact dashboard view
-  - FIX: Show only 3-4 items per card with smooth scrolling
-  - FIX: Consistent card heights whether empty or full
-  - FIX: More compact empty states
-  - IMPROVED: Better responsive grid sizing
-  v1.2.0
-  - NEW: Add files to existing projects without new routes
-  - NEW: Always show files section with empty state
-  - NEW: Inline upload form using existing edit endpoint
-  v1.1.3
-  - Force inner scrolling by giving .section-scroll a fixed viewport height (height: 60vh)
-  - Keep min-height:0 on ancestors so flex children can shrink
-  - Cards contain their scroller (overflow:hidden on the card; .section-scroll does the scrolling)
+  TEMPLATE VERSION: v1.3.0 + pop-up expand (non-breaking)
+  LAST UPDATED: 2025-09-09
 ============================================================================= #}
 
 {% extends "base.html" %}
@@ -70,6 +55,7 @@
     padding:8px 12px; border-radius:12px; border:1px solid var(--pd-line);
     background:var(--pd-card); color:var(--pd-text); text-decoration:none; font-size:.95rem;
     transition:transform .1s ease, border-color .2s ease, background .2s ease;
+    cursor:pointer;
   }
   .btn:hover{ border-color:var(--pd-primary); transform:translateY(-1px); }
   .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
@@ -202,20 +188,10 @@
   }
   
   /* Compact scrollbar */
-  .section-scroll::-webkit-scrollbar {
-    width: 6px;
-  }
-  .section-scroll::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-  .section-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-    border-radius: 3px;
-  }
-  .section-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.3);
-  }
+  .section-scroll::-webkit-scrollbar { width: 6px; }
+  .section-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+  .section-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  .section-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
   /* Tasks - MORE COMPACT */
   .task-category{ margin-bottom:8px; }
@@ -284,12 +260,7 @@
   .note-content{ color:var(--pd-text); font-size:.9rem; }
 
   /* Empty states - COMPACT */
-  .empty-state{ 
-    text-align:center; 
-    color:var(--pd-muted); 
-    padding:40px 20px;
-    font-size:.9rem;
-  }
+  .empty-state{ text-align:center; color:var(--pd-muted); padding:40px 20px; font-size:.9rem; }
 
   /* Todo lists */
   .todo-lists-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
@@ -300,7 +271,7 @@
   .progress-bar-small{ flex:1; height:8px; border-radius:999px; overflow:hidden; background:#0b1120; border:1px solid var(--pd-line); }
   .progress-fill-small{ height:100%; background:var(--pd-success); }
 
-  /* Files (now at bottom) */
+  /* Files */
   .files-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
   .files-section h2{ margin:0 0 10px 0; font-size:1.05rem; }
   .files-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:10px; margin-top:10px; }
@@ -314,31 +285,16 @@
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
 
   /* File upload specific styles */
-  .file-upload-panel{
-    background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:12px; margin-bottom:12px;
-  }
-  .drop{
-    position:relative; border:2px dashed var(--pd-line); border-radius:12px;
-    background:#0b1120; padding:12px; transition: border-color .2s ease, background .2s ease;
-  }
+  .file-upload-panel{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:12px; margin-bottom:12px; }
+  .drop{ position:relative; border:2px dashed var(--pd-line); border-radius:12px; background:#0b1120; padding:12px; transition: border-color .2s ease, background .2s ease; }
   .drop.is-drag{ border-color: var(--pd-primary); background: rgba(110,168,255,.06); }
   .file-upload-input{ width:100%; }
-  .file-upload-input::-webkit-file-upload-button{
-    padding:8px 12px; border-radius:10px; border:none; cursor:pointer;
-    color:#0a0f1a; background: var(--pd-primary); margin-right:10px;
-  }
+  .file-upload-input::-webkit-file-upload-button{ padding:8px 12px; border-radius:10px; border:none; cursor:pointer; color:#0a0f1a; background: var(--pd-primary); margin-right:10px; }
   .selected-files-list{ margin-top:10px; display:grid; gap:6px; }
-  .file-pill{
-    display:flex; align-items:center; gap:8px; padding:6px 10px;
-    background:#0b1120; border:1px solid var(--pd-line); border-radius:999px; font-size:.9rem;
-  }
+  .file-pill{ display:flex; align-items:center; gap:8px; padding:6px 10px; background:#0b1120; border:1px solid var(--pd-line); border-radius:999px; font-size:.9rem; }
   .file-pill .type{ font-weight:800; font-size:.75rem; color:#0a0f1a; padding:2px 8px; border-radius:999px; }
-  .type.image{ background:#a78bfa; }
-  .type.pdf{ background:#f87171; }
-  .type.word{ background:#60a5fa; }
-  .type.excel{ background:#34d399; }
-  .type.archive{ background:#fbbf24; }
-  .type.other{ background:#94a3b8; }
+  .type.image{ background:#a78bfa; } .type.pdf{ background:#f87171; } .type.word{ background:#60a5fa; }
+  .type.excel{ background:#34d399; } .type.archive{ background:#fbbf24; } .type.other{ background:#94a3b8; }
   .pill-size{ margin-left:auto; color: var(--pd-muted); font-size:.8rem; }
   .totals{ margin-top:6px; padding-top:6px; border-top:1px dashed var(--pd-line); color: var(--pd-muted); font-size:.9rem; }
 
@@ -359,6 +315,33 @@
     .header-top{ grid-template-columns:1fr; }
     .content-grid{ grid-template-columns: 1fr; }
     .content-section{ height: 240px; min-height: 240px; max-height: 240px; }
+  }
+
+  /* ===== Overlay (pop-up) — non-intrusive, only used when expanded ===== */
+  .pd-overlay{
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .pd-overlay[hidden]{ display: none; }
+
+  /* When a content section is expanded we re-use the same node */
+  .content-section.pd-fullscreen{
+    width: min(1100px, 94vw);
+    height: min(88vh, 920px);
+    max-height: min(88vh, 920px);
+    overflow: hidden; /* keep internal scroller behavior */
+    position: relative;
+    box-shadow: 0 12px 36px rgba(0,0,0,.6);
+  }
+
+  /* sticky close bar inside expanded card */
+  .pd-closebar{
+    position: sticky; top: -12px; z-index: 2;
+    display: flex; justify-content: flex-end;
+    padding: 4px; margin: -8px -8px 8px -8px;
+    background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0));
   }
 </style>
 {% endblock %}
@@ -460,16 +443,20 @@
   <div class="content-grid">
 
     <!-- ===== Tasks ===== -->
-    <section class="content-section" id="tasks" aria-labelledby="tasks-title">
+    <section class="content-section" id="tasks" aria-labelledby="tasks-title" data-expandable="tasks">
       <div class="section-header">
-        <h2 id="tasks-title">✅ Tasks</h2>
+        <h2 id="tasks-title" data-expand-trigger>✅ Tasks</h2>
 
-        <div class="split-actions" data-section="tasks">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" aria-label="More add options" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Task</a>
-            <a href="#" data-action="full">📝 Full Task Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="tasks" title="Open full tasks">🗖 Expand</button>
+
+          <div class="split-actions" data-section="tasks">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" aria-label="More add options" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Task</a>
+              <a href="#" data-action="full">📝 Full Task Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -535,16 +522,20 @@
     </section>
 
     <!-- ===== Ideas ===== -->
-    <section class="content-section" id="ideas" aria-labelledby="ideas-title">
+    <section class="content-section" id="ideas" aria-labelledby="ideas-title" data-expandable="ideas">
       <div class="section-header">
-        <h2 id="ideas-title">💡 Ideas</h2>
+        <h2 id="ideas-title" data-expand-trigger>💡 Ideas</h2>
 
-        <div class="split-actions" data-section="ideas">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Idea</a>
-            <a href="#" data-action="full">📝 Full Idea Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="ideas" title="Open full ideas">🗖 Expand</button>
+
+          <div class="split-actions" data-section="ideas">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Idea</a>
+              <a href="#" data-action="full">📝 Full Idea Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -592,16 +583,20 @@
     </section>
 
     <!-- ===== Milestones ===== -->
-    <section class="content-section" id="milestones" aria-labelledby="milestones-title">
+    <section class="content-section" id="milestones" aria-labelledby="milestones-title" data-expandable="milestones">
       <div class="section-header">
-        <h2 id="milestones-title">🏁 Milestones</h2>
+        <h2 id="milestones-title" data-expand-trigger>🏁 Milestones</h2>
 
-        <div class="split-actions" data-section="milestones">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Milestone</a>
-            <a href="#" data-action="full">📝 Full Milestone Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="milestones" title="Open full milestones">🗖 Expand</button>
+
+          <div class="split-actions" data-section="milestones">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Milestone</a>
+              <a href="#" data-action="full">📝 Full Milestone Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -655,16 +650,20 @@
     </section>
 
     <!-- ===== Notes ===== -->
-    <section class="content-section" id="notes" aria-labelledby="notes-title">
+    <section class="content-section" id="notes" aria-labelledby="notes-title" data-expandable="notes">
       <div class="section-header">
-        <h2 id="notes-title">📝 Notes</h2>
+        <h2 id="notes-title" data-expand-trigger>📝 Notes</h2>
 
-        <div class="split-actions" data-section="notes">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Note</a>
-            <a href="#" data-action="full">📝 Full Note Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="notes" title="Open full notes">🗖 Expand</button>
+
+          <div class="split-actions" data-section="notes">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Note</a>
+              <a href="#" data-action="full">📝 Full Note Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -735,12 +734,13 @@
   {% endif %}
 
   <!-- Files section - Always visible now -->
-  <div class="files-section" id="files">
+  <div class="files-section" id="files" data-expandable="files">
     <div class="section-header">
-      <h2>📎 Project Files</h2>
-      <button class="btn btn-primary btn-sm" onclick="toggleFileUploadPanel()">
-        ➕ Add Files
-      </button>
+      <h2 data-expand-trigger>📎 Project Files</h2>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button type="button" class="btn btn-sm btn-outline" data-expand-btn="files" title="Open full files">🗖 Expand</button>
+        <button class="btn btn-primary btn-sm" onclick="toggleFileUploadPanel()">➕ Add Files</button>
+      </div>
     </div>
 
     <!-- File upload panel (hidden by default) -->
@@ -811,9 +811,7 @@
       <!-- Empty state -->
       <div class="empty-state-box">
         <p>📁 No files uploaded yet</p>
-        <button class="btn btn-primary" onclick="toggleFileUploadPanel()">
-          Upload your first file
-        </button>
+        <button class="btn btn-primary" onclick="toggleFileUploadPanel()">Upload your first file</button>
       </div>
     {% endif %}
   </div>
@@ -830,6 +828,7 @@
 
 {% block extra_js %}
 <script>
+/* ---------- menus + add panels (existing) ---------- */
 (function(){
   function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -864,6 +863,7 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllMenus(); });
 })();
 
+/* ---------- task checkbox ajax (existing) ---------- */
 (function(){
   const boxes = document.querySelectorAll('.task-checkbox');
   if (!boxes.length) return;
@@ -887,12 +887,11 @@
   });
 })();
 
-// Toggle file upload panel
+/* ---------- file upload panel (existing) ---------- */
 function toggleFileUploadPanel() {
   const panel = document.getElementById('file-upload-panel');
   if (panel) {
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    // Clear any previously selected files when closing
     if (panel.style.display === 'none') {
       const input = document.getElementById('attachments');
       if (input) input.value = '';
@@ -904,7 +903,7 @@ function toggleFileUploadPanel() {
   }
 }
 
-// File upload drag & drop functionality
+/* drag & drop (existing) */
 (function(){
   const dz = document.getElementById('dropZone');
   const input = document.getElementById('attachments');
@@ -920,17 +919,15 @@ function toggleFileUploadPanel() {
     if(['zip','rar','7z','tar','gz'].includes(ext)) return 'archive';
     return 'other';
   }
-  
   function fmtSize(bytes){
     if(bytes < 1024) return bytes + ' B';
     if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
     return (bytes/1024/1024).toFixed(1) + ' MB';
   }
-  
   function renderFiles(files){
     if(!files || !files.length){ 
-      list.innerHTML=''; 
-      totals.textContent=''; 
+      if(list) list.innerHTML=''; 
+      if(totals) totals.textContent=''; 
       return; 
     }
     let total = 0;
@@ -943,36 +940,97 @@ function toggleFileUploadPanel() {
         <span class="pill-size">${fmtSize(f.size)}</span>
       </div>`;
     }).join('');
-    list.innerHTML = rows;
-    totals.textContent = `${files.length} file${files.length>1?'s':''} • ${fmtSize(total)}`;
+    if(list) list.innerHTML = rows;
+    if(totals) totals.textContent = `${files.length} file${files.length>1?'s':''} • ${fmtSize(total)}`;
+  }
+  input?.addEventListener('change', e => renderFiles(e.target.files));
+  if(dz){
+    ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.add('is-drag'); }));
+    ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('is-drag'); }));
+    dz.addEventListener('drop', e => { const dt=e.dataTransfer; if(dt?.files?.length && input){ input.files=dt.files; renderFiles(dt.files); } });
+  }
+})();
+
+/* ---------- NEW: Expand any card into a modal (pop-up) ---------- */
+(function(){
+  // Create a single overlay root once
+  const overlay = document.createElement('div');
+  overlay.className = 'pd-overlay';
+  overlay.setAttribute('hidden','');
+  document.body.appendChild(overlay);
+
+  let current = null; // { id, node, placeholder, closebar, onEsc, onBackdrop }
+
+  function expand(id){
+    if(current) return;
+    const node = document.querySelector(`.content-section[data-expandable="${id}"], .files-section[data-expandable="${id}"]`);
+    if(!node) return;
+
+    // Place a marker to restore original position
+    const placeholder = document.createComment('pd-placeholder:'+id);
+    node.parentNode.insertBefore(placeholder, node);
+
+    // Prepare overlay and move node inside (preserves all JS & forms)
+    overlay.removeAttribute('hidden');
+    node.classList.add('pd-fullscreen');
+    overlay.appendChild(node);
+
+    // Add a sticky close bar to the top of the moved card
+    const bar = document.createElement('div');
+    bar.className = 'pd-closebar';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn btn-sm btn-secondary';
+    closeBtn.textContent = '✕ Close';
+    bar.appendChild(closeBtn);
+    node.insertBefore(bar, node.firstChild);
+
+    const onBackdrop = (e)=>{ if(e.target===overlay) collapse(); };
+    const onEsc = (e)=>{ if(e.key==='Escape') collapse(); };
+    overlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onEsc);
+    closeBtn.addEventListener('click', collapse);
+
+    // Save state
+    current = { id, node, placeholder, closebar: bar, onEsc, onBackdrop };
   }
 
-  if(input) {
-    input.addEventListener('change', e => renderFiles(e.target.files));
+  function collapse(){
+    if(!current) return;
+    const { node, placeholder, closebar, onEsc, onBackdrop } = current;
+
+    // Remove close bar
+    if(closebar && closebar.parentNode===node) node.removeChild(closebar);
+
+    // Move node back to its original place
+    placeholder.parentNode.insertBefore(node, placeholder);
+    placeholder.remove();
+
+    node.classList.remove('pd-fullscreen');
+    overlay.setAttribute('hidden','');
+
+    overlay.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onEsc);
+
+    current = null;
   }
-  
-  if(dz) {
-    ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => {
-      e.preventDefault(); 
-      e.stopPropagation(); 
-      dz.classList.add('is-drag');
-    }));
-    
-    ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => {
-      e.preventDefault(); 
-      e.stopPropagation(); 
-      dz.classList.remove('is-drag');
-    }));
-    
-    dz.addEventListener('drop', e => {
-      if(!input) return;
-      const dt = e.dataTransfer;
-      if(dt?.files?.length){
-        input.files = dt.files;
-        renderFiles(dt.files);
-      }
+
+  // Wire header expand buttons
+  document.querySelectorAll('[data-expand-btn]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      expand(btn.getAttribute('data-expand-btn'));
     });
-  }
+  });
+
+  // Optional: double-click the section title to expand
+  document.querySelectorAll('[data-expand-trigger]').forEach(h=>{
+    h.addEventListener('dblclick', ()=>{
+      const section = h.closest('[data-expandable]');
+      if(section) expand(section.getAttribute('data-expandable'));
+    });
+  });
+
 })();
 </script>
 {% endblock %}

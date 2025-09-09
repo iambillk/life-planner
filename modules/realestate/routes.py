@@ -376,15 +376,27 @@ def add_maintenance(property_id):
         db.session.flush()  # for maint.id
 
         # Work photos (multiple)
+        # Get the photo captions from the form
+        photo_captions = request.form.getlist("photo_captions[]")
+        print("DEBUG: Captions received:", photo_captions)  # ADD THIS
+        print("DEBUG: All form data:", request.form)  # AND THIS
+
+        # Work photos (multiple)
         files = request.files.getlist("photos")
-        for f in files:
+        for idx, f in enumerate(files):  # Changed to enumerate to get index
             if f and allowed_file(f.filename):
-                filename = save_uploaded_photo(f, "maintenance_photos", task or "maintenance")
-                db.session.add(PropertyMaintenancePhoto(
-                    maintenance_id=maint.id,
-                    filename=filename,
-                    photo_type="general",
-                ))
+               filename = save_uploaded_photo(f, "maintenance_photos", task or "maintenance")
+        
+               # Get the corresponding caption if it exists
+               caption = photo_captions[idx] if idx < len(photo_captions) else None
+               print(f"DEBUG: Saving photo {idx} with caption: {caption}")  # ADD THIS
+        
+               db.session.add(PropertyMaintenancePhoto(
+                   maintenance_id=maint.id,
+                   filename=filename,
+                   photo_type="general",
+                   caption=caption  # Added caption field
+            ))
 
         # Receipt (single)
         receipt = request.files.get("receipt")

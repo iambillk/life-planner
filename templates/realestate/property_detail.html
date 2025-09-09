@@ -1,363 +1,829 @@
-{# =============================================================================
-  FILE: templates/realestate/property_detail.html
-  PURPOSE: Real Estate — Property Detail (summary, related entities, history)
-  TEMPLATE VERSION: v1.3.1
-  LAST UPDATED: 2025-09-05
+{# ============================================================================= 
+FILE: templates/realestate/property_detail.html 
+PURPOSE: Real Estate — Property Detail (summary, related entities, history)
+TEMPLATE VERSION: v2.0.1 
+LAST UPDATED: 2025-09-09 
 
-  ── Changelog ──────────────────────────────────────────────────────────────────
-  v1.3.1
-  - Vendors list uses bullet-proof scroll container (.vendors-list) with visible,
-    styled scrollbar and touch momentum scrolling.
+── Changelog ──────────────────────────────────────────────────────────────────
+v2.0.1 - Show captions under maintenance thumbnails (on page) and in modal.
+v2.0.0 - Complete redesign of maintenance cards with date badges, smaller 
+         clickable photos, improved visual hierarchy
+v1.3.1 - Vendors list uses bullet-proof scroll container (.vendors-list) with 
+         visible, styled scrollbar and touch momentum scrolling. 
+v1.3.0 - Reordered sections: Maintenance above Vendors; Vendors scrollable. 
+v1.2.0 - Removed "Recent Photos" section; added captions for maintenance photos. 
+v1.1.1 - Fixed tall/odd-height action buttons across cards.
+=============================================================================#} 
+{% extends "base.html" %} 
+{% block title %}{{ property.name }}{% endblock %} 
+{% set active = 'realestate' %} 
+{% block header %}{{ property.name }}{% endblock %} 
 
-  v1.3.0
-  - Reordered sections: Maintenance above Vendors; Vendors scrollable.
-
-  v1.2.0
-  - Removed "Recent Photos" section; added captions for maintenance photos.
-
-  v1.1.1
-  - Fixed tall/odd-height action buttons across cards.
-============================================================================= #}
-
-{% extends "base.html" %}
-{% block title %}{{ property.name }}{% endblock %}
-{% set active = 'realestate' %}
-
-{% block header %}{{ property.name }}{% endblock %}
-
-{% block content %}
-<div class="page-stack" style="display:flex;flex-direction:column;gap:14px;">
-
-  {# ============================== SUMMARY CARD ============================ #}
+{% block content %} 
+<div class="page-stack" style="display:flex;flex-direction:column;gap:14px;"> 
+  {# ============================== SUMMARY CARD ============================ #} 
   <section class="kcard" id="summary">
     <div class="kcard-head" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <h2 class="kcard-title" style="margin:0;">{{ property.name }}</h2>
-        {% if property.property_type %}
-          <span class="kchip">Type: <strong>{{ property.property_type }}</strong></span>
-        {% endif %}
-        {% if property.city or property.state %}
-          <span class="kchip">Location: <strong>{{ (property.city ~ ', ' if property.city) ~ (property.state or '') }}</strong></span>
-        {% endif %}
-        {% if property.status %}
-          <span class="kstatus kstatus-{{ property.status|lower|replace(' ','-')|replace('/','-') }}"> {{ property.status|upper }} </span>
+        <h2 class="kcard-title" style="margin:0;">{{ property.name }}</h2> 
+        {% if property.property_type %} 
+        <span class="kchip">Type: <strong>{{ property.property_type }}</strong></span> 
+        {% endif %} 
+        {% if property.city or property.state %} 
+        <span class="kchip">Location: <strong>{{ (property.city ~ ', ' if property.city) ~ (property.state or '') }}</strong></span> 
+        {% endif %} 
+        {% if property.status %} 
+        <span class="kstatus kstatus-{{ property.status|lower|replace(' ','-')|replace('/','-') }}"> 
+          {{ property.status|upper }} 
+        </span> 
         {% endif %}
       </div>
-      <div class="kcard-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.dashboard') }}">← Back</a>
-        <a class="kbtn" href="{{ url_for('realestate.edit_property', id=property.id) }}">✏️ Edit</a>
-        <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}">🛠️ Add Maintenance</a>
+      <div class="kcard-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"> 
+        <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.dashboard') }}">← Back</a> 
+        <a class="kbtn" href="{{ url_for('realestate.edit_property', id=property.id) }}">✏️ Edit</a> 
+        <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}">🛠️ Add Maintenance</a> 
       </div>
     </div>
-
     <div class="kcard-body" style="display:grid;grid-template-columns:360px 1fr;gap:16px;">
       <div class="kpanel">
         <div style="border:1px solid var(--line);background:#0d1526;border-radius:14px;overflow:hidden;height:220px;display:flex;align-items:center;justify-content:center;">
-          {% if property.profile_photo %}
-            <img src="{{ url_for('static', filename='equipment_photos/property_profiles/' ~ property.profile_photo) }}"
-                 alt="{{ property.name }}" style="width:100%;height:100%;object-fit:cover;">
-          {% else %}
-            <div style="font-size:56px;opacity:.6;">🏠</div>
-          {% endif %}
-        </div>
-        {% if property.notes %}
-          <div class="khint" style="margin-top:10px;"><strong>Notes:</strong> {{ property.notes }}</div>
+          {% if property.profile_photo %} 
+          <img src="{{ url_for('static', filename='equipment_photos/property_profiles/' ~ property.profile_photo) }}"
+               alt="{{ property.name }}" style="width:100%;height:100%;object-fit:cover;"> 
+          {% else %} 
+          <div style="font-size:56px;opacity:.6;">🏠</div> 
+          {% endif %} 
+        </div> 
+        {% if property.notes %} 
+        <div class="khint" style="margin-top:10px;"><strong>Notes:</strong> {{ property.notes }}</div> 
         {% endif %}
       </div>
-
       <div class="kpanel">
         <div class="grid grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="kfield readonly"><label>Address</label><div class="kvalue">{{ property.address or '—' }}</div></div>
-          <div class="kfield readonly"><label>City / State</label><div class="kvalue">{{ (property.city or '—') ~ ' / ' ~ (property.state or '—') }}</div></div>
-          <div class="kfield readonly"><label>Zip</label><div class="kvalue">{{ property.zip_code or '—' }}</div></div>
-          <div class="kfield readonly"><label>Country</label><div class="kvalue">{{ property.country or '—' }}</div></div>
-          <div class="kfield readonly"><label>County</label><div class="kvalue">{{ property.county or '—' }}</div></div>
-          <div class="kfield readonly"><label>Township</label><div class="kvalue">{{ property.township or '—' }}</div></div>
-          <div class="kfield readonly"><label>Year Built</label><div class="kvalue">{{ property.year_built or '—' }}</div></div>
-          <div class="kfield readonly"><label>Square Footage</label><div class="kvalue">{{ property.square_footage or '—' }}</div></div>
-          <div class="kfield readonly"><label>Lot Size (acres)</label><div class="kvalue">{{ property.lot_size_acres or '—' }}</div></div>
-          <div class="kfield readonly"><label>Purchase Date</label><div class="kvalue">{% if property.purchase_date %}{{ property.purchase_date.strftime('%B %d, %Y') }}{% else %}—{% endif %}</div></div>
-          <div class="kfield readonly"><label>Purchase Price</label><div class="kvalue">{% if property.purchase_price %}${{ "%.2f"|format(property.purchase_price) }}{% else %}—{% endif %}</div></div>
-          <div class="kfield readonly"><label>Serial / Parcel</label><div class="kvalue">{{ property.serial or property.parcel_id or '—' }}</div></div>
+          <div class="kfield readonly">
+            <label>Address</label>
+            <div class="kvalue">{{ property.address or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>City / State</label>
+            <div class="kvalue">{{ (property.city or '—') ~ ' / ' ~ (property.state or '—') }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Zip</label>
+            <div class="kvalue">{{ property.zip_code or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Country</label>
+            <div class="kvalue">{{ property.country or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>County</label>
+            <div class="kvalue">{{ property.county or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Township</label>
+            <div class="kvalue">{{ property.township or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Year Built</label>
+            <div class="kvalue">{{ property.year_built or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Square Footage</label>
+            <div class="kvalue">{{ property.square_footage or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Lot Size (acres)</label>
+            <div class="kvalue">{{ property.lot_size_acres or '—' }}</div>
+          </div>
+          <div class="kfield readonly">
+            <label>Purchase Date</label>
+            <div class="kvalue">
+              {% if property.purchase_date %}{{ property.purchase_date.strftime('%B %d, %Y') }}{% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="kfield readonly">
+            <label>Purchase Price</label>
+            <div class="kvalue">
+              {% if property.purchase_price %}${{ "%.2f"|format(property.purchase_price) }}{% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="kfield readonly">
+            <label>Serial / Parcel</label>
+            <div class="kvalue">{{ property.serial or property.parcel_id or '—' }}</div>
+          </div>
         </div>
       </div>
     </div>
-  </section>
-
-  {# ============================== MAINTENANCE COSTS ======================= #}
-<section class="kcard" id="maintenance-costs">
-  <div class="kcard-head">
-    <div class="kcard-title">Maintenance Costs</div>
-  </div>
+  </section> 
   
-  <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
-    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
-      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year }} YTD</div>
-      <div style="font-size:1.8rem;font-weight:700;color:var(--primary);">
-        ${{ "{:,.0f}".format(property_ytd) }}
+  {# ============================== MAINTENANCE COSTS ======================= #} 
+  <section class="kcard" id="maintenance-costs">
+    <div class="kcard-head">
+      <div class="kcard-title">Maintenance Costs</div>
+    </div>
+    <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+      <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+        <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year }} YTD</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--primary);"> 
+          ${{ "{:,.0f}".format(property_ytd) }}
+        </div> 
+        {% if property_last_year > 0 %} 
+        {% set change = ((property_ytd - property_last_year) / property_last_year * 100) %} 
+        <div style="margin-top:4px;font-size:.85rem;"> 
+          <span style="color:{{ 'var(--danger)' if change > 0 else 'var(--success)' }};"> 
+            {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}% vs last year 
+          </span> 
+        </div> 
+        {% endif %}
       </div>
-      {% if property_last_year > 0 %}
-        {% set change = ((property_ytd - property_last_year) / property_last_year * 100) %}
-        <div style="margin-top:4px;font-size:.85rem;">
-          <span style="color:{{ 'var(--danger)' if change > 0 else 'var(--success)' }};">
-            {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}% vs last year
-          </span>
+      <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+        <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year - 1 }} Total</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--text);"> 
+          ${{ "{:,.0f}".format(property_last_year) }}
         </div>
-      {% endif %}
-    </div>
-    
-    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
-      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">{{ current_year - 1 }} Total</div>
-      <div style="font-size:1.8rem;font-weight:700;color:var(--text);">
-        ${{ "{:,.0f}".format(property_last_year) }}
+      </div> 
+      {% set total_all_time = maintenance|selectattr('cost')|sum(attribute='cost') %} 
+      <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
+        <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">All-Time Total</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--text);"> 
+          ${{ "{:,.0f}".format(total_all_time) }} 
+        </div>
+        <div style="margin-top:4px;font-size:.85rem;color:var(--text-muted);"> 
+          {{ maintenance|length }} records 
+        </div>
       </div>
     </div>
-    
-    {% set total_all_time = maintenance|selectattr('cost')|sum(attribute='cost') %}
-    <div class="cost-card" style="border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(255,255,255,0.02);">
-      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:4px;">All-Time Total</div>
-      <div style="font-size:1.8rem;font-weight:700;color:var(--text);">
-        ${{ "{:,.0f}".format(total_all_time) }}
-      </div>
-      <div style="margin-top:4px;font-size:.85rem;color:var(--text-muted);">
-        {{ maintenance|length }} records
-      </div>
-    </div>
-  </div>
-</section>
-
-  {# ============================== OUTBUILDINGS ============================ #}
+  </section> 
+  
+  {# ============================== OUTBUILDINGS ============================ #} 
   <section class="kcard" id="outbuildings">
     <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div class="kcard-title">Outbuildings</div>
+      <div class="kcard-title">Outbuildings</div> 
       <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_outbuilding', property_id=property.id) }}">➕ Add Outbuilding</a>
-    </div>
-
-    {% if outbuildings %}
-      <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
-        {% for ob in outbuildings %}
-          <article class="kmini"
-                   style="border:1px solid var(--line);border-radius:12px;padding:10px;
-                          display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-            <div style="display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;min-width:0;flex:1;">
-              <div style="width:92px;height:92px;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0d1526;">
-                {% if ob.profile_photo %}
-                  <img src="{{ url_for('static', filename='equipment_photos/outbuilding_profiles/' ~ ob.profile_photo) }}"
-                       alt="{{ ob.name }}" style="width:100%;height:100%;object-fit:cover;">
-                {% else %}<span style="font-size:28px;opacity:.7;">🏚️</span>{% endif %}
-              </div>
-              <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <strong>{{ ob.name }}</strong>
-                  {% if ob.type %}<span class="kchip">{{ ob.type }}</span>{% endif %}
-                </div>
-                <div class="khint">
-                  {% if ob.year_built %}Built {{ ob.year_built }}{% endif %}
-                  {% if ob.square_footage %}{% if ob.year_built %} · {% endif %}{{ ob.square_footage }} sqft{% endif %}
-                </div>
-                {% if ob.notes %}<div class="khint">{{ ob.notes }}</div>{% endif %}
-              </div>
+    </div> 
+    {% if outbuildings %} 
+    <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"> 
+      {% for ob in outbuildings %} 
+      <article class="kmini" style="border:1px solid var(--line);border-radius:12px;padding:10px; display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div style="display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;min-width:0;flex:1;">
+          <div style="width:92px;height:92px;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0d1526;">
+            {% if ob.profile_photo %} 
+            <img src="{{ url_for('static', filename='equipment_photos/outbuilding_profiles/' ~ ob.profile_photo) }}"
+                 alt="{{ ob.name }}" style="width:100%;height:100%;object-fit:cover;"> 
+            {% else %}
+            <span style="font-size:28px;opacity:.7;">🏚️</span>
+            {% endif %} 
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"> 
+              <strong>{{ ob.name }}</strong> 
+              {% if ob.type %}<span class="kchip">{{ ob.type }}</span>{% endif %} 
             </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-              <a class="kbtn" href="{{ url_for('realestate.edit_outbuilding', property_id=property.id, ob_id=ob.id) }}">Edit</a>
-              <form method="POST" action="{{ url_for('realestate.delete_outbuilding', property_id=property.id, ob_id=ob.id) }}">
-                <button class="kbtn kbtn-danger" onclick="return confirm('Delete this outbuilding?')">Delete</button>
-              </form>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="kempty">No outbuildings yet.</div>
+            <div class="khint"> 
+              {% if ob.year_built %}Built {{ ob.year_built }}{% endif %} 
+              {% if ob.square_footage %}{% if ob.year_built %} · {% endif %}{{ ob.square_footage }} sqft{% endif %} 
+            </div> 
+            {% if ob.notes %}<div class="khint">{{ ob.notes }}</div>{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;"> 
+          <a class="kbtn" href="{{ url_for('realestate.edit_outbuilding', property_id=property.id, ob_id=ob.id) }}">Edit</a>
+          <form method="POST" action="{{ url_for('realestate.delete_outbuilding', property_id=property.id, ob_id=ob.id) }}"> 
+            <button class="kbtn kbtn-danger" onclick="return confirm('Delete this outbuilding?')">Delete</button> 
+          </form>
+        </div>
+      </article> 
+      {% endfor %} 
+    </div> 
+    {% else %} 
+    <div class="kempty">No outbuildings yet.</div> 
     {% endif %}
-  </section>
-
-  {# ============================== MAINTENANCE HISTORY ===================== #}
+  </section> 
+  
+  {# ============================== IMPROVED MAINTENANCE HISTORY ===================== #} 
   <section class="kcard" id="maintenance">
     <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div class="kcard-title">Maintenance History</div>
+      <div class="kcard-title">Maintenance History</div> 
       <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}">➕ Add Maintenance Record</a>
-    </div>
-
-    {% if maintenance %}
-      <div class="kcard-body" style="display:grid;gap:12px;max-height:520px;overflow:auto;">
-        {% for m in maintenance %}
-          <article class="kmini"
-                   style="border:1px solid var(--line);border-radius:12px;padding:12px;
-                          display:flex;flex-direction:column;gap:10px;">
-            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-              <div style="min-width:240px;">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <strong>{{ m.task }}</strong>
-                  {% if m.category %}<span class="kchip">{{ m.category }}</span>{% endif %}
-                  {% if m.performed_by %}<span class="kchip">By {{ m.performed_by }}</span>{% endif %}
-                </div>
-                <div class="khint" style="margin-top:2px;">
-                  {% if m.date_completed %}{{ m.date_completed.strftime('%B %d, %Y') }}{% endif %}
-                  {% if m.cost %}{% if m.date_completed %} · {% endif %}${{ "%.2f"|format(m.cost) }}{% endif %}
-                </div>
-                {% if m.description %}
-                  <div class="khint" style="margin-top:6px;">{{ m.description }}</div>
-                {% endif %}
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-                <a class="kbtn" href="{{ url_for('realestate.edit_maintenance', property_id=property.id, maint_id=m.id) }}">Edit</a>
-                <form method="POST" action="{{ url_for('realestate.delete_maintenance', property_id=property.id, maint_id=m.id) }}">
-                  <button class="kbtn kbtn-danger" onclick="return confirm('Delete this maintenance item? This also removes its photos.')">Delete</button>
-                </form>
-              </div>
-            </div>
-
-            {% set photos = photos_by_maint.get(m.id, []) %}
-            {% if photos %}
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">
-                {% for ph in photos %}
-                  {% set is_pdf = ph.filename.lower().endswith('.pdf') %}
-                  {% if ph.photo_type == 'receipt' %}
-                    <div class="kthumb kthumb-receipt" style="border:1px dashed var(--line);border-radius:10px;padding:8px;background:rgba(255,255,255,0.02);">
-                      <div style="font-weight:600;margin-bottom:4px;">Receipt</div>
-                      {% if is_pdf %}
-                        <a class="kbtn kbtn-ghost" href="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" target="_blank">Open PDF</a>
-                      {% else %}
-                        <a href="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" target="_blank">
-                          <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}"
-                               alt="receipt" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
-                        </a>
-                      {% endif %}
-                    </div>
-                  {% else %}
-                    <div class="kthumb" style="border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;">
-                      <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}"
-                           alt="photo" style="width:100%;height:100%;object-fit:cover;">
-                      {% if ph.caption %}
-                        <div style="padding:4px 6px;font-size:.8rem;color:var(--text-muted);text-align:center;background:rgba(255,255,255,0.03);">
-                          {{ ph.caption }}
-                        </div>
-                      {% endif %}
-                    </div>
-                  {% endif %}
-                {% endfor %}
-              </div>
-            {% endif %}
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="kempty"><div style="font-size:24px;margin-bottom:6px;">🧰</div>No maintenance records yet.</div>
-    {% endif %}
-  </section>
-
-  {# ============================== VENDORS (SCROLLABLE) ==================== #}
-  <section class="kcard" id="vendors">
-    <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div class="kcard-title">Vendors & Neighbors</div>
-      <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_vendor', property_id=property.id) }}">➕ Add Vendor / Neighbor</a>
-    </div>
-
-    {% if vendors %}
-      <!-- Bullet-proof scroll container -->
-      <div class="kcard-body vendors-list">
-        {% for v in vendors %}
-          <article class="kmini"
-                   style="border:1px solid var(--line);border-radius:12px;padding:10px;
-                          display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-            <div style="min-width:0;">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <strong>{{ v.company_name }}</strong>
-                {% if v.service_type %}<span class="kchip">{{ v.service_type }}</span>{% endif %}
-              </div>
-              <div class="khint" style="margin-top:4px;">
-                {% if v.phone %}📞 {{ v.phone }}{% endif %}
-                {% if v.email %}{% if v.phone %} · {% endif %}✉️ {{ v.email }}{% endif %}
-              </div>
-              {% if v.notes %}<div class="khint" style="margin-top:4px;">{{ v.notes }}</div>{% endif %}
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-              <a class="kbtn" href="{{ url_for('realestate.edit_vendor', property_id=property.id, vendor_id=v.id) }}">Edit</a>
-              <form method="POST" action="{{ url_for('realestate.delete_vendor', property_id=property.id, vendor_id=v.id) }}">
-                <button class="kbtn kbtn-danger" onclick="return confirm('Delete this vendor?')">Delete</button>
+    </div> 
+    {% if maintenance %} 
+    <div class="kcard-body maintenance-container">
+      {% for m in maintenance %} 
+      <article class="maintenance-card">
+        <div class="date-badge">
+          {% if m.date_completed %}
+          <div class="month">{{ m.date_completed.strftime('%b') }}</div>
+          <div class="day">{{ m.date_completed.strftime('%d') }}</div>
+          <div class="year">{{ m.date_completed.strftime('%Y') }}</div>
+          {% else %}
+          <div class="month">—</div>
+          <div class="day">—</div>
+          <div class="year">—</div>
+          {% endif %}
+        </div>
+        
+        <div class="maint-content">
+          <div class="maint-header">
+            <h4 class="maint-title">
+              {% if 'HVAC' in m.task or 'heating' in m.task|lower or 'cooling' in m.task|lower %}🔧
+              {% elif 'plumb' in m.task|lower or 'sink' in m.task|lower or 'toilet' in m.task|lower %}🚰
+              {% elif 'paint' in m.task|lower %}🎨
+              {% elif 'roof' in m.task|lower %}🏠
+              {% elif 'electric' in m.task|lower %}⚡
+              {% elif 'lawn' in m.task|lower or 'landscap' in m.task|lower %}🌿
+              {% elif 'gutter' in m.task|lower %}🍂
+              {% else %}🔨{% endif %}
+              {{ m.task }}
+            </h4>
+            <div class="maint-actions">
+              <a class="kbtn-icon" href="{{ url_for('realestate.edit_maintenance', property_id=property.id, maint_id=m.id) }}" title="Edit">✏️</a>
+              <form method="POST" action="{{ url_for('realestate.delete_maintenance', property_id=property.id, maint_id=m.id) }}" style="display:inline;"> 
+                <button class="kbtn-icon kbtn-danger" onclick="return confirm('Delete this maintenance item? This also removes its photos.')" title="Delete">🗑️</button>
               </form>
             </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="kempty">No vendors yet.</div>
+          </div>
+          
+          <div class="maint-meta">
+            {% if m.category %}<span class="kchip">{{ m.category }}</span>{% endif %} 
+            {% if m.performed_by %}<span class="kchip">By: {{ m.performed_by }}</span>{% endif %}
+            {% if m.cost %}<span class="maint-cost">${{ "%.2f"|format(m.cost) }}</span>{% endif %}
+          </div>
+          
+          {% if m.description %} 
+          <div class="maint-description">{{ m.description }}</div>
+          {% endif %}
+          
+          {% set photos = photos_by_maint.get(m.id, []) %} 
+          {% if photos %} 
+          <div class="maint-photos">
+            {% for ph in photos %} 
+              {% set is_pdf = ph.filename.lower().endswith('.pdf') %}
+              {% set caption_text = ph.caption or ph.photo_type or 'Photo' %}
+              {% if is_pdf %}
+                <figure class="photo-item photo-receipt">
+                  <a class="photo-thumb"
+                     href="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}"
+                     target="_blank"
+                     title="{{ caption_text }}">
+                    <span style="font-size:24px;">📄</span>
+                    <span class="photo-type">PDF</span>
+                  </a>
+                  <figcaption class="photo-caption" title="{{ caption_text }}">{{ caption_text }}</figcaption>
+                </figure>
+              {% else %}
+                <figure class="photo-item {% if ph.photo_type == 'receipt' %}photo-receipt{% endif %}">
+                  <div class="photo-thumb"
+                       onclick="openModal('{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}', {{ caption_text|tojson }})"
+                       title="{{ caption_text }}">
+                    <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" alt="{{ caption_text }}">
+                    <span class="photo-type">{{ ph.photo_type|title if ph.photo_type else 'Photo' }}</span>
+                  </div>
+                  <figcaption class="photo-caption" title="{{ caption_text }}">{{ caption_text }}</figcaption>
+                </figure>
+              {% endif %}
+            {% endfor %} 
+          </div> 
+          {% endif %}
+        </div>
+      </article> 
+      {% endfor %} 
+    </div> 
+    {% else %} 
+    <div class="kempty">
+      <div style="font-size:24px;margin-bottom:6px;">🧰</div>
+      No maintenance records yet.
+    </div> 
     {% endif %}
-  </section>
-
-  {# ============================== PAGE INFO =============================== #}
+  </section> 
+  
+  {# ============================== VENDORS (SCROLLABLE) ==================== #} 
+  <section class="kcard" id="vendors">
+    <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div class="kcard-title">Vendors & Neighbors</div> 
+      <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_vendor', property_id=property.id) }}">➕ Add Vendor / Neighbor</a>
+    </div> 
+    {% if vendors %} 
+    <div class="kcard-body vendors-list"> 
+      {% for v in vendors %} 
+      <article class="kmini" style="border:1px solid var(--line);border-radius:12px;padding:10px; display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"> 
+            <strong>{{ v.company_name }}</strong> 
+            {% if v.service_type %}<span class="kchip">{{ v.service_type }}</span>{% endif %} 
+          </div>
+          <div class="khint" style="margin-top:4px;"> 
+            {% if v.phone %}📞 {{ v.phone }}{% endif %} 
+            {% if v.email %}{% if v.phone %} · {% endif %}✉️ {{ v.email }}{% endif %} 
+          </div> 
+          {% if v.notes %}<div class="khint" style="margin-top:4px;">{{ v.notes }}</div>{% endif %}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;"> 
+          <a class="kbtn" href="{{ url_for('realestate.edit_vendor', property_id=property.id, vendor_id=v.id) }}">Edit</a>
+          <form method="POST" action="{{ url_for('realestate.delete_vendor', property_id=property.id, vendor_id=v.id) }}"> 
+            <button class="kbtn kbtn-danger" onclick="return confirm('Delete this vendor?')">Delete</button> 
+          </form>
+        </div>
+      </article> 
+      {% endfor %} 
+    </div> 
+    {% else %} 
+    <div class="kempty">No vendors yet.</div> 
+    {% endif %}
+  </section> 
+  
+  {# ============================== PAGE INFO =============================== #} 
   <details class="kaccordion" id="meta">
     <summary>Page Info & Changelog</summary>
     <div class="kcard-body">
       <ul>
-        <li><strong>Template:</strong> property_detail.html — v1.3.1</li>
-        <li><strong>Last Updated:</strong> 2025-09-05</li>
-        <li><strong>Notes:</strong> Vendors list has dedicated scroll area with visible scrollbar (tweak height via CSS var or class).</li>
+        <li><strong>Template:</strong> property_detail.html — v2.0.1</li>
+        <li><strong>Last Updated:</strong> 2025-09-09</li>
+        <li><strong>Notes:</strong> Maintenance thumbnails now display captions; same captions appear in modal.</li>
       </ul>
     </div>
   </details>
+</div> 
 
+<!-- Photo Modal -->
+<div id="photoModal" class="modal" onclick="closeModal()">
+  <img class="modal-content" id="modalImg" alt="Enlarged photo">
+  <div class="modal-caption" id="modalCaption"></div>
 </div>
-{% endblock %}
 
-{% block extra_css %}
+{% endblock %} 
+
+{% block extra_css %} 
 <style>
-  /* Buttons */
-  .kbtn{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:10px; cursor:pointer;
-    border:1px solid var(--line); background:rgba(255,255,255,.03);
-    color:var(--text); text-decoration:none; line-height:1;
-    transition:border-color .15s ease, background .15s ease, transform .06s ease;
+  /* Existing Buttons */
+  .kbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1;
+    transition: border-color .15s ease, background .15s ease, transform .06s ease;
   }
-  .kbtn:hover{ border-color:var(--primary); transform:translateY(-1px); }
-  .kbtn-ghost{ background:transparent; }
-  .kbtn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
-  .kbtn-danger{ background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.55); color:#fecaca; }
-  .kbtn-danger:hover{ border-color:#ef4444; }
 
-  /* Chips & fields */
-  .kcard-head{padding-bottom:6px;border-bottom:1px solid var(--line);}
-  .kcard-title{font-weight:700}
-  .kchip{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:4px 8px;border-radius:999px;border:1px solid var(--line);
-    background:rgba(255,255,255,0.04);font-size:.9rem
+  .kbtn:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
   }
-  .kstatus{padding:4px 10px;border-radius:999px;font-weight:700}
-  .kstatus-active{background:#1d3b2b;border:1px solid #2a5a40;color:#bef3c7}
-  .kpanel .kfield label{display:block;color:var(--text-muted);font-size:.85rem;margin-bottom:4px}
-  .kvalue{padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,0.02)}
+
+  .kbtn-ghost {
+    background: transparent;
+  }
+
+  .kbtn-primary {
+    background: rgba(110, 168, 255, .18);
+    border-color: rgba(110, 168, 255, .45);
+  }
+
+  .kbtn-danger {
+    background: rgba(239, 68, 68, .18);
+    border-color: rgba(239, 68, 68, .55);
+    color: #fecaca;
+  }
+
+  .kbtn-danger:hover {
+    border-color: #ef4444;
+  }
+  
+  /* Icon buttons for maintenance cards */
+  .kbtn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    text-decoration: none;
+    transition: border-color .15s ease, transform .06s ease;
+  }
+  
+  .kbtn-icon:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+  
+  .kbtn-icon.kbtn-danger {
+    background: rgba(239, 68, 68, .18);
+    border-color: rgba(239, 68, 68, .55);
+  }
+
+  /* Existing Chips & fields */
+  .kcard-head {
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .kcard-title {
+    font-weight: 700
+  }
+
+  .kchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: .9rem
+  }
+
+  .kstatus {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700
+  }
+
+  .kstatus-active {
+    background: #1d3b2b;
+    border: 1px solid #2a5a40;
+    color: #bef3c7
+  }
+
+  .kpanel .kfield label {
+    display: block;
+    color: var(--text-muted);
+    font-size: .85rem;
+    margin-bottom: 4px
+  }
+
+  .kvalue {
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02)
+  }
 
   /* Empty & changelog */
-  .kempty{
-    border:1px dashed var(--line);border-radius:12px;padding:32px;
-    text-align:center;color:var(--text-muted);background:rgba(255,255,255,0.02)
+  .kempty {
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02)
   }
-  details.kaccordion > summary{
-    cursor:pointer;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);
-    border:1px solid var(--line);font-weight:700
+
+  details.kaccordion>summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--line);
+    font-weight: 700
   }
-  details.kaccordion[open] > summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
-  details.kaccordion .kcard-body{border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:12px 16px}
+
+  details.kaccordion[open]>summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0
+  }
+
+  details.kaccordion .kcard-body {
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    padding: 12px 16px
+  }
 
   /* ================= Scrollable Vendors List (bullet-proof) ================ */
-  :root{ --vendors-max-h: 320px; }               /* ← adjust height here */
-  .vendors-list{
-    display:grid;
-    gap:10px;
-    max-height: var(--vendors-max-h);
-    overflow-y: auto;                             /* vertical scroll when needed   */
-    -webkit-overflow-scrolling: touch;            /* momentum on iOS               */
-    overscroll-behavior: contain;                 /* prevent page from scrolling   */
+  :root {
+    --vendors-max-h: 320px;
   }
-  /* Visible, styled scrollbar */
-  .vendors-list::-webkit-scrollbar{ width:10px; }
-  .vendors-list::-webkit-scrollbar-track{ background:#0b1120; border-radius:8px; }
-  .vendors-list::-webkit-scrollbar-thumb{ background:#23324a; border-radius:8px; }
-  .vendors-list:hover::-webkit-scrollbar-thumb{ background:#3b5aa1; }
-  /* For Firefox */
-  .vendors-list{ scrollbar-width: thin; scrollbar-color:#23324a #0b1120; }
-</style>
+
+  .vendors-list {
+    display: grid;
+    gap: 10px;
+    max-height: var(--vendors-max-h);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .vendors-list::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .vendors-list::-webkit-scrollbar-track {
+    background: #0b1120;
+    border-radius: 8px;
+  }
+
+  .vendors-list::-webkit-scrollbar-thumb {
+    background: #23324a;
+    border-radius: 8px;
+  }
+
+  .vendors-list:hover::-webkit-scrollbar-thumb {
+    background: #3b5aa1;
+  }
+
+  .vendors-list {
+    scrollbar-width: thin;
+    scrollbar-color: #23324a #0b1120;
+  }
+  
+  /* ================= IMPROVED MAINTENANCE SECTION ================= */
+  .maintenance-container {
+    max-height: 580px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  
+  /* Maintenance scrollbar */
+  .maintenance-container::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  .maintenance-container::-webkit-scrollbar-track {
+    background: #0b1120;
+    border-radius: 8px;
+  }
+  
+  .maintenance-container::-webkit-scrollbar-thumb {
+    background: #23324a;
+    border-radius: 8px;
+  }
+  
+  .maintenance-container:hover::-webkit-scrollbar-thumb {
+    background: #3b5aa1;
+  }
+  
+  .maintenance-container {
+    scrollbar-width: thin;
+    scrollbar-color: #23324a #0b1120;
+  }
+  
+  /* Maintenance Card */
+  .maintenance-card {
+    display: flex;
+    background: #0c1322;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    transition: transform .1s ease, border-color .2s ease;
+  }
+  
+  .maintenance-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary);
+  }
+  
+  /* Date Badge */
+  .date-badge {
+    min-width: 92px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+    color: #fff;
+  }
+  
+  .date-badge .month {
+    font-size: .7rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .9;
+  }
+  
+  .date-badge .day {
+    font-size: 1.6rem;
+    line-height: 1;
+    font-weight: 800;
+    margin: 4px 0;
+  }
+  
+  .date-badge .year {
+    font-size: .8rem;
+    opacity: .85;
+  }
+  
+  /* Maintenance Content */
+  .maint-content {
+    flex: 1;
+    padding: 14px;
+  }
+  
+  .maint-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .maint-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+  
+  .maint-actions {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .maint-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  
+  .maint-cost {
+    background: rgba(34, 197, 94, .15);
+    border: 1px solid rgba(34, 197, 94, .3);
+    color: #86efac;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: .85rem;
+    font-weight: 700;
+  }
+  
+  .maint-description {
+    background: #0b1120;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-size: .9rem;
+  }
+  
+  /* Photo Grid */
+  .maint-photos {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .photo-thumb {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: transform .1s ease;
+    background: #0b1120;
+  }
+  
+  .photo-thumb:hover {
+    transform: scale(1.05);
+  }
+  
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .photo-type {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    text-align: center;
+    font-size: .65rem;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, .8);
+    color: #fff;
+  }
+  
+  .photo-receipt {
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  /* NEW: Photo figure + caption */
+  .photo-item{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    width:80px; /* matches .photo-thumb */
+  }
+
+  .photo-caption{
+    font-size:.72rem;
+    line-height:1.1;
+    color:var(--text-muted);
+    max-width:100%;
+    max-height:2.2em;      /* ~two lines */
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    word-break: break-word;
+  }
+  
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, .9);
+    cursor: pointer;
+  }
+  
+  .modal-content {
+    display: block;
+    max-width: 90%;
+    max-height: 90%;
+    margin: 60px auto 0;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  
+  .modal-caption {
+    text-align: center;
+    color: var(--text);
+    padding: 10px;
+    background: rgba(0, 0, 0, .7);
+    max-width: 90%;
+    margin: 0 auto;
+    border-radius: 0 0 12px 12px;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .kcard-body[style*="grid-template-columns:360px"] {
+      grid-template-columns: 1fr !important;
+    }
+    
+    .maintenance-card {
+      flex-direction: column;
+    }
+    
+    .date-badge {
+      min-width: 100%;
+      flex-direction: row;
+      gap: 12px;
+      padding: 10px;
+    }
+    
+    .maint-header {
+      flex-direction: column;
+    }
+  }
+</style> 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openModal(src, caption) {
+  const modal = document.getElementById('photoModal');
+  const img = document.getElementById('modalImg');
+  const captionElement = document.getElementById('modalCaption');
+  
+  img.src = src;
+  captionElement.textContent = caption || '';
+  captionElement.style.display = caption ? 'block' : 'none';
+  modal.style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('photoModal').style.display = 'none';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+  }
+});
+
+// Prevent modal from closing when clicking on image or caption
+document.getElementById('modalImg').addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+if (document.getElementById('modalCaption')) {
+  document.getElementById('modalCaption').addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+}
+</script>
 {% endblock %}

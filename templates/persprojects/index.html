@@ -1,4 +1,4 @@
-<!-- templates/persprojects/index.html - FIXED VERSION with status_counts -->
+<!-- templates/persprojects/index.html - ENHANCED with Grid/List toggle -->
 {% extends "base.html" %}
 {% block title %}Personal Projects{% endblock %}
 {% block header %}Personal Projects{% endblock %}
@@ -48,6 +48,20 @@
   .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
   .btn-primary:hover{ background: rgba(110,168,255,.25); }
   .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ======= View Toggle ======= */
+  .view-toggle{ display:inline-flex; border:1px solid var(--pp-line); border-radius:12px; overflow:hidden; }
+  .view-toggle .toggle-btn{
+    background:var(--pp-card); border:0; border-right:1px solid var(--pp-line);
+    padding:6px 10px; color:var(--pp-muted); cursor:pointer; font-size:.9rem;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .view-toggle .toggle-btn:last-child{ border-right:0; }
+  .view-toggle .toggle-btn:hover{ color:var(--pp-text); }
+  .view-toggle .toggle-btn.active{
+    background: rgba(110,168,255,.18); color: var(--pp-primary);
+    border-color: rgba(110,168,255,.45);
+  }
 
   /* ======= Controls Row ======= */
   .controls{ display:grid; gap:12px; }
@@ -138,10 +152,7 @@
   .priority-high{ background:#f59e0b; color:#0a0f1a; }
   .priority-critical{ background:#ef4444; color:#fff; animation: pulse 2s infinite; }
 
-  @keyframes pulse{
-    0%, 100%{ opacity:1; }
-    50%{ opacity:.8; }
-  }
+  @keyframes pulse{ 0%, 100%{ opacity:1; } 50%{ opacity:.8; } }
 
   /* Card Header */
   .project-header{ display:flex; justify-content:space-between; align-items:flex-start; }
@@ -167,7 +178,6 @@
     background:var(--pp-panel); color:var(--pp-muted);
     border:1px solid var(--pp-line);
   }
-  
   /* Special category colors */
   .category-home-improvement{ background:#8b5cf6; color:#0a0f1a; }
   .category-hobbies-crafts{ background:#ec4899; color:#0a0f1a; }
@@ -184,70 +194,39 @@
     background:#0c1322; border:1px solid var(--pp-line); border-radius:10px;
     color:var(--pp-text); font-size:.92rem; padding:10px; margin-bottom:10px;
   }
-  .project-goal strong, .project-desc strong{ 
-    color:var(--pp-primary); font-weight:700; 
-  }
+  .project-goal strong, .project-desc strong{ color:var(--pp-primary); font-weight:700; }
 
   /* Project Meta */
-  .project-meta{ 
-    margin:12px 0; padding-top:10px; 
-    border-top:1px dashed var(--pp-line); 
-  }
-  .deadline{ 
-    color:var(--pp-muted); font-size:.9rem; margin-bottom:8px; 
-    display:flex; align-items:center; gap:6px;
-  }
+  .project-meta{ margin:12px 0; padding-top:10px; border-top:1px dashed var(--pp-line); }
+  .deadline{ color:var(--pp-muted); font-size:.9rem; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
   .overdue-badge{
     display:inline-block; margin-left:6px; padding:2px 6px; border-radius:6px;
-    background:var(--pp-danger); color:#0a0f1a; font-size:.72rem; 
-    font-weight:800; animation: blink 2s infinite;
+    background:var(--pp-danger); color:#0a0f1a; font-size:.72rem; font-weight:800; animation: blink 2s infinite;
   }
-  @keyframes blink{
-    0%, 100%{ opacity:1; }
-    50%{ opacity:.6; }
-  }
+  @keyframes blink{ 0%, 100%{ opacity:1; } 50%{ opacity:.6; } }
 
   /* Progress Bar */
   .progress-bar{
     background:#0c1322; border:1px solid var(--pp-line);
     height:10px; border-radius:999px; overflow:hidden; margin-bottom:6px;
   }
-  .progress-fill{ 
-    background: linear-gradient(90deg, var(--pp-primary), var(--pp-primary-700)); 
-    height:100%; transition: width .3s; 
-  }
-  .progress-text{ 
-    font-size:.8rem; color:var(--pp-muted); 
-    text-align:center; margin-bottom:8px;
-  }
+  .progress-fill{ background: linear-gradient(90deg, var(--pp-primary), var(--pp-primary-700)); height:100%; transition: width .3s; }
+  .progress-text{ font-size:.8rem; color:var(--pp-muted); text-align:center; margin-bottom:8px; }
 
   /* Stats */
-  .project-stats{ 
-    display:flex; gap:12px; margin:10px 0; font-size:.85rem; 
-    color:var(--pp-muted); flex-wrap:wrap; 
-  }
-  .project-stats span{ 
-    display:inline-flex; align-items:center; gap:6px; 
-  }
+  .project-stats{ display:flex; gap:12px; margin:10px 0; font-size:.85rem; color:var(--pp-muted); flex-wrap:wrap; }
+  .project-stats span{ display:inline-flex; align-items:center; gap:6px; }
 
   /* Actions */
-  .project-actions{ 
-    display:flex; gap:8px; margin-top:auto; padding-top:8px;
-  }
+  .project-actions{ display:flex; gap:8px; margin-top:auto; padding-top:8px; }
 
   /* Empty State */
   .empty-state{
-    grid-column:1 / -1; text-align:center; padding:60px 20px; 
-    color:var(--pp-muted);
-    background:var(--pp-card); border:1px dashed var(--pp-line); 
-    border-radius: var(--pp-radius);
+    grid-column:1 / -1; text-align:center; padding:60px 20px; color:var(--pp-muted);
+    background:var(--pp-card); border:1px dashed var(--pp-line); border-radius: var(--pp-radius);
   }
-  .empty-state .icon{ 
-    font-size:48px; margin-bottom:16px; opacity:.5; 
-  }
-  .empty-state h3{ 
-    margin:6px 0 12px; color:var(--pp-text); font-size:1.2rem; 
-  }
+  .empty-state .icon{ font-size:48px; margin-bottom:16px; opacity:.5; }
+  .empty-state h3{ margin:6px 0 12px; color:var(--pp-text); font-size:1.2rem; }
   .empty-state p{ margin-bottom:20px; }
 
   /* Stats summary bar */
@@ -256,19 +235,58 @@
     padding:14px; background:var(--pp-card); border:1px solid var(--pp-line);
     border-radius:var(--pp-radius-sm); margin-bottom:16px;
   }
-  .stat-item{
-    display:flex; align-items:center; gap:8px;
-    color:var(--pp-muted);
+  .stat-item{ display:flex; align-items:center; gap:8px; color:var(--pp-muted); }
+  .stat-item .number{ font-size:1.2rem; font-weight:700; color:var(--pp-text); }
+
+  /* ================= List View ================= */
+  #projectsGrid.list-view{ grid-template-columns: 1fr; }
+  #projectsGrid.list-view .project-card{
+    display:grid;
+    grid-template-columns: 1.2fr 0.9fr 0.7fr auto;
+    grid-template-areas: "name badges meta actions";
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
   }
-  .stat-item .number{
-    font-size:1.2rem; font-weight:700; color:var(--pp-text);
+  #projectsGrid.list-view .priority-ribbon{
+    position:static; justify-self:end; grid-column: 4 / 5; margin-right:8px;
+    border-radius:8px; padding:4px 8px;
   }
+  #projectsGrid.list-view .project-name{ grid-area:name; margin:0; }
+  #projectsGrid.list-view .project-badges{ grid-area:badges; margin:0; }
+  #projectsGrid.list-view .project-meta{ grid-area:meta; margin:0; border-top:0; padding-top:0; }
+  #projectsGrid.list-view .project-actions{ grid-area:actions; justify-self:end; padding-top:0; margin-top:0; }
+  /* Hide long text in list view for scanability */
+  #projectsGrid.list-view .project-goal,
+  #projectsGrid.list-view .project-desc,
+  #projectsGrid.list-view .project-stats{ display:none; }
+  #projectsGrid.list-view .deadline{ margin:0 0 6px 0; }
+  #projectsGrid.list-view .progress-text{ margin:0; }
 
   /* Responsive */
+  @media (max-width: 1024px){
+    #projectsGrid.list-view .project-card{
+      grid-template-columns: 1fr 1fr auto;
+      grid-template-areas:
+        "name badges actions"
+        "meta meta actions";
+      row-gap:8px;
+    }
+  }
   @media (max-width: 768px){
     .projects-grid{ grid-template-columns: 1fr; }
     .controls-row{ flex-direction:column; }
     .search-input{ width:100%; }
+    #projectsGrid.list-view .project-card{
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "name"
+        "badges"
+        "meta"
+        "actions";
+      justify-items:stretch;
+    }
+    .view-toggle .toggle-btn span.label{ display:none; } /* icons only on small screens */
   }
 
   /* Screen reader only */
@@ -288,6 +306,17 @@
       <span aria-hidden="true">🎯</span> Personal Projects
     </h1>
     <div class="page-actions">
+      <!-- View Toggle -->
+      <div class="view-toggle" role="group" aria-label="Change projects view">
+        <button id="btnGrid" class="toggle-btn active" type="button" aria-pressed="true" title="Grid view">
+          <span aria-hidden="true">🔲</span><span class="label">Grid</span>
+        </button>
+        <button id="btnList" class="toggle-btn" type="button" aria-pressed="false" title="List view">
+          <span aria-hidden="true">☰</span><span class="label">List</span>
+        </button>
+      </div>
+
+      <!-- New Project -->
       <a href="{{ url_for('persprojects.add') }}" class="btn btn-primary" title="Create a new personal project">
         <span aria-hidden="true">➕</span> New Project
       </a>
@@ -500,82 +529,92 @@
   </div>
 </div>
 
-<!-- JavaScript for search, sort, and filter -->
+<!-- JavaScript for search, sort, category filter, and view toggle -->
 <script>
-// Search functionality
-document.getElementById('searchProjects').addEventListener('input', function(e) {
-  const searchTerm = e.target.value.toLowerCase();
-  const cards = document.querySelectorAll('.project-card');
-  
-  cards.forEach(card => {
-    const name = card.dataset.name;
-    const matches = name.includes(searchTerm);
-    card.style.display = matches ? '' : 'none';
-  });
-  
-  // Show empty state if no results
-  const visibleCards = Array.from(cards).filter(c => c.style.display !== 'none');
-  if (visibleCards.length === 0 && searchTerm) {
-    // Could add a "no search results" message here
-  }
-});
-
-// Sort functionality
-document.getElementById('sortProjects').addEventListener('change', function(e) {
-  const sortBy = e.target.value;
+(function(){
   const grid = document.getElementById('projectsGrid');
-  const cards = Array.from(grid.querySelectorAll('.project-card'));
-  
-  cards.sort((a, b) => {
-    switch(sortBy) {
-      case 'updated_desc':
-        return b.dataset.updated.localeCompare(a.dataset.updated);
-      case 'created_desc':
-        return b.dataset.created.localeCompare(a.dataset.created);
-      case 'deadline_asc':
-        return a.dataset.deadline.localeCompare(b.dataset.deadline);
-      case 'progress_desc':
-        return parseInt(b.dataset.progress) - parseInt(a.dataset.progress);
-      case 'priority_desc':
-        const priorityOrder = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3};
-        return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
-      case 'name_asc':
-        return a.dataset.name.localeCompare(b.dataset.name);
-      default:
-        return 0;
-    }
-  });
-  
-  // Re-append in new order
-  cards.forEach(card => grid.appendChild(card));
-});
+  const searchInput = document.getElementById('searchProjects');
+  const sortSelect = document.getElementById('sortProjects');
+  const btnGrid = document.getElementById('btnGrid');
+  const btnList = document.getElementById('btnList');
 
-// Category filter
-let activeCategory = 'all';
+  // ---- View persistence ----
+  const savedView = localStorage.getItem('ppProjectsView') || 'grid';
+  setView(savedView);
 
-function filterCategory(category) {
-  activeCategory = category;
-  
-  // Update chip styles
-  document.querySelectorAll('.category-chips .chip').forEach(chip => {
-    if (chip.dataset.category === category) {
-      chip.classList.add('active');
-    } else {
-      chip.classList.remove('active');
-    }
-  });
-  
-  // Filter cards
-  document.querySelectorAll('.project-card').forEach(card => {
-    if (category === 'all' || card.dataset.category === category) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
-  });
-}
+  btnGrid?.addEventListener('click', () => setView('grid'));
+  btnList?.addEventListener('click', () => setView('list'));
 
-// Initialize datetime for overdue checking
-const datetime = { now: () => ({ date: () => new Date() }) };
+  function setView(view){
+    if(view === 'list'){
+      grid.classList.add('list-view');
+      btnList?.classList.add('active'); btnList?.setAttribute('aria-pressed', 'true');
+      btnGrid?.classList.remove('active'); btnGrid?.setAttribute('aria-pressed', 'false');
+    }else{
+      grid.classList.remove('list-view');
+      btnGrid?.classList.add('active'); btnGrid?.setAttribute('aria-pressed', 'true');
+      btnList?.classList.remove('active'); btnList?.setAttribute('aria-pressed', 'false');
+      view = 'grid';
+    }
+    localStorage.setItem('ppProjectsView', view);
+  }
+
+  // ---- Category filter ----
+  let activeCategory = 'all';
+  window.filterCategory = function(category){
+    activeCategory = category;
+    document.querySelectorAll('.category-chips .chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.category === category || (category === 'all' && chip.dataset.category === 'all'));
+    });
+    document.querySelectorAll('.project-card').forEach(card => {
+      const matches = (category === 'all' || card.dataset.category === category);
+      card.dataset.catvisible = matches ? '1' : '0'; // preserve for search combo
+      card.style.display = matches ? '' : 'none';
+    });
+    // re-apply search to respect combined filters
+    applySearch();
+  }
+
+  // ---- Search ----
+  function applySearch(){
+    const term = (searchInput?.value || '').toLowerCase();
+    document.querySelectorAll('.project-card').forEach(card => {
+      const name = card.dataset.name || '';
+      const catVisible = card.dataset.catvisible !== '0';
+      const matches = name.includes(term) && catVisible;
+      card.style.display = matches ? '' : 'none';
+    });
+  }
+  searchInput?.addEventListener('input', applySearch);
+
+  // ---- Sort ----
+  function applySort(){
+    const sortBy = sortSelect?.value || 'updated_desc';
+    const cards = Array.from(grid.querySelectorAll('.project-card'))
+      .filter(card => card.style.display !== 'none'); // keep current filters
+
+    cards.sort((a, b) => {
+      switch(sortBy) {
+        case 'updated_desc':   return (b.dataset.updated || '').localeCompare(a.dataset.updated || '');
+        case 'created_desc':   return (b.dataset.created || '').localeCompare(a.dataset.created || '');
+        case 'deadline_asc':   return (a.dataset.deadline || '9999').localeCompare(b.dataset.deadline || '9999');
+        case 'progress_desc':  return (parseInt(b.dataset.progress||'0') - parseInt(a.dataset.progress||'0'));
+        case 'priority_desc': {
+          const order = {'critical':0,'high':1,'medium':2,'low':3};
+          return (order[a.dataset.priority] ?? 9) - (order[b.dataset.priority] ?? 9);
+        }
+        case 'name_asc':       return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+        default: return 0;
+      }
+    });
+
+    cards.forEach(card => grid.appendChild(card));
+  }
+  sortSelect?.addEventListener('change', applySort);
+
+  // Initialize defaults
+  applySearch();
+  applySort();
+})();
 </script>
 {% endblock %}

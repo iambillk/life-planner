@@ -94,6 +94,7 @@ class PropertyMaintenancePhoto(db.Model):
     )
     filename = db.Column(db.String(255), nullable=False)
     photo_type = db.Column(db.String(50), default="general")  # general | receipt
+    caption = db.Column(db.String(255))
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     maintenance = db.relationship(

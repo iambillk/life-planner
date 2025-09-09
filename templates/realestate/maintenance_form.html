@@ -1,10 +1,15 @@
 {# =============================================================================
-  FILE: templates/realestate/maintenance.html
+  FILE: templates/realestate/maintenance_form.html
   PURPOSE: Real Estate — Add Maintenance record for a Property
-  TEMPLATE VERSION: v2.1.0
-  LAST UPDATED: 2025-09-05
+  TEMPLATE VERSION: v2.2.0
+  LAST UPDATED: 2025-01-21
 
   ── Changelog ──────────────────────────────────────────────────────────────────
+  v2.2.0
+  - FIXED: Caption inputs now properly submit with form
+  - Added form ID for better element binding
+  - Fixed caption sync issues when removing/adding photos
+  
   v2.1.0
   - FIX: "Categorys" → "Category".
   - NEW: Per-photo captions (photo_captions[]), preserved while editing previews.
@@ -21,6 +26,7 @@
 
 {% block content %}
 <form method="POST"
+      id="maint-form"
       enctype="multipart/form-data"
       class="kcard maint-form"
       style="display:grid;gap:14px;max-width:980px;">
@@ -113,6 +119,8 @@
       </div>
       <div class="khint">Saved under <code>static/equipment_photos/maintenance_photos/YYYY/MM/</code></div>
       <div id="preview-photos" class="preview-grid" hidden></div>
+      <!-- Hidden container for caption inputs that will submit with form -->
+      <div id="hidden-captions" style="display:none;"></div>
     </div>
 
     <!-- Receipt (single image or PDF) -->
@@ -151,9 +159,9 @@
     <summary>Form Info & Changelog</summary>
     <div class="kcard-body">
       <ul>
-        <li><strong>Template:</strong> maintenance.html — v2.1.0</li>
-        <li><strong>Last Updated:</strong> 2025-09-05</li>
-        <li><strong>Behavior:</strong> Drag-drop & previews are cosmetic; server receives the same <code>photos</code> and <code>receipt</code>. New optional field: <code>photo_captions[]</code>.</li>
+        <li><strong>Template:</strong> maintenance_form.html — v2.2.0</li>
+        <li><strong>Last Updated:</strong> 2025-01-21</li>
+        <li><strong>Behavior:</strong> Fixed caption submission. Captions now properly sync and submit with photos.</li>
       </ul>
     </div>
   </details>
@@ -257,15 +265,15 @@
     const inputPhotos = document.getElementById('photos');
     const dzPhotos = document.getElementById('dz-photos');
     const gridPhotos = document.getElementById('preview-photos');
+    const hiddenCaptions = document.getElementById('hidden-captions');
 
     // Receipt
     const inputReceipt = document.getElementById('receipt');
     const dzReceipt = document.getElementById('dz-receipt');
     const gridReceipt = document.getElementById('preview-receipt');
 
-    // Cache captions by a stable key so they persist while adding/removing files
-    const captionCache = new Map(); // key: name|size -> caption string
-    const keyFor = (f) => `${f.name}|${f.size}`;
+    // Store caption values by filename (more stable than size)
+    const captionValues = [];
 
     // ----- Keyboard shortcut: Ctrl/Cmd + Enter to submit
     form.addEventListener('keydown', (e) => {
@@ -299,8 +307,22 @@
     function renderPhotoPreviews(){
       const files = Array.from(inputPhotos.files || []);
       gridPhotos.innerHTML = '';
-      if (!files.length){ gridPhotos.hidden = true; return; }
+      hiddenCaptions.innerHTML = ''; // Clear hidden inputs
+      
+      if (!files.length){ 
+        gridPhotos.hidden = true; 
+        captionValues.length = 0; // Clear caption array
+        return; 
+      }
       gridPhotos.hidden = false;
+
+      // Ensure caption array has right length
+      if (captionValues.length > files.length) {
+        captionValues.length = files.length;
+      }
+      while (captionValues.length < files.length) {
+        captionValues.push('');
+      }
 
       files.forEach((file, idx) => {
         const card = document.createElement('div');
@@ -308,7 +330,9 @@
 
         // remove button
         const remove = document.createElement('button');
-        remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+        remove.type = 'button'; 
+        remove.className = 'remove'; 
+        remove.title = 'Remove';
         remove.textContent = '✕';
         remove.addEventListener('click', ()=> removeFromInput(inputPhotos, idx, renderPhotoPreviews));
         card.appendChild(remove);
@@ -321,17 +345,28 @@
         reader.readAsDataURL(file);
         card.appendChild(img);
 
-        // caption (synced to captionCache; name "photo_captions[]" to align with photos[])
+        // Visual caption input (for user interaction)
         const caption = document.createElement('input');
         caption.type = 'text';
-        caption.name = 'photo_captions[]';
         caption.placeholder = 'Caption (optional)';
         caption.className = 'cap';
-        caption.value = captionCache.get(keyFor(file)) || '';
-        caption.addEventListener('input', () => captionCache.set(keyFor(file), caption.value));
+        caption.value = captionValues[idx] || '';
+        caption.addEventListener('input', () => {
+          captionValues[idx] = caption.value;
+          // Update the hidden input
+          const hiddenInput = hiddenCaptions.children[idx];
+          if (hiddenInput) hiddenInput.value = caption.value;
+        });
         card.appendChild(caption);
 
         gridPhotos.appendChild(card);
+
+        // Create hidden input that will actually submit
+        const hiddenCaption = document.createElement('input');
+        hiddenCaption.type = 'hidden';
+        hiddenCaption.name = 'photo_captions[]';
+        hiddenCaption.value = captionValues[idx] || '';
+        hiddenCaptions.appendChild(hiddenCaption);
       });
     }
 
@@ -356,22 +391,32 @@
       card.className = 'preview';
 
       const remove = document.createElement('button');
-      remove.type = 'button'; remove.className = 'remove'; remove.title = 'Remove';
+      remove.type = 'button'; 
+      remove.className = 'remove'; 
+      remove.title = 'Remove';
       remove.textContent = '✕';
       remove.addEventListener('click', ()=> { inputReceipt.value=''; renderReceiptPreview(); });
       card.appendChild(remove);
 
       if (file.name.toLowerCase().endsWith('.pdf')){
-        const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = 'PDF';
+        const badge = document.createElement('div'); 
+        badge.className = 'badge'; 
+        badge.textContent = 'PDF';
         card.appendChild(badge);
         const tile = document.createElement('div');
-        tile.style.height = '120px'; tile.style.display='flex'; tile.style.alignItems='center';
-        tile.style.justifyContent='center'; tile.style.opacity='.75';
+        tile.style.height = '120px'; 
+        tile.style.display='flex'; 
+        tile.style.alignItems='center';
+        tile.style.justifyContent='center'; 
+        tile.style.opacity='.75';
         tile.textContent = '📄 ' + file.name;
         card.appendChild(tile);
       } else {
-        const img = document.createElement('img'); img.alt = file.name;
-        const reader = new FileReader(); reader.onload = e => img.src = e.target.result; reader.readAsDataURL(file);
+        const img = document.createElement('img'); 
+        img.alt = file.name;
+        const reader = new FileReader(); 
+        reader.onload = e => img.src = e.target.result; 
+        reader.readAsDataURL(file);
         card.appendChild(img);
       }
 
@@ -382,10 +427,25 @@
     function removeFromInput(inputEl, index, rerender){
       const files = Array.from(inputEl.files || []);
       const dt = new DataTransfer();
-      files.forEach((f,i)=>{ if(i!==index) dt.items.add(f); });
+      
+      // Remove the caption for this index
+      captionValues.splice(index, 1);
+      
+      files.forEach((f,i)=>{ 
+        if(i!==index) dt.items.add(f); 
+      });
       inputEl.files = dt.files;
       rerender();
     }
+
+    // Debug: Log what we're submitting
+    form.addEventListener('submit', (e) => {
+      console.log('Submitting form...');
+      console.log('Files:', inputPhotos.files.length);
+      const captions = document.querySelectorAll('input[name="photo_captions[]"]');
+      console.log('Caption inputs found:', captions.length);
+      captions.forEach((c, i) => console.log(`Caption ${i}:`, c.value));
+    });
   })();
 </script>
 {% endblock %}
