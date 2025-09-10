@@ -102,7 +102,7 @@
       <label for="property_type">Type <span class="req">*</span></label>
       <select id="property_type" name="property_type" required>
         <option value="">Select type…</option>
-        {% set types = ['Home', 'Cottage', 'Rental', 'Estate', 'Out Building'] %}
+        {% set types = ['Home', 'Cottage', 'Rental', 'Estate', 'Vacant Land', 'Out Building'] %}
         {% for t in types %}
           <option value="{{ t }}" {% if property and property.property_type == t %}selected{% endif %}>{{ t }}</option>
         {% endfor %}

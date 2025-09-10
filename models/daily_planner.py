@@ -46,6 +46,9 @@ class CalendarEvent(db.Model):
     event_type = db.Column(db.String(50))  # Soccer, Dentist, etc
     who = db.Column(db.String(20))  # Me/Wife/Tommy/Sarah/Family
     description = db.Column(db.Text)
+    category = db.Column(db.String(30))  # Work, Errands, Health, Social, Family
+    location = db.Column(db.String(50))  # Office, Home, DC, etc
+    was_planned = db.Column(db.Boolean, default=True)  # False = emergency/urgent
     recurring_id = db.Column(db.Integer, db.ForeignKey('recurring_events.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -76,17 +79,44 @@ class EventType(db.Model):
 
 
 class RecurringEvent(db.Model):
-    """Recurring event patterns"""
+    """Recurring event patterns with multiple recurrence types"""
     __tablename__ = 'recurring_events'
     
     id = db.Column(db.Integer, primary_key=True)
     event_type = db.Column(db.String(50))
+    
+    # Recurrence pattern fields
+    recurrence_type = db.Column(db.String(20))  # 'daily', 'weekly', 'monthly_date', 'monthly_day', 'yearly'
+    
+    # For daily recurrence
+    daily_interval = db.Column(db.Integer, default=1)  # Every X days
+    
+    # For weekly recurrence (existing)
     days_of_week = db.Column(db.String(50))  # "Mon,Wed,Fri"
+    weekly_interval = db.Column(db.Integer, default=1)  # Every X weeks
+    
+    # For monthly recurrence by date
+    monthly_date = db.Column(db.Integer)  # Day of month (1-31)
+    monthly_interval = db.Column(db.Integer, default=1)  # Every X months
+    
+    # For monthly recurrence by day
+    monthly_week = db.Column(db.Integer)  # 1=first, 2=second, 3=third, 4=fourth, -1=last
+    monthly_weekday = db.Column(db.Integer)  # 0=Monday, 6=Sunday
+    
+    # For yearly recurrence
+    yearly_month = db.Column(db.Integer)  # 1-12
+    yearly_day = db.Column(db.Integer)  # 1-31
+    
+    # Common fields
     time = db.Column(db.String(20))
     who = db.Column(db.String(20))
     description = db.Column(db.Text)
+    category = db.Column(db.String(30))  # NEW - Work, Errands, Health, Social, Family
+    location = db.Column(db.String(50))  # NEW - Office, Home, DC, etc
     until_date = db.Column(db.Date)
     active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
 
 
 # ============ PROJECT INTEGRATION ============

@@ -1,76 +1,72 @@
 <!-- templates/daily/add_event.html -->
 {% extends "base.html" %}
-{% block title %}Add Calendar Event{% endblock %}
+{% block title %}Add Event{% endblock %}
 {% block header %}ADD CALENDAR EVENT{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ==================== CONTAINER ==================== */
-    .add-event-container {
+    /* ==================== FORM CONTAINER ==================== */
+    .form-container {
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;
     }
     
-    /* ==================== FORM CARD ==================== */
-    .event-form-card {
+    .form-card {
         background: var(--card);
         border: 2px solid var(--line);
         border-radius: 12px;
         padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
-    /* ==================== FORM SECTIONS ==================== */
-    .form-section {
+    .form-header {
+        text-align: center;
         margin-bottom: 30px;
-        padding-bottom: 30px;
+        padding-bottom: 20px;
         border-bottom: 2px solid var(--line);
     }
     
-    .form-section:last-of-type {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-    }
-    
-    .section-title {
-        font-size: 18px;
+    .form-title {
+        font-size: 28px;
         font-weight: 700;
         color: var(--primary);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .form-subtitle {
+        color: var(--text-muted);
+        font-size: 14px;
     }
     
     /* ==================== FORM GROUPS ==================== */
+    .form-content {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+    
     .form-group {
-        margin-bottom: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
     
     .form-label {
-        display: block;
-        font-size: 14px;
         font-weight: 600;
         color: var(--text);
-        margin-bottom: 10px;
+        font-size: 14px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
-    .form-label.required::after {
-        content: " *";
-        color: var(--danger);
-    }
-    
     .form-input {
-        width: 100%;
         background: var(--panel);
         border: 2px solid var(--line);
         border-radius: 8px;
         padding: 12px 15px;
         color: var(--text);
-        font-size: 15px;
+        font-size: 16px;
         transition: all 0.3s ease;
     }
     
@@ -80,37 +76,33 @@
         box-shadow: 0 0 0 3px rgba(98, 0, 238, 0.1);
     }
     
-    .form-textarea {
-        resize: vertical;
-        min-height: 100px;
-        font-family: inherit;
-    }
-    
     .form-hint {
         font-size: 12px;
         color: var(--text-muted);
-        margin-top: 5px;
         font-style: italic;
     }
     
-    /* ==================== EVENT TYPE SECTION ==================== */
-    .event-type-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    textarea.form-input {
+        min-height: 100px;
+        resize: vertical;
+    }
+    
+    /* ==================== EVENT TYPE CHIPS ==================== */
+    .event-type-chips {
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
-        margin-top: 15px;
+        margin-top: 10px;
     }
     
     .event-type-chip {
         background: var(--panel);
         border: 2px solid var(--line);
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
+        border-radius: 20px;
+        padding: 8px 16px;
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 14px;
-        font-weight: 500;
     }
     
     .event-type-chip:hover {
@@ -120,26 +112,26 @@
     
     .event-type-chip.selected {
         background: var(--primary);
-        border-color: var(--primary);
         color: white;
+        border-color: var(--primary);
     }
     
     /* ==================== WHO SELECTOR ==================== */
     .who-selector {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 15px;
+        margin-top: 10px;
     }
     
     .who-option {
         background: var(--panel);
         border: 2px solid var(--line);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 15px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s ease;
-        position: relative;
     }
     
     .who-option:hover {
@@ -148,116 +140,92 @@
     }
     
     .who-option.selected {
-        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-        border-color: var(--primary);
+        background: var(--primary);
         color: white;
+        border-color: var(--primary);
     }
     
-    .who-option.selected::after {
-        content: "✓";
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        background: white;
-        color: var(--primary);
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-    }
-    
-    .who-icon {
+    .who-emoji {
         font-size: 24px;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
     }
     
     .who-name {
-        font-size: 14px;
         font-weight: 600;
+        font-size: 14px;
     }
     
-    /* ==================== DATE & TIME SECTION ==================== */
-    .datetime-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    
-    @media (max-width: 600px) {
-        .datetime-row {
-            grid-template-columns: 1fr;
-        }
-    }
-    
+    /* ==================== TIME SHORTCUTS ==================== */
     .time-shortcuts {
         display: flex;
-        flex-wrap: wrap;
         gap: 8px;
-        margin-top: 10px;
+        margin-top: 8px;
     }
     
-    .time-chip {
+    .time-shortcut {
         background: var(--panel);
-        border: 2px solid var(--line);
+        border: 1px solid var(--line);
         border-radius: 6px;
         padding: 6px 12px;
+        font-size: 12px;
         cursor: pointer;
-        font-size: 13px;
         transition: all 0.2s ease;
     }
     
-    .time-chip:hover {
+    .time-shortcut:hover {
         background: var(--primary);
-        border-color: var(--primary);
         color: white;
+        border-color: var(--primary);
     }
     
-    /* ==================== RECURRING SECTION ==================== */
+    /* ==================== RECURRING OPTIONS ==================== */
     .recurring-toggle {
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 15px;
-        background: var(--panel);
-        border-radius: 8px;
-        cursor: pointer;
+        gap: 15px;
         transition: all 0.3s ease;
     }
     
     .recurring-toggle:hover {
-        background: var(--card);
+        border-color: var(--primary);
     }
     
     .toggle-checkbox {
-        width: 20px;
-        height: 20px;
-        border: 2px solid var(--primary);
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        position: relative;
     }
     
     .toggle-checkbox.checked {
         background: var(--primary);
+        border-color: var(--primary);
     }
     
     .toggle-checkbox.checked::after {
-        content: "✓";
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         color: white;
-        font-size: 14px;
+        font-weight: bold;
     }
     
     .recurring-options {
-        margin-top: 20px;
-        padding: 20px;
-        background: var(--panel);
-        border-radius: 8px;
         display: none;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 15px;
     }
     
     .recurring-options.active {
@@ -276,52 +244,116 @@
         }
     }
     
-    .day-selector {
+    /* Recurrence Type Selector */
+    .recurrence-type-selector {
         display: grid;
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .recurrence-type-btn {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .recurrence-type-btn:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .recurrence-type-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    /* Pattern Options */
+    .pattern-options {
+        margin-top: 20px;
+        padding: 15px;
+        background: var(--card);
+        border-radius: 8px;
+    }
+    
+    .pattern-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .pattern-row label {
+        min-width: 80px;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .pattern-row input[type="number"] {
+        width: 80px;
+    }
+    
+    .pattern-row select {
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        padding: 8px;
+        color: var(--text);
+    }
+    
+    /* Day Selector */
+    .day-selector {
+        display: flex;
         gap: 8px;
-        margin-top: 15px;
+        flex-wrap: wrap;
     }
     
     .day-option {
         background: var(--card);
         border: 2px solid var(--line);
         border-radius: 8px;
-        padding: 12px 8px;
-        text-align: center;
+        padding: 10px 15px;
         cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
         transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 14px;
     }
     
     .day-option:hover {
         border-color: var(--primary);
+        transform: translateY(-2px);
     }
     
     .day-option.selected {
-        background: var(--success);
-        border-color: var(--success);
+        background: var(--primary);
         color: white;
+        border-color: var(--primary);
     }
     
     /* ==================== WARNING CARD ==================== */
     .warning-card {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
-        border: 2px solid #f59e0b;
-        border-radius: 8px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 2px solid var(--warning);
+        border-radius: 12px;
         padding: 20px;
-        margin-top: 30px;
+        margin-top: 20px;
     }
     
     .warning-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #f59e0b;
-        margin-bottom: 10px;
         display: flex;
         align-items: center;
         gap: 10px;
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--warning);
+        margin-bottom: 10px;
     }
     
     .warning-text {
@@ -330,24 +362,24 @@
         line-height: 1.6;
     }
     
-    /* ==================== ACTION BUTTONS ==================== */
+    /* ==================== FORM ACTIONS ==================== */
     .form-actions {
         display: flex;
-        gap: 15px;
         justify-content: center;
-        margin-top: 40px;
-        padding-top: 30px;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
         border-top: 2px solid var(--line);
     }
     
     .btn {
         padding: 12px 30px;
-        border: none;
         border-radius: 8px;
-        font-size: 16px;
         font-weight: 600;
+        font-size: 16px;
         cursor: pointer;
         transition: all 0.3s ease;
+        border: none;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
@@ -355,7 +387,7 @@
     }
     
     .btn-primary {
-        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+        background: var(--primary);
         color: white;
     }
     
@@ -373,121 +405,128 @@
     .btn-secondary:hover {
         background: var(--card);
         border-color: var(--primary);
-        text-decoration: none;
-        color: var(--text);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="add-event-container">
-    <div class="event-form-card">
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1 class="form-title">Add New Event</h1>
+            <p class="form-subtitle">Schedule something for your calendar</p>
+        </div>
+        
         <form method="POST" action="{{ url_for('daily.add_event') }}">
             
-            <!-- EVENT TYPE SECTION -->
-            <div class="form-section">
-                <div class="section-title">
-                    <span>📌</span>
-                    <span>Event Details</span>
-                </div>
+            <div class="form-content">
                 
+                <!-- EVENT TYPE -->
                 <div class="form-group">
-                    <label class="form-label required">What's happening?</label>
-                    <input type="text" 
-                           name="event_type" 
-                           id="event_type" 
-                           class="form-input" 
-                           placeholder="e.g., Soccer Practice, Dentist, Date Night..."
-                           required>
-                    <div class="form-hint">Type your own or select from common events below</div>
-                    
-                    {% if event_types %}
-                    <div class="event-type-grid">
-                        {% for type in event_types[:12] %}
+                    <label class="form-label">Event Type</label>
+                    <input type="text" name="event_type" id="event_type" class="form-input" 
+                           placeholder="e.g., Doctor Appointment, Meeting, Birthday" required>
+                    <div class="event-type-chips">
+                        {% for type in event_types[:8] %}
                         <div class="event-type-chip" onclick="setEventType('{{ type.type_name }}')">
                             {{ type.type_name }}
                         </div>
                         {% endfor %}
                     </div>
-                    {% endif %}
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Additional Details</label>
-                    <textarea name="description" 
-                              class="form-input form-textarea" 
-                              placeholder="Location, what to bring, reminders, etc..."></textarea>
-                </div>
-            </div>
-            
-            <!-- WHO SECTION -->
-            <div class="form-section">
-                <div class="section-title">
-                    <span>👥</span>
-                    <span>Who's This For?</span>
-                </div>
-                
-                <input type="hidden" name="who" id="who" value="Me" required>
-                
-                <div class="who-selector">
-                    <div class="who-option selected" onclick="setWho('Me')">
-                        <div class="who-icon">🙋‍♂️</div>
-                        <div class="who-name">Me</div>
-                    </div>
-                    <div class="who-option" onclick="setWho('Wife')">
-                        <div class="who-icon">👩</div>
-                        <div class="who-name">Wife</div>
-                    </div>
-                    <div class="who-option" onclick="setWho('Ziggy')">
-                        <div class="who-icon">👦</div>
-                        <div class="who-name">Ziggy</div>
-                    </div>
-                    <div class="who-option" onclick="setWho('Gus')">
-                        <div class="who-icon">👧</div>
-                        <div class="who-name">Gus</div>
-                    </div>
-                    <div class="who-option" onclick="setWho('Family')">
-                        <div class="who-icon">👨‍👩‍👧‍👦</div>
-                        <div class="who-name">Family</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- DATE & TIME SECTION -->
-            <div class="form-section">
-                <div class="section-title">
-                    <span>📅</span>
-                    <span>When?</span>
-                </div>
-                
-                <div class="datetime-row">
+
+                <!-- CATEGORY & LOCATION -->
+                <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label required">Date</label>
-                        <input type="date" 
-                               name="event_date" 
-                               class="form-input" 
-                               value="{{ request.args.get('date', '') }}" 
-                               required>
+                        <label class="form-label">Category (optional)</label>
+                        <select name="category" class="form-input">
+                            <option value="">-- Select Category --</option>
+                            <option value="Work">💼 Work</option>
+                            <option value="Errands">🚗 Errands</option>
+                            <option value="Health">🏥 Health</option>
+                            <option value="Social">👥 Social</option>
+                            <option value="Family">👨‍👩‍👧‍👦 Family</option>
+                            <option value="Personal">🧘 Personal</option>
+                        </select>
+                    </div>
+                
+                    <div class="form-group">
+                        <label class="form-label">Location (optional)</label>
+                        <input type="text" name="location" class="form-input" placeholder="e.g., Office, Home, DC, Kroger..."
+                            list="location-list">
+                        <datalist id="location-list">
+                            <option value="Home">
+                            <option value="Office">
+                            <option value="DC">
+                            <option value="Kroger">
+                            <option value="School">
+                        </datalist>
+                    </div>
+                </div>
+                
+                <!-- PLANNED STATUS -->
+                <div class="form-group">
+                    <label class="form-label">Was this planned?</label>
+                    <select name="was_planned" class="form-input">
+                        <option value="planned">✅ Planned - On my schedule</option>
+                        <option value="emergency">🚨 Emergency - Unexpected/Urgent</option>
+                    </select>
+                </div>
+                
+                <!-- DATE AND TIME -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="event_date" class="form-input" 
+                               value="{{ default_date }}" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Time</label>
-                        <input type="text" 
-                               name="event_time" 
-                               id="event_time" 
-                               class="form-input" 
-                               placeholder="e.g., 2:00 PM">
+                        <label class="form-label">Time (Optional)</label>
+                        <input type="text" name="event_time" id="event_time" class="form-input" 
+                               placeholder="e.g., 2:00 PM or Morning">
                         <div class="time-shortcuts">
-                            <span class="time-chip" onclick="setTime('Morning')">Morning</span>
-                            <span class="time-chip" onclick="setTime('Afternoon')">Afternoon</span>
-                            <span class="time-chip" onclick="setTime('Evening')">Evening</span>
-                            <span class="time-chip" onclick="setTime('9:00 AM')">9:00 AM</span>
-                            <span class="time-chip" onclick="setTime('12:00 PM')">Noon</span>
-                            <span class="time-chip" onclick="setTime('3:00 PM')">3:00 PM</span>
-                            <span class="time-chip" onclick="setTime('6:00 PM')">6:00 PM</span>
-                            <span class="time-chip" onclick="setTime('All Day')">All Day</span>
+                            <button type="button" class="time-shortcut" onclick="setTime('Morning')">Morning</button>
+                            <button type="button" class="time-shortcut" onclick="setTime('Afternoon')">Afternoon</button>
+                            <button type="button" class="time-shortcut" onclick="setTime('Evening')">Evening</button>
+                            <button type="button" class="time-shortcut" onclick="setTime('All Day')">All Day</button>
                         </div>
                     </div>
+                </div>
+                
+                <!-- WHO -->
+                <div class="form-group">
+                    <label class="form-label">Who is this for?</label>
+                    <input type="hidden" name="who" id="who" required>
+                    <div class="who-selector">
+                        <div class="who-option" onclick="setWho('Me')">
+                            <div class="who-emoji">👤</div>
+                            <div class="who-name">Me</div>
+                        </div>
+                        <div class="who-option" onclick="setWho('Wife')">
+                            <div class="who-emoji">👩</div>
+                            <div class="who-name">Wife</div>
+                        </div>
+                        <div class="who-option" onclick="setWho('Family')">
+                            <div class="who-emoji">👨‍👩‍👦‍👦</div>
+                            <div class="who-name">Family</div>
+                        </div>
+                        <div class="who-option" onclick="setWho('Ziggy')">
+                            <div class="who-emoji">👦</div>
+                            <div class="who-name">Ziggy</div>
+                        </div>
+                        <div class="who-option" onclick="setWho('Gus')">
+                            <div class="who-emoji">👶</div>
+                            <div class="who-name">Gus</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DESCRIPTION -->
+                <div class="form-group">
+                    <label class="form-label">Description (Optional)</label>
+                    <textarea name="description" class="form-input" 
+                              placeholder="Add any additional details..."></textarea>
                 </div>
                 
                 <!-- RECURRING OPTIONS -->
@@ -496,23 +535,124 @@
                         <div class="toggle-checkbox" id="recurring_checkbox"></div>
                         <div>
                             <div style="font-weight: 600;">Make this a recurring event</div>
-                            <div style="font-size: 12px; color: var(--text-muted);">Repeat on specific days of the week</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Set up a repeating schedule</div>
                         </div>
                     </div>
                     
                     <div class="recurring-options" id="recurring_options">
-                        <label class="form-label">Select Days to Repeat</label>
-                        <div class="day-selector">
-                            <div class="day-option" data-day="Mon">MON</div>
-                            <div class="day-option" data-day="Tue">TUE</div>
-                            <div class="day-option" data-day="Wed">WED</div>
-                            <div class="day-option" data-day="Thu">THU</div>
-                            <div class="day-option" data-day="Fri">FRI</div>
-                            <div class="day-option" data-day="Sat">SAT</div>
-                            <div class="day-option" data-day="Sun">SUN</div>
+                        <!-- Recurrence Type Selector -->
+                        <label class="form-label">Recurrence Pattern</label>
+                        <div class="recurrence-type-selector">
+                            <div class="recurrence-type-btn active" onclick="setRecurrenceType('daily')" data-type="daily">
+                                Daily
+                            </div>
+                            <div class="recurrence-type-btn" onclick="setRecurrenceType('weekly')" data-type="weekly">
+                                Weekly
+                            </div>
+                            <div class="recurrence-type-btn" onclick="setRecurrenceType('monthly_date')" data-type="monthly_date">
+                                Monthly
+                            </div>
+                            <div class="recurrence-type-btn" onclick="setRecurrenceType('monthly_day')" data-type="monthly_day">
+                                Monthly (Day)
+                            </div>
+                            <div class="recurrence-type-btn" onclick="setRecurrenceType('yearly')" data-type="yearly">
+                                Yearly
+                            </div>
                         </div>
-                        <input type="hidden" name="recurring_days" id="recurring_days">
                         
+                        <input type="hidden" name="recurrence_type" id="recurrence_type" value="daily">
+                        
+                        <!-- Pattern Options Container -->
+                        <div class="pattern-options">
+                            <!-- Daily Pattern -->
+                            <div id="daily_pattern" class="pattern-section">
+                                <div class="pattern-row">
+                                    <label>Every</label>
+                                    <input type="number" name="daily_interval" value="1" min="1" max="365" class="form-input">
+                                    <span>day(s)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Weekly Pattern -->
+                            <div id="weekly_pattern" class="pattern-section" style="display: none;">
+                                <div class="pattern-row">
+                                    <label>Every</label>
+                                    <input type="number" name="weekly_interval" value="1" min="1" max="52" class="form-input">
+                                    <span>week(s) on:</span>
+                                </div>
+                                <div class="day-selector">
+                                    <div class="day-option" data-day="Mon">MON</div>
+                                    <div class="day-option" data-day="Tue">TUE</div>
+                                    <div class="day-option" data-day="Wed">WED</div>
+                                    <div class="day-option" data-day="Thu">THU</div>
+                                    <div class="day-option" data-day="Fri">FRI</div>
+                                    <div class="day-option" data-day="Sat">SAT</div>
+                                    <div class="day-option" data-day="Sun">SUN</div>
+                                </div>
+                                <input type="hidden" name="recurring_days" id="recurring_days">
+                            </div>
+                            
+                            <!-- Monthly by Date Pattern -->
+                            <div id="monthly_date_pattern" class="pattern-section" style="display: none;">
+                                <div class="pattern-row">
+                                    <label>Day</label>
+                                    <input type="number" name="monthly_date" value="1" min="1" max="31" class="form-input">
+                                    <label style="margin-left: 20px;">Every</label>
+                                    <input type="number" name="monthly_interval" value="1" min="1" max="12" class="form-input">
+                                    <span>month(s)</span>
+                                </div>
+                                <div class="form-hint">e.g., "15th of every month" or "1st of every 3 months"</div>
+                            </div>
+                            
+                            <!-- Monthly by Day Pattern -->
+                            <div id="monthly_day_pattern" class="pattern-section" style="display: none;">
+                                <div class="pattern-row">
+                                    <label>The</label>
+                                    <select name="monthly_week" class="form-input">
+                                        <option value="1">First</option>
+                                        <option value="2">Second</option>
+                                        <option value="3">Third</option>
+                                        <option value="4">Fourth</option>
+                                        <option value="-1">Last</option>
+                                    </select>
+                                    <select name="monthly_weekday" class="form-input">
+                                        <option value="0">Monday</option>
+                                        <option value="1">Tuesday</option>
+                                        <option value="2">Wednesday</option>
+                                        <option value="3">Thursday</option>
+                                        <option value="4">Friday</option>
+                                        <option value="5">Saturday</option>
+                                        <option value="6">Sunday</option>
+                                    </select>
+                                </div>
+                                <div class="form-hint">e.g., "Second Tuesday of every month"</div>
+                            </div>
+                            
+                            <!-- Yearly Pattern -->
+                            <div id="yearly_pattern" class="pattern-section" style="display: none;">
+                                <div class="pattern-row">
+                                    <label>Every year on</label>
+                                    <select name="yearly_month" class="form-input">
+                                        <option value="1">January</option>
+                                        <option value="2">February</option>
+                                        <option value="3">March</option>
+                                        <option value="4">April</option>
+                                        <option value="5">May</option>
+                                        <option value="6">June</option>
+                                        <option value="7">July</option>
+                                        <option value="8">August</option>
+                                        <option value="9">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
+                                    </select>
+                                    <input type="number" name="yearly_day" value="1" min="1" max="31" class="form-input" style="width: 80px;">
+                                </div>
+                                <div class="form-hint">e.g., "July 4th every year"</div>
+                            </div>
+                        </div>
+                        
+                        <!-- End Date -->
                         <div style="margin-top: 20px;">
                             <label class="form-label">Repeat Until</label>
                             <input type="date" name="until_date" class="form-input">
@@ -595,7 +735,29 @@
         }
     }
     
-    // Day selector for recurring
+    // Set recurrence type
+    function setRecurrenceType(type) {
+        // Update hidden input
+        document.getElementById('recurrence_type').value = type;
+        
+        // Update button states
+        document.querySelectorAll('.recurrence-type-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.type === type) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Hide all pattern sections
+        document.querySelectorAll('.pattern-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Show relevant pattern section
+        document.getElementById(type + '_pattern').style.display = 'block';
+    }
+    
+    // Day selector for weekly recurring
     document.querySelectorAll('.day-option').forEach(day => {
         day.addEventListener('click', function() {
             this.classList.toggle('selected');

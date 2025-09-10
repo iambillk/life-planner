@@ -255,19 +255,22 @@
   
   <!-- ====================== HEADER ======================= -->
   <div class="page-header">
-    <h1>
-      <span aria-hidden="true">🏡</span> Property Portfolio
-    </h1>
-    <div class="page-actions">
-      <a href="{{ url_for('realestate.add_property') }}" class="btn btn-primary">
-        <span aria-hidden="true">➕</span> Add Property
-      </a>
-      <div class="view-mode">
-        <button class="view-btn active" onclick="setViewMode('grid')">⚡</button>
-        <button class="view-btn" onclick="setViewMode('list')">📋</button>
-      </div>
+  <h1>
+    <span aria-hidden="true">🏡</span> Property Portfolio
+  </h1>
+  <div class="page-actions">
+    <a href="{{ url_for('realestate.portfolio_costs') }}" class="btn">
+      <span aria-hidden="true">📊</span> Portfolio Costs
+    </a>
+    <a href="{{ url_for('realestate.add_property') }}" class="btn btn-primary">
+      <span aria-hidden="true">➕</span> Add Property
+    </a>
+    <div class="view-mode">
+      <button class="view-btn active" onclick="setViewMode('grid')">⚡</button>
+      <button class="view-btn" onclick="setViewMode('list')">📋</button>
     </div>
   </div>
+</div>
 
   <!-- =================== STATS SUMMARY =================== -->
   <div class="stats-bar">
@@ -375,7 +378,7 @@
       </div>
       {% set recent_properties = properties|list|sort(attribute='created_at', reverse=true) if properties else [] %}
       {% for p in recent_properties %}
-        {% if loop.index <= 3 %}
+        {% if loop.index <= 2 %}
         <div style="padding:4px 0;">
           <div style="color:var(--re-text); font-size:.9rem; font-weight:600;">{{ p.name }}</div>
           <div style="color:var(--re-muted); font-size:.8rem;">

@@ -216,11 +216,25 @@ def edit_property(id):
 
         prop.notes = request.form.get("notes")
 
-        # optional new profile photo
+        # optional new profile photo (with old photo deletion)
         file = request.files.get("profile_photo")
         if file and allowed_file(file.filename):
+            # Store old photo filename before updating
+            old_photo = prop.profile_photo
+            
+            # Save new photo
             filename = save_uploaded_photo(file, "property_profiles", prop.name or "property")
             prop.profile_photo = filename
+            
+            # Delete old photo from server if it exists
+            if old_photo:
+                try:
+                    old_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "property_profiles", old_photo)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                        print(f"Deleted old property photo: {old_path}")  # For debugging
+                except Exception as e:
+                    print(f"Error deleting old property photo: {e}")  # Log but don't fail the update
 
         db.session.commit()
         flash(f'Property "{prop.name}" updated', "success")
@@ -508,7 +522,7 @@ def delete_maintenance_photo(property_id, maint_id, photo_id):
         return redirect(url_for("realestate.property_detail", id=property_id))
 
     try:
-        full_path = os.path.join(current_app.config()["UPLOAD_FOLDER"], "maintenance_photos", photo.filename)
+        full_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "maintenance_photos", photo.filename)
         if os.path.exists(full_path):
             os.remove(full_path)
     except Exception:
@@ -651,6 +665,12 @@ def cost_analysis(property_id):
         if record.date_completed and record.date_completed.year == (current_year - 1):
             last_year_total += record.cost or 0
     
+    # Calculate all-time total
+    total_all_time = sum(category_costs.values())
+    
+    # Calculate maintenance record count
+    maintenance_count = len(maintenance)
+    
     # Calculate YTD (Year to Date) - only completed months
     ytd_total = sum(monthly_costs[:current_month])
     
@@ -673,6 +693,8 @@ def cost_analysis(property_id):
         category_costs=sorted_categories,
         yearly_total=yearly_total,
         last_year_total=last_year_total,
+        total_all_time=total_all_time,
+        maintenance_count=maintenance_count,  # ADD THIS LINE
         monthly_costs=monthly_costs,
         monthly_avg=monthly_avg,
         cost_per_sqft=cost_per_sqft,

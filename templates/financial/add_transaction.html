@@ -246,14 +246,21 @@
                    id="merchant" 
                    name="merchant" 
                    class="form-input" 
-                   placeholder="Where did you shop?"
+                   list="merchant-list"
+                   placeholder="Type to search or enter new merchant"
+                   autocomplete="off"
                    required>
+            <datalist id="merchant-list">
+                {% for merchant in merchants %}
+                <option value="{{ merchant }}">
+                {% endfor %}
+            </datalist>
             <div class="quick-fill">
-                <button type="button" class="quick-fill-btn" onclick="setMerchant('Amazon')">Amazon</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Bueches Food World')">Bueches</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Tractor Supply')">Tractor Supply</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('BP Amoco')">BP Gas</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Meijers')">Meijers</button>
                 <button type="button" class="quick-fill-btn" onclick="setMerchant('Kroger')">Kroger</button>
-                <button type="button" class="quick-fill-btn" onclick="setMerchant('Target')">Target</button>
-                <button type="button" class="quick-fill-btn" onclick="setMerchant('Walmart')">Walmart</button>
-                <button type="button" class="quick-fill-btn" onclick="setMerchant('Costco')">Costco</button>
             </div>
         </div>
 
@@ -362,14 +369,18 @@ function suggestCategory(merchant) {
     // Find matching category
     for (let option of categorySelect.options) {
         if (option.text.toLowerCase().includes('groceries') && 
-            ['kroger', 'walmart', 'target', 'whole foods', 'aldi'].some(store => merchantLower.includes(store))) {
+            ['kroger', 'walmart', 'target', 'whole foods', 'aldi', 'bueches', 'meijer'].some(store => merchantLower.includes(store))) {
             categorySelect.value = option.value;
             break;
         } else if (option.text.toLowerCase().includes('amazon') && merchantLower.includes('amazon')) {
             categorySelect.value = option.value;
             break;
         } else if (option.text.toLowerCase().includes('gas') && 
-            ['shell', 'exxon', 'bp', 'chevron', 'gas'].some(store => merchantLower.includes(store))) {
+            ['shell', 'exxon', 'bp', 'chevron', 'gas', 'amoco'].some(store => merchantLower.includes(store))) {
+            categorySelect.value = option.value;
+            break;
+        } else if (option.text.toLowerCase().includes('restaurant') && 
+            ['restaurant', 'cafe', 'coffee', 'mcdonald', 'subway', 'pizza'].some(store => merchantLower.includes(store))) {
             categorySelect.value = option.value;
             break;
         }

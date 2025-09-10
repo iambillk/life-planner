@@ -170,12 +170,19 @@ def add_transaction():
         
         return redirect(url_for('financial.dashboard'))
     
-    # GET request
+    # GET request - fetch merchants for dropdown
     categories = SpendingCategory.query.order_by(
         SpendingCategory.is_custom,
         SpendingCategory.usage_count.desc(),
         SpendingCategory.name
     ).all()
+    
+    # Get unique merchants from database
+    merchants_query = db.session.query(Transaction.merchant)\
+        .distinct()\
+        .order_by(Transaction.merchant)\
+        .all()
+    merchants = [m[0] for m in merchants_query if m[0]]  # Extract merchant names, filter None
     
     # Get last used values for convenience
     last_category = request.args.get('last_category')
@@ -184,6 +191,7 @@ def add_transaction():
     return render_template(
         'financial/add_transaction.html',
         categories=categories,
+        merchants=merchants,
         cards=CARDS,
         today=date.today(),
         last_category=last_category,

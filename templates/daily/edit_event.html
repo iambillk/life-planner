@@ -428,6 +428,45 @@
                     </div>
                 </div>
                 
+                <!-- CATEGORY & LOCATION -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Category (optional)</label>
+                        <select name="category" class="form-input">
+                            <option value="">-- Select Category --</option>
+                            <option value="Work" {% if event.category=='Work' %}selected{% endif %}>💼 Work</option>
+                            <option value="Errands" {% if event.category=='Errands' %}selected{% endif %}>🚗 Errands</option>
+                            <option value="Health" {% if event.category=='Health' %}selected{% endif %}>🏥 Health</option>
+                            <option value="Social" {% if event.category=='Social' %}selected{% endif %}>👥 Social</option>
+                            <option value="Family" {% if event.category=='Family' %}selected{% endif %}>👨‍👩‍👧‍👦 Family</option>
+                            <option value="Personal" {% if event.category=='Personal' %}selected{% endif %}>🧘 Personal</option>
+                        </select>
+                    </div>
+                
+                    <div class="form-group">
+                        <label class="form-label">Location (optional)</label>
+                        <input type="text" name="location" class="form-input" value="{{ event.location or '' }}"
+                            placeholder="e.g., Office, Home, DC, Kroger..." list="location-list">
+                        <datalist id="location-list">
+                            <option value="Home">
+                            <option value="Office">
+                            <option value="DC">
+                            <option value="Kroger">
+                            <option value="School">
+                        </datalist>
+                    </div>
+                </div>
+                
+                <!-- PLANNED STATUS -->
+                <div class="form-group">
+                    <label class="form-label">Was this planned?</label>
+                    <select name="was_planned" class="form-input">
+                        <option value="planned" {% if event.was_planned %}selected{% endif %}>✅ Planned - On my schedule</option>
+                        <option value="emergency" {% if not event.was_planned %}selected{% endif %}>🚨 Emergency - Unexpected/Urgent
+                        </option>
+                    </select>
+                </div>
+
                 <!-- WHO -->
                 <div class="form-group">
                     <label class="form-label">Who is this for?</label>

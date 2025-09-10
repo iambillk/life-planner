@@ -27,6 +27,7 @@ def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.jinja_env.globals.update(abs=abs)
     
     # Initialize database
     db.init_app(app)

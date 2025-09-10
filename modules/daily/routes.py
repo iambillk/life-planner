@@ -82,9 +82,16 @@ def index():
         db.session.commit()
         daily_tasks = valid_tasks
         
-        # If no tasks for today, auto-select some
+        # Only auto-select tasks if there were NEVER any tasks today
+        # (Don't re-add tasks after completing them all!)
         if not daily_tasks:
-            daily_tasks = auto_select_tasks()
+            # Check if any tasks existed today (completed or not)
+            had_tasks_today = DailyTask.query.filter_by(date=today).first() is not None
+    
+            if not had_tasks_today:
+                # First visit of the day - auto-select tasks
+                daily_tasks = auto_select_tasks()
+            # else: User completed all tasks - show empty list with success state
     
     # Get captured notes
     notes = CapturedNote.query.filter_by(
@@ -547,9 +554,21 @@ def update_human():
 def complete_task(task_id):
     """Mark a daily task as complete"""
     task = DailyTask.query.get_or_404(task_id)
-    task.complete()
     
-    flash(f"Task completed! {DailyTask.query.filter_by(date=date.today(), completed=False).count()} remaining.", "success")
+    # Explicitly set completed to True (don't rely on the complete() method)
+    task.completed = True
+    db.session.commit()
+    
+    # Count remaining tasks for today
+    remaining = DailyTask.query.filter_by(
+        date=date.today(), 
+        completed=False
+    ).count()
+    
+    if remaining == 0:
+        flash("All tasks completed! Great work today!", "success")
+    else:
+        flash(f"Task completed! {remaining} remaining.", "success")
     
     return redirect(url_for('daily.index'))
 
@@ -919,7 +938,7 @@ def calendar_view():
             month_start=month_start,
             month_end=month_end,
             events=events,
-            project_deadlines=project_deadlines,
+         oject_deadlines=project_deadlines,
             calendar_days=calendar_days,  # THIS IS WHAT WAS MISSING
             today=today,
             datetime=datetime,
@@ -930,35 +949,61 @@ def calendar_view():
 
 @daily_bp.route('/events/add', methods=['GET', 'POST'])
 def add_event():
-    """Add a new calendar event"""
+    """Add a calendar event with enhanced recurring options"""
     if request.method == 'POST':
-        # Create the event
+        # Create the single event first
         event = CalendarEvent(
             event_date=datetime.strptime(request.form.get('event_date'), '%Y-%m-%d').date(),
             event_time=request.form.get('event_time'),
             event_type=request.form.get('event_type'),
             who=request.form.get('who'),
-            description=request.form.get('description')
+            description=request.form.get('description'),
+            category=request.form.get('category'),  # NEW
+            location=request.form.get('location'),  # NEW
+            was_planned=request.form.get('was_planned') != 'emergency'  # NEW - stores as True/False
         )
         
-        # Add/update event type for quick selection
+        # Track event type usage
         EventType.get_or_create(event.event_type)
         
         # Check if this should be recurring
-        if request.form.get('recurring_days'):
-            # Create recurring pattern
+        if request.form.get('recurrence_type'):
             recurring = RecurringEvent(
                 event_type=event.event_type,
-                days_of_week=request.form.get('recurring_days'),
+                recurrence_type=request.form.get('recurrence_type'),
                 time=event.event_time,
                 who=event.who,
                 description=event.description,
+                category=event.category,  # NEW - maintain category for recurring
+                location=event.location,  # NEW - maintain location for recurring  
                 until_date=datetime.strptime(request.form.get('until_date'), '%Y-%m-%d').date() if request.form.get('until_date') else None
             )
+            
+            # Set pattern-specific fields based on recurrence type
+            if recurring.recurrence_type == 'daily':
+                recurring.daily_interval = int(request.form.get('daily_interval', 1))
+            
+            elif recurring.recurrence_type == 'weekly':
+                recurring.days_of_week = request.form.get('recurring_days')
+                recurring.weekly_interval = int(request.form.get('weekly_interval', 1))
+            
+            elif recurring.recurrence_type == 'monthly_date':
+                recurring.monthly_date = int(request.form.get('monthly_date', 1))
+                recurring.monthly_interval = int(request.form.get('monthly_interval', 1))
+            
+            elif recurring.recurrence_type == 'monthly_day':
+                recurring.monthly_week = int(request.form.get('monthly_week', 1))
+                recurring.monthly_weekday = int(request.form.get('monthly_weekday', 0))
+                recurring.monthly_interval = int(request.form.get('monthly_interval', 1))
+            
+            elif recurring.recurrence_type == 'yearly':
+                recurring.yearly_month = int(request.form.get('yearly_month', 1))
+                recurring.yearly_day = int(request.form.get('yearly_day', 1))
+            
             db.session.add(recurring)
             db.session.commit()
             
-            # Generate instances for next 30 days
+            # Generate instances for next 365 days (or until end date)
             generate_recurring_instances(recurring)
         else:
             db.session.add(event)
@@ -980,6 +1025,210 @@ def add_event():
         active='daily'
     )
 
+
+def generate_recurring_instances(recurring):
+    """Generate event instances from recurring pattern with multiple recurrence types"""
+    from datetime import date, datetime, timedelta
+    from calendar import monthrange
+    
+    # Determine the date range for generating instances
+    start_date = date.today()
+    end_date = recurring.until_date if recurring.until_date else (start_date + timedelta(days=365))
+    
+    current_date = start_date
+    instances_created = 0
+    max_instances = 365  # Safety limit
+    
+    if recurring.recurrence_type == 'daily':
+        # Daily recurrence
+        interval = recurring.daily_interval or 1
+        while current_date <= end_date and instances_created < max_instances:
+            event = CalendarEvent(
+                event_date=current_date,
+                event_time=recurring.time,
+                event_type=recurring.event_type,
+                who=recurring.who,
+                category=recurring.category,  # NEW
+                location=recurring.location,  # NEW
+                description=recurring.description,
+                recurring_id=recurring.id
+            )
+            db.session.add(event)
+            instances_created += 1
+            current_date += timedelta(days=interval)
+    
+    elif recurring.recurrence_type == 'weekly':
+        # Weekly recurrence - check if days_of_week exists and is not None
+        if recurring.days_of_week:
+            days = recurring.days_of_week.split(',')
+            day_map = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6}
+            interval = recurring.weekly_interval or 1
+            
+            week_count = 0
+            while current_date <= end_date and instances_created < max_instances:
+                # Check if current day is in the selected days
+                current_weekday = current_date.weekday()
+                
+                for day in days:
+                    if day in day_map and day_map[day] == current_weekday:
+                        # Only add if we're on the right week interval
+                        if week_count % interval == 0:
+                            event = CalendarEvent(
+                                event_date=current_date,
+                                event_time=recurring.time,
+                                event_type=recurring.event_type,
+                                who=recurring.who,
+                                description=recurring.description,
+                                recurring_id=recurring.id
+                            )
+                            db.session.add(event)
+                            instances_created += 1
+                
+                # Track weeks
+                if current_date.weekday() == 6:  # Sunday
+                    week_count += 1
+                
+                current_date += timedelta(days=1)
+    
+    elif recurring.recurrence_type == 'monthly_date':
+        # Monthly by specific date (e.g., 15th of every month)
+        target_day = recurring.monthly_date or 1
+        interval = recurring.monthly_interval or 1
+        months_passed = 0
+        
+        while current_date <= end_date and instances_created < max_instances:
+            year = current_date.year
+            month = current_date.month
+            
+            # Only create event on interval months
+            if months_passed % interval == 0:
+                try:
+                    event_date = date(year, month, target_day)
+                    
+                    # Only add if the date is in our range
+                    if event_date >= start_date and event_date <= end_date:
+                        event = CalendarEvent(
+                            event_date=event_date,
+                            event_time=recurring.time,
+                            event_type=recurring.event_type,
+                            who=recurring.who,
+                            description=recurring.description,
+                            recurring_id=recurring.id
+                        )
+                        db.session.add(event)
+                        instances_created += 1
+                except ValueError:
+                    # Day doesn't exist in this month (e.g., Feb 31st)
+                    # Use last day of month instead
+                    last_day = monthrange(year, month)[1]
+                    event_date = date(year, month, last_day)
+                    
+                    if event_date >= start_date and event_date <= end_date:
+                        event = CalendarEvent(
+                            event_date=event_date,
+                            event_time=recurring.time,
+                            event_type=recurring.event_type,
+                            who=recurring.who,
+                            description=recurring.description,
+                            recurring_id=recurring.id
+                        )
+                        db.session.add(event)
+                        instances_created += 1
+            
+            # Move to next month
+            months_passed += 1
+            if month == 12:
+                current_date = date(year + 1, 1, 1)
+            else:
+                current_date = date(year, month + 1, 1)
+    
+    elif recurring.recurrence_type == 'monthly_day':
+        # Monthly by day of week (e.g., 2nd Tuesday of every month)
+        target_week = recurring.monthly_week or 1  # 1-4 or -1 for last
+        target_weekday = recurring.monthly_weekday or 0  # 0=Monday, 6=Sunday
+        interval = recurring.monthly_interval or 1
+        months_passed = 0
+        
+        while current_date <= end_date and instances_created < max_instances:
+            year = current_date.year
+            month = current_date.month
+            
+            # Only create event on interval months
+            if months_passed % interval == 0:
+                # Find all occurrences of the target weekday in this month
+                first_day = date(year, month, 1)
+                days_in_month = monthrange(year, month)[1]
+                
+                weekday_occurrences = []
+                for day in range(1, days_in_month + 1):
+                    d = date(year, month, day)
+                    if d.weekday() == target_weekday:
+                        weekday_occurrences.append(d)
+                
+                # Select the appropriate occurrence
+                if weekday_occurrences:
+                    if target_week == -1:  # Last occurrence
+                        event_date = weekday_occurrences[-1]
+                    elif target_week <= len(weekday_occurrences):
+                        event_date = weekday_occurrences[target_week - 1]
+                    else:
+                        event_date = None
+                    
+                    if event_date and event_date >= start_date and event_date <= end_date:
+                        event = CalendarEvent(
+                            event_date=event_date,
+                            event_time=recurring.time,
+                            event_type=recurring.event_type,
+                            who=recurring.who,
+                            description=recurring.description,
+                            recurring_id=recurring.id
+                        )
+                        db.session.add(event)
+                        instances_created += 1
+            
+            # Move to next month
+            months_passed += 1
+            if month == 12:
+                current_date = date(year + 1, 1, 1)
+            else:
+                current_date = date(year, month + 1, 1)
+    
+    elif recurring.recurrence_type == 'yearly':
+        # Yearly recurrence
+        target_month = recurring.yearly_month or 1
+        target_day = recurring.yearly_day or 1
+        
+        current_year = current_date.year
+        
+        while current_year <= end_date.year and instances_created < max_instances:
+            try:
+                event_date = date(current_year, target_month, target_day)
+                
+                if event_date >= start_date and event_date <= end_date:
+                    event = CalendarEvent(
+                        event_date=event_date,
+                        event_time=recurring.time,
+                        event_type=recurring.event_type,
+                        who=recurring.who,
+                        description=recurring.description,
+                        recurring_id=recurring.id
+                    )
+                    db.session.add(event)
+                    instances_created += 1
+            except ValueError:
+                # Invalid date (e.g., Feb 30th) - skip this year
+                pass
+            
+            current_year += 1
+    
+    db.session.commit()
+    
+    # Log what was created
+    if instances_created > 0:
+        flash(f"Created {instances_created} recurring events", "success")
+    else:
+        flash("No recurring events were created - check your settings", "warning")
+
 # ============ ADD THESE ROUTES TO modules/daily/routes.py ============
 # Place these after the add_event route and before generate_recurring_instances function
 
@@ -995,6 +1244,9 @@ def edit_event(event_id):
         event.event_type = request.form.get('event_type')
         event.who = request.form.get('who')
         event.description = request.form.get('description')
+        event.category = request.form.get('category')  # ADD THIS
+        event.location = request.form.get('location')  # ADD THIS
+        event.was_planned = request.form.get('was_planned') != 'emergency'  # ADD THIS
         
         # Update event type usage
         EventType.get_or_create(event.event_type)
@@ -1012,6 +1264,9 @@ def edit_event(event_id):
                 future_event.event_type = event.event_type
                 future_event.who = event.who
                 future_event.description = event.description
+                future_event.category = event.category  # ADD THIS
+                future_event.location = event.location  # ADD THIS
+                future_event.was_planned = event.was_planned  # ADD THIS
             
             flash(f"Updated {len(future_events)} recurring events", "success")
         else:
@@ -1126,35 +1381,6 @@ def api_get_event(event_id):
         'recurring_id': event.recurring_id,
         'is_recurring': event.recurring_id is not None
     })
-
-def generate_recurring_instances(recurring):
-    """Generate event instances from recurring pattern"""
-    # Parse days of week
-    days = recurring.days_of_week.split(',')
-    day_map = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6}
-    
-    # Generate for next 365 days (1 year) or until end date for "indefinite" events
-    start = date.today()
-    end = recurring.until_date if recurring.until_date else start + timedelta(days=365)  # Changed from 30 to 365
-    
-    current = start
-    while current <= end:
-        # Check if this day matches our pattern
-        if any(day_map.get(d) == current.weekday() for d in days):
-            # Create event instance
-            event = CalendarEvent(
-                event_date=current,
-                event_time=recurring.time,
-                event_type=recurring.event_type,
-                who=recurring.who,
-                description=recurring.description,
-                recurring_id=recurring.id
-            )
-            db.session.add(event)
-        current += timedelta(days=1)
-    
-    db.session.commit()
-
 
 # ============ EVENING REVIEW ============
 
@@ -1443,3 +1669,130 @@ def api_harassment():
         'message': message,
         'severity': 'warning' if message else 'none'
     })
+
+@daily_bp.route('/calendar/analytics')
+def calendar_analytics():
+    """Analytics dashboard for calendar events"""
+    from datetime import datetime, date, timedelta
+    from sqlalchemy import func
+    
+    # Get date range (default last 30 days)
+    end_date = date.today()
+    days_back = int(request.args.get('days', 30))
+    start_date = end_date - timedelta(days=days_back)
+    
+    # Get all events in range
+    events = CalendarEvent.query.filter(
+        CalendarEvent.event_date >= start_date,
+        CalendarEvent.event_date <= end_date
+    ).all()
+    
+    # Basic counts
+    total_events = len(events)
+    planned_events = sum(1 for e in events if e.was_planned)
+    emergency_events = total_events - planned_events
+    emergency_rate = (emergency_events / total_events * 100) if total_events > 0 else 0
+    
+    # Category breakdown
+    category_counts = {}
+    for event in events:
+        cat = event.category or 'Uncategorized'
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+    
+    # Location frequency
+    location_counts = {}
+    for event in events:
+        if event.location:
+            location_counts[event.location] = location_counts.get(event.location, 0) + 1
+    top_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    # Who breakdown
+    who_counts = {}
+    who_emergencies = {}
+    for event in events:
+        who = event.who or 'Unknown'
+        who_counts[who] = who_counts.get(who, 0) + 1
+        if not event.was_planned:
+            who_emergencies[who] = who_emergencies.get(who, 0) + 1
+    
+    # Emergency analysis by category
+    emergency_by_category = {}
+    for event in events:
+        if not event.was_planned:
+            cat = event.category or 'Uncategorized'
+            emergency_by_category[cat] = emergency_by_category.get(cat, 0) + 1
+    
+    # Event type frequency
+    type_counts = {}
+    for event in events:
+        if event.event_type:
+            type_counts[event.event_type] = type_counts.get(event.event_type, 0) + 1
+    top_activities = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:15]
+    
+    # Day of week patterns
+    weekday_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+    weekday_emergency = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+    for event in events:
+        wd = event.event_date.weekday()
+        weekday_counts[wd] += 1
+        if not event.was_planned:
+            weekday_emergency[wd] += 1
+    
+    # Patterns and insights
+    insights = []
+    
+    # Emergency pattern detection
+    if emergency_rate > 30:
+        insights.append(f"⚠️ {emergency_rate:.0f}% of your events are emergencies - you need better planning!")
+    
+    # Find emergency hotspots
+    if emergency_by_category:
+        worst_category = max(emergency_by_category.items(), key=lambda x: x[1])
+        if worst_category[1] >= 3:
+            insights.append(f"🚨 {worst_category[0]} had {worst_category[1]} emergencies - this needs attention")
+    
+    # Who has most emergencies
+    if who_emergencies:
+        worst_who = max(who_emergencies.items(), key=lambda x: x[1])
+        if worst_who[1] >= 3:
+            insights.append(f"👤 {worst_who[0]} had {worst_who[1]} emergencies - needs better planning")
+    
+    # Location patterns
+    if location_counts:
+        dc_runs = sum(1 for e in events if e.location and 'DC' in e.location.upper() and not e.was_planned)
+        if dc_runs >= 3:
+            insights.append(f"🚗 You had {dc_runs} emergency DC runs - batch these errands!")
+    
+    # Busy day detection
+    busiest_day = max(weekday_counts.items(), key=lambda x: x[1])
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    if busiest_day[1] > total_events / 7 * 1.5:
+        insights.append(f"📅 {day_names[busiest_day[0]]}s are your busiest - {busiest_day[1]} events")
+    
+    # Family balance check
+    if who_counts.get('Me', 0) > total_events * 0.7:
+        insights.append("🤔 Over 70% of events are just for you - where's the family time?")
+    elif who_counts.get('Family', 0) < total_events * 0.1:
+        insights.append("👨‍👩‍👧‍👦 Less than 10% family events - schedule more together time")
+    
+    return render_template(
+        'daily/calendar_analytics.html',
+        total_events=total_events,
+        planned_events=planned_events,
+        emergency_events=emergency_events,
+        emergency_rate=emergency_rate,
+        category_counts=category_counts,
+        top_locations=top_locations,
+        emergency_by_category=emergency_by_category,
+        top_activities=top_activities,
+        weekday_counts=weekday_counts,
+        weekday_emergency=weekday_emergency,
+        who_counts=who_counts,
+        who_emergencies=who_emergencies,
+        insights=insights,
+        start_date=start_date,
+        end_date=end_date,
+        days_back=days_back,
+        events=events,  # Pass raw events for template processing
+        active='daily'
+    )

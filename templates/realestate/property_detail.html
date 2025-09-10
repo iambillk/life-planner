@@ -1,10 +1,11 @@
 {# ============================================================================= 
 FILE: templates/realestate/property_detail.html 
 PURPOSE: Real Estate — Property Detail (summary, related entities, history)
-TEMPLATE VERSION: v2.0.1 
-LAST UPDATED: 2025-09-09 
+TEMPLATE VERSION: v2.1.0 
+LAST UPDATED: 2025-01-10 
 
 ── Changelog ──────────────────────────────────────────────────────────────────
+v2.1.0 - Added individual photo deletion functionality for maintenance photos
 v2.0.1 - Show captions under maintenance thumbnails (on page) and in modal.
 v2.0.0 - Complete redesign of maintenance cards with date badges, smaller 
          clickable photos, improved visual hierarchy
@@ -38,10 +39,11 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
         </span> 
         {% endif %}
       </div>
-      <div class="kcard-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"> 
-        <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.dashboard') }}">← Back</a> 
-        <a class="kbtn" href="{{ url_for('realestate.edit_property', id=property.id) }}">✏️ Edit</a> 
-        <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}">🛠️ Add Maintenance</a> 
+      <div class="kcard-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <a class="kbtn kbtn-ghost" href="{{ url_for('realestate.dashboard') }}">← Back</a>
+        <a class="kbtn" href="{{ url_for('realestate.edit_property', id=property.id) }}">✏️ Edit</a>
+        <a class="kbtn" href="{{ url_for('realestate.cost_analysis', property_id=property.id) }}">📊 Cost Analysis</a>
+        <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_maintenance', property_id=property.id) }}">🛠️ Add Maintenance</a>
       </div>
     </div>
     <div class="kcard-body" style="display:grid;grid-template-columns:360px 1fr;gap:16px;">
@@ -273,11 +275,22 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
                 </figure>
               {% else %}
                 <figure class="photo-item {% if ph.photo_type == 'receipt' %}photo-receipt{% endif %}">
-                  <div class="photo-thumb"
-                       onclick="openModal('{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}', {{ caption_text|tojson }})"
-                       title="{{ caption_text }}">
-                    <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" alt="{{ caption_text }}">
-                    <span class="photo-type">{{ ph.photo_type|title if ph.photo_type else 'Photo' }}</span>
+                  <div class="photo-thumb-wrapper">
+                    <div class="photo-thumb"
+                         role="button"
+                         tabindex="0"
+                         data-src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}"
+                         data-caption="{{ caption_text }}"
+                         title="{{ caption_text }}">
+                      <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' ~ ph.filename) }}" alt="{{ caption_text }}">
+                      <span class="photo-type">{{ ph.photo_type|title if ph.photo_type else 'Photo' }}</span>
+                    </div>
+                    <!-- Delete button for photo -->
+                    <button class="photo-delete-btn" 
+                            onclick="deleteMaintenancePhoto({{ property.id }}, {{ m.id }}, {{ ph.id }})"
+                            title="Delete this photo">
+                      ×
+                    </button>
                   </div>
                   <figcaption class="photo-caption" title="{{ caption_text }}">{{ caption_text }}</figcaption>
                 </figure>
@@ -337,9 +350,9 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
     <summary>Page Info & Changelog</summary>
     <div class="kcard-body">
       <ul>
-        <li><strong>Template:</strong> property_detail.html — v2.0.1</li>
-        <li><strong>Last Updated:</strong> 2025-09-09</li>
-        <li><strong>Notes:</strong> Maintenance thumbnails now display captions; same captions appear in modal.</li>
+        <li><strong>Template:</strong> property_detail.html — v2.1.0</li>
+        <li><strong>Last Updated:</strong> 2025-01-10</li>
+        <li><strong>Notes:</strong> Added individual photo deletion for maintenance photos</li>
       </ul>
     </div>
   </details>
@@ -350,6 +363,10 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
   <img class="modal-content" id="modalImg" alt="Enlarged photo">
   <div class="modal-caption" id="modalCaption"></div>
 </div>
+
+<!-- Hidden form for photo deletion -->
+<form id="deletePhotoForm" method="POST" style="display: none;">
+</form>
 
 {% endblock %} 
 
@@ -677,6 +694,12 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
     flex-wrap: wrap;
   }
   
+  /* Photo wrapper for delete button */
+  .photo-thumb-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
   .photo-thumb {
     position: relative;
     width: 80px;
@@ -717,12 +740,12 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
     background: rgba(255, 255, 255, 0.02);
   }
 
-  /* NEW: Photo figure + caption */
+  /* Photo figure + caption */
   .photo-item{
     display:flex;
     flex-direction:column;
     gap:4px;
-    width:80px; /* matches .photo-thumb */
+    width:80px;
   }
 
   .photo-caption{
@@ -730,12 +753,41 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
     line-height:1.1;
     color:var(--text-muted);
     max-width:100%;
-    max-height:2.2em;      /* ~two lines */
+    max-height:2.2em;
     overflow:hidden;
     display:-webkit-box;
     -webkit-line-clamp:2;
     -webkit-box-orient:vertical;
     word-break: break-word;
+  }
+  
+  /* Photo delete button */
+  .photo-delete-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, .9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s ease;
+  }
+  
+  .photo-thumb-wrapper:hover .photo-delete-btn {
+    display: flex;
+  }
+  
+  .photo-delete-btn:hover {
+    background: rgba(239, 68, 68, 1);
+    transform: scale(1.1);
   }
   
   /* Modal */
@@ -807,6 +859,42 @@ function openModal(src, caption) {
 function closeModal() {
   document.getElementById('photoModal').style.display = 'none';
 }
+
+// Function to delete maintenance photo
+function deleteMaintenancePhoto(propertyId, maintId, photoId) {
+  if (!confirm('Are you sure you want to delete this photo? This action cannot be undone.')) {
+    return;
+  }
+  
+  // Create and submit form
+  const form = document.getElementById('deletePhotoForm');
+  form.action = `/property/${propertyId}/maintenance/${maintId}/photo/${photoId}/delete`;
+  form.submit();
+}
+
+// Delegated click for any .photo-thumb (ignore anchors used for PDFs)
+document.addEventListener('click', function(e) {
+  const thumb = e.target.closest('.photo-thumb');
+  if (!thumb) return;
+  // If it's an <a> (PDF), let the browser handle target=_blank
+  if (thumb.tagName === 'A') return;
+  const src = thumb.getAttribute('data-src');
+  const caption = thumb.getAttribute('data-caption') || '';
+  if (src) openModal(src, caption);
+});
+
+// Keyboard accessibility: Enter/Space on focused .photo-thumb (non-anchors)
+document.addEventListener('keydown', function(e) {
+  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement.classList.contains('photo-thumb')) {
+    // If focused element is an anchor, allow default behavior
+    if (document.activeElement.tagName === 'A') return;
+    e.preventDefault();
+    const thumb = document.activeElement;
+    const src = thumb.getAttribute('data-src');
+    const caption = thumb.getAttribute('data-caption') || '';
+    if (src) openModal(src, caption);
+  }
+});
 
 // Close modal on Escape key
 document.addEventListener('keydown', function(e) {
