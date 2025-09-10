@@ -560,7 +560,8 @@
                             </div>
                         </div>
                         
-                        <input type="hidden" name="recurrence_type" id="recurrence_type" value="daily">
+                        <!-- FIXED: Changed from value="daily" to value="" -->
+                        <input type="hidden" name="recurrence_type" id="recurrence_type" value="">
                         
                         <!-- Pattern Options Container -->
                         <div class="pattern-options">
@@ -721,22 +722,34 @@
         document.getElementById('event_time').value = time;
     }
     
-    // Toggle recurring options
+    // FIXED: Toggle recurring options - now properly clears/sets recurrence_type
     function toggleRecurring() {
         const checkbox = document.getElementById('recurring_checkbox');
         const options = document.getElementById('recurring_options');
+        const recurrenceTypeInput = document.getElementById('recurrence_type');
         
         checkbox.classList.toggle('checked');
         
         if (checkbox.classList.contains('checked')) {
             options.classList.add('active');
+            // Set default recurrence type when enabling
+            recurrenceTypeInput.value = 'daily';
         } else {
             options.classList.remove('active');
+            // IMPORTANT: Clear the recurrence type when disabling
+            recurrenceTypeInput.value = '';
         }
     }
     
-    // Set recurrence type
+    // FIXED: Set recurrence type - only works when recurring is enabled
     function setRecurrenceType(type) {
+        const checkbox = document.getElementById('recurring_checkbox');
+        
+        // Only set if recurring is actually enabled
+        if (!checkbox.classList.contains('checked')) {
+            return;
+        }
+        
         // Update hidden input
         document.getElementById('recurrence_type').value = type;
         
