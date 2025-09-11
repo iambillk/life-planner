@@ -1,0 +1,269 @@
+Authenticating with public key "wgkish@icloud.com"
+    +----------------------------------------------------------------------+
+    ¦               • MobaXterm Professional Edition v24.2 •               ¦
+    ¦               (SSH client, X server and network tools)               ¦
+    ¦                                                                      ¦
+    ¦ ? SSH session to root@208.76.81.107                                  ¦
+    ¦   • Direct SSH      :  ?                                             ¦
+    ¦   • SSH compression :  ?                                             ¦
+    ¦   • SSH-browser     :  ?                                             ¦
+    ¦   • X11-forwarding  :  ?  (disabled or not supported by server)      ¦
+    ¦                                                                      ¦
+    ¦ ? For more info, ctrl+click on help or visit our website.            ¦
+    +----------------------------------------------------------------------+
+
+Last login: Tue Sep  9 03:37:20 2025 from syn-075-128-176-072.res.spectrum.com
+[root@netmon ~]# ssh tchnoc@10.0.0.31
+(tchnoc@10.0.0.31) Password:
+Last login: Mon Sep  8 23:34:24 2025 from 10.10.6.59
+TCH-SFJ-DISTRO1>en
+TCH-SFJ-DISTRO1#sh run
+! Command: show running-config
+! device: TCH-SFJ-DISTRO1 (DCS-7048T-A, EOS-4.15.2F)
+!
+! boot system flash:/EOS-4.15.2F.swi
+!
+transceiver qsfp default-mode 4x10G
+!
+logging trap debugging
+logging trap system severity debugging
+logging host 10.10.6.59
+!
+hostname TCH-SFJ-DISTRO1
+!
+snmp-server contact Bill Kish
+snmp-server location SFJ
+snmp-server community tch ro
+snmp-server enable traps
+!
+spanning-tree mode mstp
+!
+no aaa root
+!
+username tchnoc secret 5 $1$v.gomRsL$d1PWMlyGMVvkY.XhNmgny1
+!
+clock timezone US/Eastern
+!
+vlan 2-3,5-14,17,30,90-92,100,111,204-206,301,1000
+!
+interface Port-Channel1
+   description to SFJ-Core
+   switchport mode trunk
+!
+interface Ethernet1
+   description thing2
+   switchport access vlan 13
+!
+interface Ethernet2
+   description ostego
+   switchport access vlan 100
+!
+interface Ethernet3
+   shutdown
+!
+interface Ethernet4
+   description herendeen
+   shutdown
+   switchport access vlan 100
+!
+interface Ethernet5
+   shutdown
+!
+interface Ethernet6
+   description herendeen-new
+   switchport access vlan 100
+!
+interface Ethernet7
+   shutdown
+!
+interface Ethernet8
+   description ostego-new
+   switchport access vlan 100
+!
+interface Ethernet9
+   description buserver30
+   switchport access vlan 111
+!
+interface Ethernet10
+   description loon
+   switchport access vlan 14
+!
+interface Ethernet11
+   description new-elk
+   switchport access vlan 100
+!
+interface Ethernet12
+   description brute
+   switchport access vlan 111
+!
+interface Ethernet13
+   description beadle-new
+   switchport access vlan 100
+!
+interface Ethernet14
+   description brute-new
+   switchport access vlan 111
+!
+interface Ethernet15
+   description hugaboom-new
+   switchport access vlan 100
+!
+interface Ethernet16
+   shutdown
+!
+interface Ethernet17
+   description dedicated91
+   switchport access vlan 8
+!
+interface Ethernet18
+   description dedicated5002
+   switchport access vlan 100
+!
+interface Ethernet19
+   description dedicated5001
+   switchport access vlan 9
+!
+interface Ethernet20
+   description dedicated304
+   shutdown
+   switchport access vlan 12
+!
+interface Ethernet21
+   description apc3
+   switchport access vlan 111
+!
+interface Ethernet22
+   description apc4
+   switchport access vlan 111
+!
+interface Ethernet23
+   shutdown
+   switchport access vlan 100
+!
+interface Ethernet24
+   description dedicated1998
+   switchport access vlan 8
+!
+interface Ethernet25
+   description dedicated5003
+   switchport access vlan 7
+!
+interface Ethernet26
+   shutdown
+!
+interface Ethernet27
+   description dedicated2210
+   switchport access vlan 100
+!
+interface Ethernet28
+   shutdown
+!
+interface Ethernet29
+   description vps8
+   switchport access vlan 12
+!
+interface Ethernet30
+   description vps9
+   switchport access vlan 12
+!
+interface Ethernet31
+   description dedicated6826
+   switchport access vlan 10
+!
+interface Ethernet32
+   description dedicated5999
+   switchport access vlan 13
+!
+interface Ethernet33
+   description vps12
+   switchport access vlan 100
+!
+interface Ethernet34
+   description dedicated6827
+   switchport access vlan 17
+!
+interface Ethernet35
+   description vps14 Port 1
+   switchport access vlan 17
+!
+interface Ethernet36
+   description vps14 port 2
+   shutdown
+   switchport access vlan 3
+!
+interface Ethernet37
+   shutdown
+!
+interface Ethernet38
+   shutdown
+!
+interface Ethernet39
+   shutdown
+!
+interface Ethernet40
+   shutdown
+!
+interface Ethernet41
+   shutdown
+!
+interface Ethernet42
+   shutdown
+!
+interface Ethernet43
+   shutdown
+!
+interface Ethernet44
+   shutdown
+!
+interface Ethernet45
+   shutdown
+!
+interface Ethernet46
+   shutdown
+!
+interface Ethernet47
+   shutdown
+!
+interface Ethernet48
+   shutdown
+!
+interface Ethernet49
+   shutdown
+!
+interface Ethernet50
+   description Uplink so SFJ Office
+   switchport mode trunk
+!
+interface Ethernet51
+   description to SFJ Core
+   channel-group 1 mode active
+!
+interface Ethernet52
+   description to SFJ Core
+   channel-group 1 mode active
+!
+interface Management1
+   shutdown
+!
+interface Vlan1000
+   description MNGMT_VLAN
+   ip address 10.0.0.31/24
+!
+ip access-list standard SSH
+   10 permit host 10.10.6.179
+   20 permit host 10.10.6.59
+   30 permit host 10.10.5.150
+!
+ip route 0.0.0.0/0 10.0.0.1
+!
+ip routing
+!
+management api http-commands
+   no protocol https
+!
+management ssh
+   ip access-group SSH in
+!
+!
+end
+TCH-SFJ-DISTRO1#

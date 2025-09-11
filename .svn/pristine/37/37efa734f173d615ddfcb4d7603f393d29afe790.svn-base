@@ -1,0 +1,650 @@
+<!-- templates/equipment/dashboard.html - FIXED VERSION -->
+{% extends "base.html" %}
+{% block title %}Equipment Center{% endblock %}
+{% block header %}Equipment Center{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ========= Page-scoped CSS (dark theme) ======================================= */
+  :root{
+    --em-bg: var(--bg, #0b0f1a);
+    --em-panel: var(--panel, #121a2a);
+    --em-card: var(--card, #0f1625);
+    --em-sub: #0c1322;
+    --em-line: var(--line, #1f2a3d);
+    --em-text: var(--text, #e6eaf2);
+    --em-muted: var(--text-muted, #9fb0c8);
+    --em-primary: var(--primary, #6ea8ff);
+    --em-primary-700: var(--primary-700, #3f7fe6);
+    --em-success: var(--success, #22c55e);
+    --em-warn: var(--warning, #f59e0b);
+    --em-danger: var(--danger, #ef4444);
+    --em-info: #38bdf8;
+
+    --em-radius: var(--radius, 14px);
+    --em-radius-sm: var(--radius-sm, 10px);
+    --em-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .equipment-dashboard{ display:grid; gap:16px; padding:16px; max-width:1400px; margin:0 auto; }
+
+  /* ======= Page Header ======= */
+  .page-header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--em-line); border-radius: var(--em-radius);
+    box-shadow: var(--em-shadow);
+  }
+  .page-header h1{ margin:0; font-size:1.15rem; letter-spacing:.2px; font-weight:650; }
+  .page-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--em-line);
+    background:var(--em-card); color:var(--em-text); text-decoration:none;
+    transition:transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--em-primary); transform:translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary:hover{ background: rgba(110,168,255,.25); }
+  .btn-success{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.45); }
+  .btn-warn{ background: rgba(245,158,11,.18); border-color: rgba(245,158,11,.45); }
+  .btn-danger{ background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.45); }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ======= Stats Summary Bar ======= */
+  .stats-bar{
+    display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
+    padding:14px; background:var(--em-card); border:1px solid var(--em-line);
+    border-radius:var(--em-radius-sm);
+  }
+  .stat-item{
+    display:flex; align-items:center; gap:8px;
+    color:var(--em-muted);
+  }
+  .stat-item .icon{ font-size:1.2rem; }
+  .stat-item .number{
+    font-size:1.2rem; font-weight:700; color:var(--em-text);
+  }
+  .stat-item.danger .number{ color:var(--em-danger); }
+  .stat-item.warn .number{ color:var(--em-warn); }
+  .stat-item.success .number{ color:var(--em-success); }
+
+  /* ======= Alert Sections ======= */
+  .alerts-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:16px;
+  }
+  
+  .alert-section{
+    background:var(--em-card); border:1px solid var(--em-line);
+    border-radius:var(--em-radius); box-shadow:var(--em-shadow);
+    overflow:hidden;
+  }
+  .alert-header{
+    padding:12px 14px; display:flex; justify-content:space-between; align-items:center;
+    background:linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+    border-bottom:1px solid var(--em-line);
+  }
+  .alert-title{ 
+    font-size:1rem; font-weight:700; display:flex; align-items:center; gap:8px; 
+  }
+  .alert-count{
+    padding:2px 8px; border-radius:999px; font-size:.75rem; font-weight:800;
+    background:rgba(255,255,255,.1); color:var(--em-text);
+  }
+  .alert-section.danger .alert-header{ background:linear-gradient(180deg, rgba(239,68,68,.1), transparent); }
+  .alert-section.danger .alert-count{ background:var(--em-danger); color:#0a0f1a; }
+  .alert-section.warn .alert-header{ background:linear-gradient(180deg, rgba(245,158,11,.1), transparent); }
+  .alert-section.warn .alert-count{ background:var(--em-warn); color:#0a0f1a; }
+  .alert-section.info .alert-header{ background:linear-gradient(180deg, rgba(56,189,248,.1), transparent); }
+  .alert-section.info .alert-count{ background:var(--em-info); color:#0a0f1a; }
+
+  .alert-body{
+    max-height:300px; overflow-y:auto; padding:8px;
+  }
+  .alert-item{
+    background:var(--em-sub); border:1px solid var(--em-line);
+    border-radius:var(--em-radius-sm); padding:10px; margin-bottom:8px;
+    transition:transform .1s, border-color .2s;
+  }
+  .alert-item:hover{ transform:translateX(4px); border-color:var(--em-primary); }
+  .alert-item-header{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    margin-bottom:6px;
+  }
+  .alert-item-name{ font-weight:700; color:var(--em-text); }
+  .alert-item-service{ color:var(--em-muted); font-size:.9rem; }
+  .alert-item-meta{
+    display:flex; gap:10px; align-items:center; font-size:.85rem; color:var(--em-muted);
+  }
+  .days-badge{
+    padding:2px 6px; border-radius:6px; font-size:.75rem; font-weight:800;
+  }
+  .days-overdue{ background:var(--em-danger); color:#0a0f1a; animation: blink 2s infinite; }
+  .days-soon{ background:var(--em-warn); color:#0a0f1a; }
+  @keyframes blink{
+    0%, 100%{ opacity:1; }
+    50%{ opacity:.6; }
+  }
+
+  /* ======= Controls Row ======= */
+  .controls{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    padding:12px; background:var(--em-card); border:1px solid var(--em-line);
+    border-radius:var(--em-radius-sm);
+  }
+  .search-input{
+    flex:1; padding:10px 14px; border:1px solid var(--em-line);
+    background:var(--em-panel); border-radius:10px; color:var(--em-text);
+    min-width:200px; font-size:.95rem;
+  }
+  .search-input:focus{ outline:none; border-color:var(--em-primary); }
+  .search-input::placeholder{ color:var(--em-muted); }
+  
+  .select{
+    padding:10px 14px; border:1px solid var(--em-line);
+    background:var(--em-panel); border-radius:10px; color:var(--em-text);
+    font-size:.95rem; cursor:pointer;
+  }
+  .select:focus{ outline:none; border-color:var(--em-primary); }
+
+  /* ======= Category Chips ======= */
+  .category-chips{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding:12px; background:var(--em-card); border:1px solid var(--em-line);
+    border-radius:var(--em-radius-sm);
+  }
+  .chip{
+    padding:6px 12px; border-radius:999px; font-size:.85rem;
+    background:var(--em-panel); color:var(--em-muted); cursor:pointer;
+    border:1px solid transparent; transition:all .2s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .chip:hover{ border-color:var(--em-primary); color:var(--em-text); }
+  .chip.active{ 
+    background:rgba(110,168,255,.18); color:var(--em-primary); 
+    border-color:rgba(110,168,255,.45); 
+  }
+  .chip .count{
+    padding:1px 6px; background:rgba(255,255,255,.1); border-radius:999px;
+    font-size:.75rem; font-weight:700;
+  }
+
+  /* ======= Equipment Grid ======= */
+  .equipment-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:16px;
+  }
+  .equip-card{
+    background:var(--em-card); border:1px solid var(--em-line);
+    border-radius:var(--em-radius); overflow:hidden;
+    box-shadow:var(--em-shadow); transition:transform .15s ease, border-color .2s;
+    display:flex; flex-direction:column;
+  }
+  .equip-card:hover{ transform:translateY(-2px); border-color:var(--em-primary); }
+  
+  .equip-img{
+    width:100%; height:160px; object-fit:cover;
+    border-bottom:1px solid var(--em-line);
+  }
+  .equip-no-img{
+    width:100%; height:160px; display:flex; align-items:center; justify-content:center;
+    background:var(--em-sub); border-bottom:1px solid var(--em-line);
+    font-size:48px; opacity:.3;
+  }
+  
+  .equip-body{
+    padding:12px; flex:1; display:flex; flex-direction:column; gap:8px;
+  }
+  .equip-name{
+    font-size:1rem; font-weight:700; color:var(--em-text);
+    margin:0 0 4px 0;
+  }
+  .equip-badges{
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .category-badge{
+    padding:3px 8px; border-radius:6px; font-size:.7rem;
+    font-weight:700; text-transform:uppercase;
+    background:var(--em-panel); color:var(--em-muted);
+    border:1px solid var(--em-line);
+  }
+  .status-badge{
+    padding:3px 8px; border-radius:6px; font-size:.7rem;
+    font-weight:800; text-transform:uppercase;
+  }
+  .status-active{ background:#22c55e; color:#0a0f1a; }
+  .status-inactive{ background:#6b7280; color:#fff; }
+  .status-maintenance{ background:#f59e0b; color:#0a0f1a; }
+  .status-repair{ background:#ef4444; color:#fff; }
+  .status-retired{ background:#4b5563; color:#e5e7eb; }
+  
+  .equip-meta{
+    color:var(--em-muted); font-size:.85rem;
+    margin-top:auto;
+  }
+  .equip-stats{
+    display:flex; gap:12px; flex-wrap:wrap;
+    padding-top:8px; margin-top:8px; border-top:1px dashed var(--em-line);
+    font-size:.85rem; color:var(--em-muted);
+  }
+  .equip-stats span{ display:inline-flex; align-items:center; gap:4px; }
+  
+  .equip-actions{
+    padding:12px; border-top:1px solid var(--em-line);
+    display:flex; gap:8px;
+  }
+
+  /* Empty State */
+  .empty-state{
+    text-align:center; padding:40px 20px; color:var(--em-muted);
+    background:var(--em-card); border:1px dashed var(--em-line);
+    border-radius:var(--em-radius); grid-column:1/-1;
+  }
+  .empty-state .icon{ font-size:48px; margin-bottom:16px; opacity:.5; }
+  .empty-state h3{ margin:6px 0 12px; color:var(--em-text); font-size:1.2rem; }
+
+  /* Responsive */
+  @media (max-width: 768px){
+    .alerts-grid{ grid-template-columns: 1fr; }
+    .equipment-grid{ grid-template-columns: 1fr; }
+    .controls{ flex-direction:column; }
+    .search-input{ width:100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="equipment-dashboard">
+  
+  <!-- ====================== HEADER ======================= -->
+  <div class="page-header">
+    <h1>
+      <span aria-hidden="true">🔧</span> Equipment Center
+    </h1>
+    <div class="page-actions">
+      <a href="{{ url_for('equipment.add') }}" class="btn btn-primary">
+        <span aria-hidden="true">➕</span> Add Equipment
+      </a>
+      <a href="{{ url_for('equipment.by_category', category='all') }}" class="btn">
+        <span aria-hidden="true">📋</span> View All
+      </a>
+    </div>
+  </div>
+
+  <!-- =================== STATS SUMMARY =================== -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="icon">🔧</span>
+      <span class="number">{{ equipment|length }}</span>
+      <span>Total Equipment</span>
+    </div>
+    <div class="stat-item success">
+      <span class="icon">✅</span>
+      <span class="number">{{ equipment|selectattr('status', 'equalto', 'active')|list|length }}</span>
+      <span>Active</span>
+    </div>
+    <div class="stat-item danger">
+      <span class="icon">🚨</span>
+      <span class="number">{{ overdue_reminders|length }}</span>
+      <span>Overdue</span>
+    </div>
+    <div class="stat-item warn">
+      <span class="icon">⏰</span>
+      <span class="number">{{ upcoming_reminders|length }}</span>
+      <span>Due Soon</span>
+    </div>
+    <div class="stat-item">
+      <span class="icon">🏷️</span>
+      <span class="number">{{ categories|length }}</span>
+      <span>Categories</span>
+    </div>
+  </div>
+
+  <!-- =================== MAINTENANCE ALERTS =================== -->
+  <div class="alerts-grid">
+    
+    <!-- Overdue Section -->
+    {% if overdue_reminders %}
+    <div class="alert-section danger">
+      <div class="alert-header">
+        <div class="alert-title">
+          <span aria-hidden="true">🚨</span> Overdue Maintenance
+          <span class="alert-count">{{ overdue_reminders|length }}</span>
+        </div>
+      </div>
+      <div class="alert-body">
+        {% for reminder in overdue_reminders[:10] %}
+        <div class="alert-item">
+          <div class="alert-item-header">
+            <div>
+              <div class="alert-item-name">{{ reminder.equipment.name }}</div>
+              <div class="alert-item-service">{{ reminder.service_type }}</div>
+            </div>
+            <span class="days-badge days-overdue">
+              {{ (datetime.now().date() - reminder.due_date).days }} days overdue
+            </span>
+          </div>
+          <div class="alert-item-meta">
+            <span>📅 Due: {{ reminder.due_date.strftime('%b %d, %Y') }}</span>
+            {% if reminder.equipment.mileage %}
+            <span>📏 {{ "{:,}".format(reminder.equipment.mileage) }} miles</span>
+            {% endif %}
+          </div>
+          <div style="margin-top:8px;">
+            <a href="{{ url_for('equipment.add_maintenance', id=reminder.equipment.id) }}" 
+               class="btn btn-sm btn-danger">
+              Service Now
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming Section -->
+    {% if upcoming_reminders %}
+    <div class="alert-section warn">
+      <div class="alert-header">
+        <div class="alert-title">
+          <span aria-hidden="true">⏰</span> Due Soon
+          <span class="alert-count">{{ upcoming_reminders|length }}</span>
+        </div>
+      </div>
+      <div class="alert-body">
+        {% for reminder in upcoming_reminders[:10] %}
+        <div class="alert-item">
+          <div class="alert-item-header">
+            <div>
+              <div class="alert-item-name">{{ reminder.equipment.name }}</div>
+              <div class="alert-item-service">{{ reminder.service_type }}</div>
+            </div>
+            <span class="days-badge days-soon">
+              {{ (reminder.due_date - datetime.now().date()).days }} days
+            </span>
+          </div>
+          <div class="alert-item-meta">
+            <span>📅 Due: {{ reminder.due_date.strftime('%b %d, %Y') }}</span>
+            {% if reminder.equipment.mileage %}
+            <span>📏 {{ "{:,}".format(reminder.equipment.mileage) }} miles</span>
+            {% endif %}
+          </div>
+          <div style="margin-top:8px;">
+            <a href="{{ url_for('equipment.add_maintenance', id=reminder.equipment.id) }}" 
+               class="btn btn-sm btn-warn">
+              Schedule Service
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Services -->
+    {% if recent_maintenance %}
+    <div class="alert-section info">
+      <div class="alert-header">
+        <div class="alert-title">
+          <span aria-hidden="true">🔧</span> Recent Services
+          <span class="alert-count">{{ recent_maintenance|length }}</span>
+        </div>
+      </div>
+      <div class="alert-body">
+        {% for record in recent_maintenance[:10] %}
+        <div class="alert-item">
+          <div class="alert-item-header">
+            <div>
+              <div class="alert-item-name">{{ record.equipment.name }}</div>
+              <div class="alert-item-service">{{ record.service_type }}</div>
+            </div>
+            {% if record.cost %}
+            <span style="color:var(--em-success); font-weight:700;">
+              ${{ "{:,.2f}".format(record.cost) }}
+            </span>
+            {% endif %}
+          </div>
+          <div class="alert-item-meta">
+            <span>📅 {{ record.service_date.strftime('%b %d, %Y') }}</span>
+            {% if record.mileage %}
+            <span>📏 {{ "{:,}".format(record.mileage) }} miles</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- =================== CONTROLS =================== -->
+  <div class="controls">
+    <input id="equipSearch" class="search-input" type="search" 
+           placeholder="🔍 Search equipment..." autocomplete="off" />
+    <select id="equipSort" class="select">
+      <option value="updated_desc">📅 Recently Updated</option>
+      <option value="name_asc">🔤 Name (A-Z)</option>
+      <option value="status_asc">📊 Status</option>
+      <option value="category_asc">🏷️ Category</option>
+      <option value="year_desc">📆 Newest First</option>
+      <option value="mileage_desc">📏 Highest Mileage</option>
+    </select>
+    <select id="viewMode" class="select">
+      <option value="grid">⚡ Grid View</option>
+      <option value="list">📋 List View</option>
+      <option value="compact">📦 Compact</option>
+    </select>
+  </div>
+
+  <!-- =================== CATEGORY FILTER =================== -->
+  <div class="category-chips">
+    <span class="chip active" data-category="all" onclick="filterCategory('all')">
+      All Equipment
+      <span class="count">{{ equipment|length }}</span>
+    </span>
+    {% for category in categories %}
+    {% set cat_count = equipment|selectattr('category', 'equalto', category)|list|length %}
+    {% if cat_count > 0 %}
+    <span class="chip" data-category="{{ category|lower }}" onclick="filterCategory('{{ category|lower }}')">
+      {% if category == 'Auto' %}🚗
+      {% elif category == 'Motorcycle' %}🏍️
+      {% elif category == 'ATV' %}🏍️
+      {% elif category == 'Marine' %}🚤
+      {% elif category == 'Lawn' %}🌱
+      {% elif category == 'Tool' %}🔨
+      {% elif category == 'Appliance' %}🏠
+      {% else %}🔧
+      {% endif %}
+      {{ category }}
+      <span class="count">{{ cat_count }}</span>
+    </span>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- =================== EQUIPMENT GRID =================== -->
+  <div class="equipment-grid" id="equipGrid">
+    {% for item in equipment[:36] %}
+    <div class="equip-card" 
+         data-name="{{ (item.name ~ ' ' ~ (item.make or '') ~ ' ' ~ (item.model or ''))|lower }}"
+         data-category="{{ item.category|lower }}"
+         data-status="{{ item.status }}"
+         data-year="{{ item.year or '0' }}"
+         data-mileage="{{ item.mileage or '0' }}"
+         data-updated="{{ item.updated_at.isoformat() if item.updated_at else '1970-01-01' }}">
+      
+      {% if item.profile_photo %}
+      <img class="equip-img" 
+           src="{{ url_for('static', filename='equipment_photos/equipment_profiles/' + item.profile_photo) }}"
+           alt="{{ item.name }}">
+      {% else %}
+      <div class="equip-no-img">
+        {% if item.category == 'Auto' %}🚗
+        {% elif item.category == 'Motorcycle' %}🏍️
+        {% elif item.category == 'Marine' %}🚤
+        {% elif item.category == 'Lawn' %}🌱
+        {% elif item.category == 'Tool' %}🔨
+        {% else %}🔧
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="equip-body">
+        <h3 class="equip-name">{{ item.name }}</h3>
+        
+        <div class="equip-badges">
+          <span class="category-badge">{{ item.category }}</span>
+          <span class="status-badge status-{{ item.status }}">{{ item.status|upper }}</span>
+        </div>
+        
+        <div class="equip-meta">
+          {% if item.make or item.model %}
+            {{ item.make }} {{ item.model }}
+          {% endif %}
+          {% if item.year %}
+            ({{ item.year }})
+          {% endif %}
+        </div>
+        
+        {% if item.mileage or item.maintenance_records %}
+        <div class="equip-stats">
+          {% if item.mileage %}
+          <span>📏 {{ "{:,}".format(item.mileage) }} mi</span>
+          {% endif %}
+          {% if item.maintenance_records %}
+          <span>🔧 {{ item.maintenance_records|length }} services</span>
+          {% endif %}
+          {% if item.fuel_logs %}
+          <span>⛽ {{ item.fuel_logs|length }} fills</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="equip-actions">
+        <a href="{{ url_for('equipment.detail', id=item.id) }}" class="btn btn-sm btn-primary">
+          <span aria-hidden="true">👁️</span> View
+        </a>
+        <a href="{{ url_for('equipment.add_maintenance', id=item.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">🔧</span> Service
+        </a>
+        {% if item.category in ['Auto', 'Motorcycle', 'ATV', 'Marine'] %}
+        <a href="{{ url_for('equipment.add_fuel', id=item.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">⛽</span> Fuel
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📦</div>
+      <h3>No equipment found</h3>
+      <p>Start tracking your equipment maintenance!</p>
+      <a href="{{ url_for('equipment.add') }}" class="btn btn-primary">
+        <span aria-hidden="true">➕</span> Add Your First Equipment
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if equipment|length > 36 %}
+  <div style="text-align:center; padding:20px;">
+    <p style="color:var(--em-muted); margin-bottom:12px;">
+      Showing first 36 of {{ equipment|length }} items
+    </p>
+    <a href="{{ url_for('equipment.by_category', category='all') }}" class="btn btn-primary">
+      View All Equipment
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- JavaScript for search, sort, and filter -->
+<script>
+// Category filter
+let activeCategory = 'all';
+
+function filterCategory(category) {
+  activeCategory = category;
+  
+  // Update chip styles
+  document.querySelectorAll('.category-chips .chip').forEach(chip => {
+    if (chip.dataset.category === category) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+  
+  // Filter cards
+  applyFilters();
+}
+
+// Search and sort
+function applyFilters() {
+  const searchTerm = document.getElementById('equipSearch').value.toLowerCase();
+  const sortBy = document.getElementById('equipSort').value;
+  const grid = document.getElementById('equipGrid');
+  const cards = Array.from(grid.querySelectorAll('.equip-card'));
+  
+  // Filter by search and category
+  cards.forEach(card => {
+    const matchesSearch = !searchTerm || card.dataset.name.includes(searchTerm);
+    const matchesCategory = activeCategory === 'all' || card.dataset.category === activeCategory;
+    card.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+  });
+  
+  // Get visible cards
+  const visibleCards = cards.filter(c => c.style.display !== 'none');
+  
+  // Sort
+  visibleCards.sort((a, b) => {
+    switch(sortBy) {
+      case 'updated_desc':
+        return b.dataset.updated.localeCompare(a.dataset.updated);
+      case 'name_asc':
+        return a.dataset.name.localeCompare(b.dataset.name);
+      case 'status_asc':
+        return a.dataset.status.localeCompare(b.dataset.status);
+      case 'category_asc':
+        return a.dataset.category.localeCompare(b.dataset.category);
+      case 'year_desc':
+        return parseInt(b.dataset.year) - parseInt(a.dataset.year);
+      case 'mileage_desc':
+        return parseInt(b.dataset.mileage) - parseInt(a.dataset.mileage);
+      default:
+        return 0;
+    }
+  });
+  
+  // Re-append in new order
+  visibleCards.forEach(card => grid.appendChild(card));
+}
+
+// Event listeners
+document.getElementById('equipSearch').addEventListener('input', applyFilters);
+document.getElementById('equipSort').addEventListener('change', applyFilters);
+
+// View mode toggle
+document.getElementById('viewMode').addEventListener('change', function(e) {
+  const grid = document.getElementById('equipGrid');
+  switch(e.target.value) {
+    case 'list':
+      grid.style.gridTemplateColumns = '1fr';
+      break;
+    case 'compact':
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+      break;
+    default:
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+  }
+});
+
+// Initialize datetime for overdue checking
+const datetime = { now: () => ({ date: () => new Date() }) };
+</script>
+{% endblock %}

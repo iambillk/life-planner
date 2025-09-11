@@ -1,0 +1,990 @@
+{# =============================================================================
+  FILE: edit_maintenance.html
+  PURPOSE: Edit an existing maintenance record with photo management
+  TEMPLATE VERSION: v2.0.0
+  LAST UPDATED: 2025-01-06
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe fallbacks to base vars)
+  - Sticky header with Save / Cancel / Delete actions
+  - Quick-pick service chips sourced from `service_types`
+  - PHOTO MANAGEMENT: View, delete existing photos and add new ones
+  - Helpers: "Today" (date), "Self" (performed_by), "Use current reading"
+  - Cost helper (Parts + Labor → Cost) with one-click fill
+  - Live "Next Service" preview from months (+ quick chips 3/6/12)
+  - Autogrow textareas, notes character counter, soft validations
+
+  CHANGELOG
+  v2.0.0
+  - NEW: Complete photo management system
+  - NEW: Display existing photos with delete capability
+  - NEW: Add new photos with multiple file support
+  - NEW: Drag and drop photo upload
+  
+  v1.0.0
+  - NEW: Full UX refactor with sticky header, helpers, live previews,
+         better sectioning, comments, and accessibility polish.
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Edit Maintenance - {{ equipment.name }}{% endblock %}
+{% block header %}Edit Maintenance Record{% endblock %}
+
+{# ============================== EXTRA CSS =================================== #}
+{% block extra_css %}
+<style>
+  /* ============ ROOT VARIABLES ============ */
+  :root {
+    --me-bg: var(--bg, #0b0f1a);
+    --me-card: var(--card, #0f1625);
+    --me-sub: #0c1322;
+    --me-line: var(--line, #1f2a3d);
+    --me-text: var(--text, #e6eaf2);
+    --me-muted: var(--text-muted, #9fb0c8);
+    --me-primary: var(--primary, #6ea8ff);
+    --me-success: var(--success, #22c55e);
+    --me-danger: #ef4444;
+    --me-radius: var(--radius, 14px);
+    --me-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  /* ============ SHELL & STICKY HEADER ============ */
+  .me-shell { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  
+  .me-header {
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border: 1px solid var(--me-line);
+    border-radius: var(--me-radius);
+    padding: 12px;
+    box-shadow: var(--me-shadow);
+    backdrop-filter: blur(6px);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .me-title { margin: 0; font-size: 1.15rem; }
+  .me-sub { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; color: var(--me-muted); }
+  
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  
+  .btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all .2s;
+    font-size: .9rem;
+    font-weight: 600;
+    background: rgba(255,255,255,.08);
+    color: var(--me-muted);
+  }
+  .btn-primary { background: var(--me-primary); color: #fff; }
+  .btn-secondary { background: rgba(255,255,255,.08); color: var(--me-muted); }
+  .btn-danger { background: rgba(239,68,68,.15); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+  .btn-sm { padding: 5px 10px; font-size: .85rem; }
+
+  /* ============ FORM CARD ============ */
+  .card {
+    background: var(--me-card);
+    border: 1px solid var(--me-line);
+    border-radius: var(--me-radius);
+    padding: 20px;
+    box-shadow: var(--me-shadow);
+  }
+
+  .form-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--me-line);
+  }
+  .form-section:last-child { margin-bottom: 0; border-bottom: none; }
+  
+  .section-title {
+    margin: 0 0 12px 0;
+    font-size: 1.05rem;
+    color: var(--me-text);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full-width { grid-column: 1 / -1; }
+  
+  label {
+    margin-bottom: 6px;
+    color: var(--me-text);
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  
+  input[type="text"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    background: var(--me-sub);
+    border: 1px solid var(--me-line);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--me-text);
+    font-size: .9rem;
+  }
+  
+  textarea { resize: vertical; font-family: inherit; }
+  
+  .hint { color: var(--me-danger); font-size: .9rem; }
+  .helper { font-size: .8rem; color: var(--me-muted); margin-top: 4px; }
+  .char-counter { text-align: right; font-size: .75rem; color: var(--me-muted); margin-top: 2px; }
+
+  /* ============ CHIPS & HELPERS ============ */
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  
+  .chip {
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--me-line);
+    color: var(--me-muted);
+    cursor: pointer;
+    font-size: .8rem;
+    transition: all .15s;
+  }
+  .chip:hover {
+    background: rgba(110,168,255,.1);
+    color: var(--me-primary);
+    border-color: var(--me-primary);
+  }
+
+  .inline-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ============ PHOTO MANAGEMENT SECTION ============ */
+  .photos-section {
+    background: rgba(0,0,0,.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .photo-group {
+    margin-bottom: 20px;
+  }
+
+  .photo-group-title {
+    font-weight: 600;
+    color: var(--me-text);
+    margin-bottom: 10px;
+    font-size: .95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .existing-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .photo-item {
+    position: relative;
+    background: var(--me-sub);
+    border: 1px solid var(--me-line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .photo-thumb {
+    position: relative;
+    width: 100%;
+    padding-top: 100%;
+    background: #000;
+  }
+
+  .photo-thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .photo-thumb img:hover {
+    transform: scale(1.05);
+  }
+
+  .photo-caption {
+    padding: 8px;
+    font-size: 0.8rem;
+    color: var(--me-muted);
+    background: rgba(0,0,0,.3);
+  }
+
+  .photo-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+  }
+
+  .delete-photo-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(239,68,68,.9);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,.3);
+  }
+
+  .delete-photo-btn:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+  }
+
+  /* Add new photos dropzone */
+  .add-photos-zone {
+    border: 2px dashed var(--me-line);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: var(--me-muted);
+    cursor: pointer;
+    transition: all .2s;
+    background: radial-gradient(circle at center, rgba(255,255,255,.02), transparent);
+  }
+
+  .add-photos-zone:hover,
+  .add-photos-zone.drag {
+    border-color: var(--me-primary);
+    background: rgba(110,168,255,.05);
+  }
+
+  .new-photos-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .new-photo-thumb {
+    position: relative;
+    width: 100%;
+    padding-top: 100%;
+    border-radius: 8px;
+    background: #0b1120;
+    overflow: hidden;
+    border: 1px solid var(--me-line);
+  }
+
+  .new-photo-thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .new-photo-thumb .remove-new {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(239,68,68,.9);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .caption-input {
+    background: var(--me-sub);
+    border: 1px solid var(--me-line);
+    border-radius: 6px;
+    padding: 6px;
+    color: var(--me-text);
+    font-size: .85rem;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .no-photos {
+    color: var(--me-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 10px;
+    text-align: center;
+  }
+
+  /* ============ DELETE MODAL ============ */
+  .delete-modal {
+    display: none;
+    position: fixed;
+    z-index: 10;
+    inset: 0;
+    background: rgba(0,0,0,.85);
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .delete-modal-content {
+    background: var(--me-card);
+    border: 1px solid var(--me-danger);
+    border-radius: var(--me-radius);
+    padding: 20px;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+  
+  .btn-cancel {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.08);
+    color: var(--me-muted);
+    border: 1px solid var(--me-line);
+    cursor: pointer;
+  }
+  
+  .btn-delete-confirm {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--me-danger);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Photo modal for viewing */
+  .photo-modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    inset: 0;
+    background: rgba(0,0,0,.9);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .photo-modal img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+  }
+
+  /* ============ FORM VALIDATION ============ */
+  .error {
+    display: none;
+    background: rgba(239,68,68,.15);
+    border: 1px solid rgba(239,68,68,.3);
+    border-radius: 8px;
+    padding: 10px;
+    color: #fca5a5;
+    margin-bottom: 16px;
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 768px) {
+    .me-header { grid-template-columns: 1fr; }
+    .header-actions { justify-content: stretch; }
+    .btn { flex: 1; text-align: center; }
+    .chip-row { justify-content: center; }
+    .existing-photos { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="me-shell">
+
+  {# =================== STICKY HEADER =================== #}
+  <div class="me-header">
+    <div>
+      <h1 class="me-title">📝 Edit Maintenance — {{ equipment.name }}</h1>
+      <div class="me-sub">
+        <span><strong>{{ record.service_type }}</strong></span>
+        <span>• {{ record.service_date.strftime('%b %d, %Y') }}</span>
+        {% if record.cost %}<span>• ${{ "%.2f"|format(record.cost) }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary" href="{{ url_for('equipment.detail', id=equipment.id) }}">← Back to Equipment</a>
+      <button form="maintenanceEditForm" type="submit" class="btn btn-primary">💾 Save Changes</button>
+      <button type="button" class="btn btn-danger" id="openDelete">🗑️ Delete Record</button>
+    </div>
+  </div>
+
+  {# =================== EDIT FORM =================== #}
+  <form id="maintenanceEditForm" method="POST"
+        action="{{ url_for('equipment.edit_maintenance', id=equipment.id, record_id=record.id) }}"
+        enctype="multipart/form-data"
+        class="card">
+
+    {# --- Service Information ------------------------------------------------ #}
+    <div class="form-section">
+      <h3 class="section-title">Service Information</h3>
+
+      <div class="form-group">
+        <label for="service_type">Service Type <span class="hint">*</span></label>
+        <select id="service_type" name="service_type" required>
+          <option value="">Select Service Type</option>
+          {% for service in service_types %}
+            <option value="{{ service }}" {% if record.service_type == service %}selected{% endif %}>{{ service }}</option>
+          {% endfor %}
+        </select>
+        {# Quick-pick chips from provided service_types (show up to 8) #}
+        <div class="chip-row" aria-label="Quick picks">
+          {% for service in service_types[:8] %}
+            <button type="button" class="chip" data-service="{{ service }}">➜ {{ service }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="service_date">Service Date <span class="hint">*</span></label>
+          <div class="inline-row">
+            <input type="date" id="service_date" name="service_date" value="{{ record.service_date.strftime('%Y-%m-%d') }}" required>
+            <button type="button" class="btn btn-sm" id="setToday">Today</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="performed_by">Performed By</label>
+          <div class="inline-row">
+            <input type="text" id="performed_by" name="performed_by" value="{{ record.performed_by or 'Self' }}" placeholder="Self or shop name">
+            <button type="button" class="btn btn-sm" id="setSelf">Self</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Current Readings --------------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Current Readings</h3>
+      <div class="form-row">
+        {% if equipment.category == 'Auto' %}
+        <div class="form-group">
+          <label for="mileage_at_service">Mileage at Service</label>
+          <div class="inline-row">
+            <input type="number" id="mileage_at_service" name="mileage_at_service"
+                   value="{{ record.mileage_at_service or '' }}"
+                   placeholder="Odometer reading" min="0" step="1">
+            {% if equipment.mileage %}
+              <button type="button" class="btn btn-sm" id="useCurrent" data-value="{{ equipment.mileage }}">
+                Use {{ "{:,}".format(equipment.mileage) }}
+              </button>
+            {% endif %}
+          </div>
+          <div class="helper">Updates equipment odometer if this is the most recent record.</div>
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label for="hours_at_service">Hours at Service</label>
+          <div class="inline-row">
+            <input type="number" id="hours_at_service" name="hours_at_service"
+                   value="{{ record.hours_at_service or '' }}"
+                   placeholder="Hour meter reading" min="0" step="0.1">
+            {% if equipment.hours %}
+              <button type="button" class="btn btn-sm" id="useCurrentHours" data-value="{{ equipment.hours }}">
+                Use {{ equipment.hours }}
+              </button>
+            {% endif %}
+          </div>
+          <div class="helper">Updates equipment hours if this is the most recent record.</div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="cost">Cost ($)</label>
+          <input type="number" id="cost" name="cost"
+                 value="{{ record.cost or '' }}"
+                 placeholder="Service cost" min="0" step="0.01">
+          <div class="helper" id="costHelper">Enter total cost for this service.</div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Service Details ---------------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Service Details</h3>
+      <div class="form-group full-width">
+        <label for="parts_used">Parts Used</label>
+        <textarea id="parts_used" name="parts_used" rows="2"
+                  placeholder="List parts used (filters, oil type, etc.)">{{ record.parts_used or '' }}</textarea>
+      </div>
+      <div class="form-group full-width">
+        <label for="notes">Service Notes</label>
+        <textarea id="notes" name="notes" rows="3"
+                  placeholder="Any notes about the service">{{ record.notes or '' }}</textarea>
+        <div class="char-counter" id="notesCounter">0 / 500</div>
+      </div>
+    </div>
+
+    {# --- Next Service Planning ---------------------------------------------- #}
+    <div class="form-section">
+      <h3 class="section-title">Next Service Planning</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="next_service_months">Next Service In (Months)</label>
+          <input type="number" id="next_service_months" name="next_service_months"
+                 value="{% if record.next_service_date %}{{ ((record.next_service_date - record.service_date).days / 30.44)|int }}{% endif %}"
+                 placeholder="e.g., 6" min="0" step="1">
+          <div class="chip-row">
+            <button type="button" class="chip" data-months="3">3 mo</button>
+            <button type="button" class="chip" data-months="6">6 mo</button>
+            <button type="button" class="chip" data-months="12">12 mo</button>
+            <button type="button" class="chip" data-months="24">24 mo</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Next Service Preview</label>
+          <div id="nextServicePreview" style="padding:10px; background:var(--me-sub); border-radius:8px; color:var(--me-primary);">
+            {% if record.next_service_date %}
+              Target: <strong>{{ record.next_service_date.strftime('%B %d, %Y') }}</strong>
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# =================== PHOTO MANAGEMENT SECTION =================== #}
+    <div class="form-section">
+      <h3 class="section-title">📷 Photos</h3>
+      
+      <div class="photos-section">
+        {# --- EXISTING PHOTOS --- #}
+        {% if record.photos %}
+          {# Group photos by type #}
+          {% set photos_by_type = {} %}
+          {% for photo in record.photos %}
+            {% if photo.photo_type not in photos_by_type %}
+              {% set _ = photos_by_type.update({photo.photo_type: []}) %}
+            {% endif %}
+            {% set _ = photos_by_type[photo.photo_type].append(photo) %}
+          {% endfor %}
+
+          {% for photo_type, photos in photos_by_type.items() %}
+          <div class="photo-group">
+            <div class="photo-group-title">{{ photo_type|title }} Photos</div>
+            <div class="existing-photos">
+              {% for photo in photos %}
+              <div class="photo-item" data-photo-id="{{ photo.id }}">
+                <div class="photo-thumb">
+                  <img src="{{ url_for('static', filename='equipment_photos/maintenance_photos/' + photo.filename) }}"
+                       alt="{{ photo.caption or photo.photo_type }}"
+                       onclick="viewPhoto(this.src)">
+                  <div class="photo-actions">
+                    <button type="button" class="delete-photo-btn" 
+                            onclick="deletePhoto({{ photo.id }}, '{{ photo.filename }}')"
+                            title="Delete photo">✕</button>
+                  </div>
+                </div>
+                {% if photo.caption %}
+                <div class="photo-caption">{{ photo.caption }}</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="no-photos">No photos attached to this maintenance record</div>
+        {% endif %}
+
+        {# --- ADD NEW PHOTOS --- #}
+        <div class="photo-group" style="margin-top: 20px;">
+          <div class="photo-group-title">Add New Photos</div>
+          
+          {# Before Photos #}
+          <div style="margin-bottom: 15px;">
+            <label style="font-size: 0.9rem; color: var(--me-text);">Before Photos</label>
+            <div class="add-photos-zone" data-input="before_photos">
+              Drop images here or click to choose (multiple)
+            </div>
+            <input type="file" id="before_photos" name="before_photos" accept="image/*" multiple style="display:none">
+            <div class="new-photos-preview" id="preview_before_photos"></div>
+          </div>
+
+          {# After Photos #}
+          <div style="margin-bottom: 15px;">
+            <label style="font-size: 0.9rem; color: var(--me-text);">After Photos</label>
+            <div class="add-photos-zone" data-input="after_photos">
+              Drop images here or click to choose (multiple)
+            </div>
+            <input type="file" id="after_photos" name="after_photos" accept="image/*" multiple style="display:none">
+            <div class="new-photos-preview" id="preview_after_photos"></div>
+          </div>
+
+          {# Receipt Photos #}
+          <div style="margin-bottom: 15px;">
+            <label style="font-size: 0.9rem; color: var(--me-text);">Receipt Photos</label>
+            <div class="add-photos-zone" data-input="receipt_photos">
+              Drop images here or click to choose (multiple)
+            </div>
+            <input type="file" id="receipt_photos" name="receipt_photos" accept="image/*" multiple style="display:none">
+            <div class="new-photos-preview" id="preview_receipt_photos"></div>
+          </div>
+
+          <div class="helper">You can add multiple images. Max ~10MB each. New photos will be added to the maintenance record.</div>
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+  {# =================== DELETE CONFIRMATION MODAL =================== #}
+  <div id="deleteModal" class="delete-modal">
+    <div class="delete-modal-content">
+      <h3 style="margin:0 0 8px 0; color:#fecaca;">Delete Maintenance Record?</h3>
+      <p style="color:var(--me-muted); margin:0;">
+        Are you sure you want to delete this entire maintenance record? This will delete all associated photos and cannot be undone.
+      </p>
+      <div class="modal-actions">
+        <button onclick="document.getElementById('deleteModal').style.display='none'" class="btn-cancel">Cancel</button>
+        <form id="delete-form" method="POST" action="{{ url_for('equipment.delete_maintenance', id=equipment.id, record_id=record.id) }}" style="display:inline;">
+          <button type="submit" class="btn-delete-confirm">Delete Record</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# =================== PHOTO VIEW MODAL =================== #}
+  <div id="photoModal" class="photo-modal" onclick="this.style.display='none'">
+    <img id="modalImg">
+  </div>
+
+</div>
+{% endblock %}
+
+{# ============================== EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+(function(){
+  /* ============================================================================
+     Edit Maintenance — JavaScript
+     - Service type quick-picks
+     - Date/performed_by helpers
+     - Mileage/hours "use current" buttons
+     - Live "Next Service" preview from months
+     - Notes character counter
+     - Photo management (view, delete, add new)
+     - Delete modal
+  ============================================================================ */
+
+  // ---- Element References ----
+  const form = document.getElementById('maintenanceEditForm');
+  const serviceType = document.getElementById('service_type');
+  const serviceDate = document.getElementById('service_date');
+  const performedBy = document.getElementById('performed_by');
+  const mileage = document.getElementById('mileage_at_service');
+  const hours = document.getElementById('hours_at_service');
+  const cost = document.getElementById('cost');
+  const notes = document.getElementById('notes');
+  const notesCounter = document.getElementById('notesCounter');
+  const nextMonths = document.getElementById('next_service_months');
+  const nextPreview = document.getElementById('nextServicePreview');
+
+  // ---- Service Type Quick-picks ----
+  document.querySelectorAll('[data-service]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      serviceType.value = chip.getAttribute('data-service');
+    });
+  });
+
+  // ---- Date & Performed By Helpers ----
+  document.getElementById('setToday')?.addEventListener('click', () => {
+    serviceDate.value = new Date().toISOString().split('T')[0];
+    updatePreview();
+  });
+
+  document.getElementById('setSelf')?.addEventListener('click', () => {
+    performedBy.value = 'Self';
+  });
+
+  // ---- Use Current Mileage/Hours ----
+  document.getElementById('useCurrent')?.addEventListener('click', (e) => {
+    const value = e.target.getAttribute('data-value');
+    if (mileage) mileage.value = value;
+  });
+
+  document.getElementById('useCurrentHours')?.addEventListener('click', (e) => {
+    const value = e.target.getAttribute('data-value');
+    if (hours) hours.value = value;
+  });
+
+  // ---- Next Service Preview ----
+  function addMonths(date, months){
+    const d = new Date(date.getTime());
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    if(d.getDate() < day){ d.setDate(0); }
+    return d;
+  }
+
+  function updatePreview(){
+    const m = parseInt(nextMonths.value, 10);
+    const sdv = serviceDate.value;
+    if(!isNaN(m) && sdv){
+      const base = new Date(sdv + 'T12:00:00');
+      const target = addMonths(base, m);
+      nextPreview.innerHTML = `Target: <strong>${target.toLocaleDateString(undefined, {year:'numeric', month:'long', day:'2-digit'})}</strong>`;
+    } else {
+      nextPreview.innerHTML = '—';
+    }
+  }
+
+  nextMonths?.addEventListener('input', updatePreview);
+  serviceDate?.addEventListener('input', updatePreview);
+
+  // Quick month chips
+  document.querySelectorAll('[data-months]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      nextMonths.value = chip.getAttribute('data-months');
+      updatePreview();
+    });
+  });
+
+  // ---- Notes Character Counter ----
+  function updateCounter(){
+    const len = notes.value.length;
+    notesCounter.textContent = `${len} / 500`;
+    notesCounter.style.color = len > 500 ? 'var(--me-danger)' : 'var(--me-muted)';
+  }
+  notes?.addEventListener('input', updateCounter);
+  updateCounter();
+
+  // ---- Cost Formatting ----
+  cost?.addEventListener('blur', () => {
+    if(cost.value){
+      let v = parseFloat(cost.value);
+      if(isNaN(v) || v < 0){ cost.value=''; return; }
+      cost.value = v.toFixed(2);
+    }
+  });
+
+  /* =================== PHOTO MANAGEMENT =================== */
+  
+  // View photo in modal
+  window.viewPhoto = function(src) {
+    const modal = document.getElementById('photoModal');
+    const img = document.getElementById('modalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  };
+
+  // Delete existing photo
+  window.deletePhoto = function(photoId, filename) {
+    if (!confirm('Delete this photo? This cannot be undone.')) return;
+    
+    // Create a hidden input to track photos to delete
+    let deletionsInput = document.getElementById('photos_to_delete');
+    if (!deletionsInput) {
+      deletionsInput = document.createElement('input');
+      deletionsInput.type = 'hidden';
+      deletionsInput.id = 'photos_to_delete';
+      deletionsInput.name = 'photos_to_delete';
+      deletionsInput.value = '';
+      form.appendChild(deletionsInput);
+    }
+    
+    // Add photo ID to deletion list
+    const currentDeletions = deletionsInput.value ? deletionsInput.value.split(',') : [];
+    currentDeletions.push(photoId);
+    deletionsInput.value = currentDeletions.join(',');
+    
+    // Hide the photo item
+    const photoItem = document.querySelector(`[data-photo-id="${photoId}"]`);
+    if (photoItem) {
+      photoItem.style.display = 'none';
+    }
+  };
+
+  // Setup photo upload zones
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  let fileCounter = 0;
+
+  function setupPhotoGroup(groupId) {
+    const dz = document.querySelector(`.add-photos-zone[data-input="${groupId}"]`);
+    const input = document.getElementById(groupId);
+    const preview = document.getElementById('preview_' + groupId);
+    if (!dz || !input || !preview) return;
+
+    let items = [];
+
+    function syncFileInput() {
+      const dt = new DataTransfer();
+      items.forEach((it, idx) => {
+        // Add unique identifier to prevent overwriting
+        const uniqueName = `${idx}_${Date.now()}_${fileCounter++}_${it.file.name}`;
+        const renamedFile = new File([it.file], uniqueName, { type: it.file.type });
+        dt.items.add(renamedFile);
+      });
+      input.files = dt.files;
+    }
+
+    function render() {
+      preview.innerHTML = '';
+      items.forEach((it, idx) => {
+        const wrap = document.createElement('div');
+        wrap.style.position = 'relative';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'new-photo-thumb';
+        
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(it.file);
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-new';
+        removeBtn.textContent = '✕';
+        removeBtn.onclick = () => {
+          items.splice(idx, 1);
+          syncFileInput();
+          render();
+        };
+
+        thumb.appendChild(img);
+        thumb.appendChild(removeBtn);
+
+        // Caption input
+        const caption = document.createElement('input');
+        caption.type = 'text';
+        caption.className = 'caption-input';
+        caption.name = groupId.replace('_photos', '_captions');
+        caption.placeholder = 'Caption (optional)';
+        caption.value = it.caption || '';
+        caption.addEventListener('input', (e) => { it.caption = e.target.value; });
+
+        wrap.appendChild(thumb);
+        wrap.appendChild(caption);
+        preview.appendChild(wrap);
+      });
+    }
+
+    function addFiles(fileList) {
+      const toAdd = Array.from(fileList || []);
+      for (const f of toAdd) {
+        if (!f.type.startsWith('image/')) continue;
+        if (f.size > MAX_SIZE) {
+          alert(`${f.name} is larger than 10MB and was skipped.`);
+          continue;
+        }
+        items.push({ file: f, caption: '' });
+      }
+      syncFileInput();
+      render();
+    }
+
+    // Click to select
+    dz.addEventListener('click', () => input.click());
+    
+    // File input change
+    input.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        addFiles(e.target.files);
+      }
+    });
+
+    // Drag and drop
+    ['dragenter', 'dragover'].forEach(evt => {
+      dz.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('drag');
+      });
+    });
+    
+    ['dragleave', 'drop'].forEach(evt => {
+      dz.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove('drag');
+      });
+    });
+    
+    dz.addEventListener('drop', (e) => {
+      if (e.dataTransfer && e.dataTransfer.files) {
+        addFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  // Initialize photo upload zones
+  setupPhotoGroup('before_photos');
+  setupPhotoGroup('after_photos');
+  setupPhotoGroup('receipt_photos');
+
+  // ---- Delete Modal ----
+  const modal = document.getElementById('deleteModal');
+  const openBtn = document.getElementById('openDelete');
+  
+  openBtn?.addEventListener('click', () => {
+    modal.style.display = 'flex';
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      modal.style.display = 'none';
+      document.getElementById('photoModal').style.display = 'none';
+    }
+  });
+
+  // ---- Form Validation ----
+  form?.addEventListener('submit', (e) => {
+    const fields = ['cost', 'mileage_at_service', 'hours_at_service'];
+    const hasNegative = fields
+      .map(id => document.getElementById(id))
+      .filter(el => el && el.value !== '')
+      .some(el => parseFloat(el.value) < 0);
+    
+    if (hasNegative) {
+      e.preventDefault();
+      alert('Please make sure numeric values are zero or greater.');
+    }
+  });
+
+})();
+</script>
+{% endblock %}

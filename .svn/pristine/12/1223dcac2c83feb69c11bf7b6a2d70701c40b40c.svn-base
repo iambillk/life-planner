@@ -1,0 +1,461 @@
+# modules/persprojects/routes.py - COMPLETE FILE
+from flask import render_template, request, redirect, url_for, flash
+from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
+from . import persprojects_bp
+from .constants import PERSONAL_PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
+from models import db, PersonalProject, PersonalTask, PersonalIdea, PersonalMilestone, PersonalProjectNote, PersonalProjectFile
+
+@persprojects_bp.route('/')
+def index():
+    """Personal projects dashboard"""
+    status_filter = request.args.get('status', 'active')
+    
+    # Get ALL projects first for counting
+    all_projects = PersonalProject.query.order_by(PersonalProject.created_at.desc()).all()
+    
+    # Calculate status counts from ALL projects
+    status_counts = {
+        'planning': len([p for p in all_projects if p.status == 'planning']),
+        'active': len([p for p in all_projects if p.status == 'active']),
+        'on_hold': len([p for p in all_projects if p.status == 'on_hold']),
+        'completed': len([p for p in all_projects if p.status == 'completed'])
+    }
+    
+    # Filter projects for display
+    if status_filter != 'all':
+        projects = [p for p in all_projects if p.status == status_filter]
+    else:
+        projects = all_projects
+    
+    # Calculate progress based on tasks
+    for project in projects:
+        if project.tasks:
+            completed_tasks = sum(1 for task in project.tasks if task.completed)
+            project.progress = int((completed_tasks / len(project.tasks)) * 100)
+        else:
+            project.progress = 0
+    
+    return render_template('persprojects/index.html',
+                         projects=projects,
+                         status_counts=status_counts,
+                         status_filter=status_filter,
+                         categories=PERSONAL_PROJECT_CATEGORIES)
+
+@persprojects_bp.route('/add', methods=['GET', 'POST'])
+def add():
+    """Add new personal project"""
+    if request.method == 'POST':
+        project = PersonalProject(
+            name=request.form.get('name'),
+            description=request.form.get('description'),
+            category=request.form.get('category'),
+            status=request.form.get('status', 'planning'),
+            priority=request.form.get('priority', 'medium'),
+            goal=request.form.get('goal'),
+            motivation=request.form.get('motivation'),
+            strategy=request.form.get('strategy'),
+            deadline=datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date() if request.form.get('deadline') else None
+        )
+        
+        db.session.add(project)
+        db.session.commit()
+        
+        flash(f'Project "{project.name}" created successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    return render_template('persprojects/add.html',
+                         categories=PERSONAL_PROJECT_CATEGORIES,
+                         statuses=PROJECT_STATUSES,
+                         priorities=PRIORITY_LEVELS)
+
+@persprojects_bp.route('/<int:id>')
+def detail(id):
+    """View personal project details"""
+    project = PersonalProject.query.get_or_404(id)
+    
+    # Calculate progress
+    if project.tasks:
+        completed_tasks = sum(1 for task in project.tasks if task.completed)
+        project.progress = int((completed_tasks / len(project.tasks)) * 100)
+    else:
+        project.progress = 0
+    
+    return render_template('persprojects/detail.html', project=project)
+
+# ==================== TASKS ====================
+
+@persprojects_bp.route('/<int:project_id>/task/add', methods=['POST'])
+def add_task(project_id):
+    """Add task to project"""
+    task = PersonalTask(
+        project_id=project_id,
+        content=request.form.get('content'),
+        category=request.form.get('category')
+    )
+    db.session.add(task)
+    db.session.commit()
+    flash('Task added!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/task/<int:task_id>/toggle', methods=['POST'])
+def toggle_task(task_id):
+    """Toggle task completion"""
+    task = PersonalTask.query.get_or_404(task_id)
+    task.completed = not task.completed
+    if task.completed:
+        task.completed_at = datetime.utcnow()
+    else:
+        task.completed_at = None
+    db.session.commit()
+    return redirect(url_for('persprojects.detail', id=task.project_id))
+
+@persprojects_bp.route('/task/<int:task_id>/delete', methods=['POST'])
+def delete_task(task_id):
+    """Delete task"""
+    task = PersonalTask.query.get_or_404(task_id)
+    project_id = task.project_id
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task deleted!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+# Add this route after the existing task routes (around line 56-75)
+
+@persprojects_bp.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
+def edit_task(task_id):
+    """Edit a personal project task"""
+    task = PersonalTask.query.get_or_404(task_id)
+    project = PersonalProject.query.get_or_404(task.project_id)
+    
+    if request.method == 'POST':
+        # Update task fields
+        task.content = request.form.get('content')
+        task.category = request.form.get('category')
+        task.priority = request.form.get('priority', 'medium')
+        task.due_date_str = request.form.get('due_date')
+        
+        # Handle due date
+        if task.due_date_str:
+            try:
+                task.due_date = datetime.strptime(task.due_date_str, '%Y-%m-%d').date()
+            except:
+                task.due_date = None
+        else:
+            task.due_date = None
+        
+        # Update notes if provided
+        task.notes = request.form.get('notes', '')
+        
+        db.session.commit()
+        flash('Task updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_task.html', 
+                         task=task, 
+                         project=project,
+                         categories=['planning', 'research', 'development', 
+                                   'testing', 'documentation', 'other'],
+                         priorities=['low', 'medium', 'high'])
+
+# ==================== IDEAS ====================
+
+@persprojects_bp.route('/<int:project_id>/idea/add', methods=['POST'])
+def add_idea(project_id):
+    """Add idea to project"""
+    idea = PersonalIdea(
+        project_id=project_id,
+        content=request.form.get('content'),
+        status='new'
+    )
+    db.session.add(idea)
+    db.session.commit()
+    flash('Idea added!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/idea/<int:idea_id>/status', methods=['POST'])
+def update_idea_status(idea_id):
+    """Update idea status"""
+    idea = PersonalIdea.query.get_or_404(idea_id)
+    idea.status = request.form.get('status')
+    db.session.commit()
+    return redirect(url_for('persprojects.detail', id=idea.project_id))
+
+@persprojects_bp.route('/idea/<int:idea_id>/delete', methods=['POST'])
+def delete_idea(idea_id):
+    """Delete idea"""
+    idea = PersonalIdea.query.get_or_404(idea_id)
+    project_id = idea.project_id
+    db.session.delete(idea)
+    db.session.commit()
+    flash('Idea deleted!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/idea/<int:idea_id>/edit', methods=['GET', 'POST'])
+def edit_idea(idea_id):
+    """Edit a personal project idea"""
+    idea = PersonalIdea.query.get_or_404(idea_id)
+    project = PersonalProject.query.get_or_404(idea.project_id)
+    
+    if request.method == 'POST':
+        # Update idea fields
+        idea.content = request.form.get('content')
+        idea.status = request.form.get('status', 'new')
+        
+        db.session.commit()
+        flash('Idea updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_idea.html', 
+                         idea=idea, 
+                         project=project,
+                         statuses=['new', 'considering', 'planned', 'rejected'])
+
+# ==================== MILESTONES ====================
+
+@persprojects_bp.route('/<int:project_id>/milestone/add', methods=['POST'])
+def add_milestone(project_id):
+    """Add milestone to project"""
+    milestone = PersonalMilestone(
+        project_id=project_id,
+        title=request.form.get('title'),
+        description=request.form.get('description'),
+        target_date=datetime.strptime(request.form.get('target_date'), '%Y-%m-%d').date() if request.form.get('target_date') else None
+    )
+    db.session.add(milestone)
+    db.session.commit()
+    flash('Milestone added!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/milestone/<int:milestone_id>/complete', methods=['POST'])
+def complete_milestone(milestone_id):
+    """Mark milestone as complete"""
+    milestone = PersonalMilestone.query.get_or_404(milestone_id)
+    milestone.completed = not milestone.completed
+    if milestone.completed:
+        milestone.completed_date = datetime.utcnow().date()
+    else:
+        milestone.completed_date = None
+    db.session.commit()
+    flash('Milestone updated!', 'success')
+    return redirect(url_for('persprojects.detail', id=milestone.project_id))
+
+@persprojects_bp.route('/milestone/<int:milestone_id>/delete', methods=['POST'])
+def delete_milestone(milestone_id):
+    """Delete milestone"""
+    milestone = PersonalMilestone.query.get_or_404(milestone_id)
+    project_id = milestone.project_id
+    db.session.delete(milestone)
+    db.session.commit()
+    flash('Milestone deleted!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/milestone/<int:milestone_id>/edit', methods=['GET', 'POST'])
+def edit_milestone(milestone_id):
+    """Edit a personal project milestone"""
+    milestone = PersonalMilestone.query.get_or_404(milestone_id)
+    project = PersonalProject.query.get_or_404(milestone.project_id)
+    
+    if request.method == 'POST':
+        # Update milestone fields
+        milestone.title = request.form.get('title')
+        milestone.description = request.form.get('description', '')
+        
+        # Handle target date
+        target_date_str = request.form.get('target_date')
+        if target_date_str:
+            milestone.target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        else:
+            milestone.target_date = None
+        
+        db.session.commit()
+        flash('Milestone updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    # GET request - show edit form
+    return render_template('persprojects/edit_milestone.html', 
+                         milestone=milestone, 
+                         project=project)
+
+# ==================== NOTES ====================
+
+@persprojects_bp.route('/<int:project_id>/note/add', methods=['POST'])
+def add_note(project_id):
+    """Add note to project"""
+    note = PersonalProjectNote(
+        project_id=project_id,
+        content=request.form.get('content'),
+        category=request.form.get('category', 'general')
+    )
+    db.session.add(note)
+    db.session.commit()
+    flash('Note added!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/note/<int:note_id>/delete', methods=['POST'])
+def delete_note(note_id):
+    """Delete note"""
+    note = PersonalProjectNote.query.get_or_404(note_id)
+    project_id = note.project_id
+    db.session.delete(note)
+    db.session.commit()
+    flash('Note deleted!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/note/<int:note_id>/edit', methods=['GET', 'POST'])
+def edit_note(note_id):
+    """Edit a personal project note"""
+    note = PersonalProjectNote.query.get_or_404(note_id)
+    project = PersonalProject.query.get_or_404(note.project_id)
+    
+    if request.method == 'POST':
+        note.content = request.form.get('content')
+        note.category = request.form.get('category', 'general')
+        
+        db.session.commit()
+        flash('Note updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    return render_template('persprojects/edit_note.html', 
+                         note=note, 
+                         project=project,
+                         categories=['general', 'progress', 'issue', 'research', 'reference'])
+    
+# ==================== Edit ====================
+
+@persprojects_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
+def edit(id):
+    """Edit personal project"""
+    project = PersonalProject.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        # Update project fields
+        project.name = request.form.get('name')
+        project.description = request.form.get('description')
+        project.category = request.form.get('category')
+        project.status = request.form.get('status')
+        project.priority = request.form.get('priority')
+        project.goal = request.form.get('goal')
+        project.motivation = request.form.get('motivation')
+        project.strategy = request.form.get('strategy')
+        
+        # Handle deadline
+        deadline_str = request.form.get('deadline')
+        if deadline_str:
+            project.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date()
+        else:
+            project.deadline = None
+        
+        project.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        flash(f'Project "{project.name}" updated successfully!', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    
+    return render_template('persprojects/edit.html',
+                         project=project,
+                         categories=PERSONAL_PROJECT_CATEGORIES,
+                         statuses=PROJECT_STATUSES,
+                         priorities=PRIORITY_LEVELS)
+
+# ==================== DELETE PROJECT ====================
+
+@persprojects_bp.route('/<int:id>/delete', methods=['POST'])
+def delete(id):
+    """Delete personal project"""
+    project = PersonalProject.query.get_or_404(id)
+    project_name = project.name
+    
+    db.session.delete(project)
+    db.session.commit()
+    
+    flash(f'Project "{project_name}" has been deleted.', 'success')
+    return redirect(url_for('persprojects.index'))
+
+# ==================== FILE ATTACHMENTS ====================
+
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@persprojects_bp.route('/<int:project_id>/file/upload', methods=['POST'])
+def upload_file(project_id):
+    """Upload file to project"""
+    project = PersonalProject.query.get_or_404(project_id)
+    
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('persprojects.detail', id=project_id))
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('persprojects.detail', id=project_id))
+    
+    if file and allowed_file(file.filename):
+        # Create unique filename
+        original_name = file.filename
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        filename = secure_filename(f"{project_id}_{timestamp}_{original_name}")
+        
+        # Save file
+        from flask import current_app
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', filename)
+        file.save(filepath)
+        
+        # Create database record
+        file_record = PersonalProjectFile(
+            project_id=project_id,
+            filename=filename,
+            original_name=original_name
+        )
+        db.session.add(file_record)
+        db.session.commit()
+        
+        flash(f'File "{original_name}" uploaded successfully!', 'success')
+    else:
+        flash('Invalid file type. Allowed types: pdf, images, doc, xls, txt, zip', 'error')
+    
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/file/<int:file_id>/download')
+def download_file(file_id):
+    """Download project file"""
+    from flask import send_file, current_app
+    
+    file_record = PersonalProjectFile.query.get_or_404(file_id)
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', file_record.filename)
+    
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True, download_name=file_record.original_name)
+    else:
+        flash('File not found', 'error')
+        return redirect(url_for('persprojects.detail', id=file_record.project_id))
+
+@persprojects_bp.route('/file/<int:file_id>/delete', methods=['POST'])
+def delete_file(file_id):
+    """Delete project file"""
+    from flask import current_app
+    
+    file_record = PersonalProjectFile.query.get_or_404(file_id)
+    project_id = file_record.project_id
+    
+    # Delete physical file
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', file_record.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    
+    # Delete database record
+    db.session.delete(file_record)
+    db.session.commit()
+    
+    flash('File deleted successfully!', 'success')
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+
+

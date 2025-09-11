@@ -1,0 +1,491 @@
+{# =============================================================================
+  FILE: consumables_history.html
+  PURPOSE: Consumables history + analytics for a single piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe fallbacks to base.html variables)
+  - Sticky header with key actions (Add, Back, Export CSV, Print)
+  - Live filters: Type + Time window + Text search; Sort by Date/Cost
+  - Dynamic KPIs (Total Spent, Total Items, Months, Avg Monthly) that react to filters
+  - Clean, responsive cards with optional receipt lightbox
+  - Cost breakdown bars; minimal, dependency-free
+  - No backend changes—pure client-side enhancements
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI, sticky header, live filter/search/sort, CSV export, print,
+         dynamic KPIs, receipt lightbox, improved analytics bars.
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Consumables History - {{ equipment.name }}{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --ch-bg: var(--bg, #0b0f1a);
+    --ch-card: var(--card, #0f1625);
+    --ch-sub: #0c1322;
+    --ch-line: var(--line, #1f2a3d);
+    --ch-text: var(--text, #e6eaf2);
+    --ch-muted: var(--text-muted, #9fb0c8);
+    --ch-primary: var(--primary, #6ea8ff);
+    --ch-success: var(--success, #22c55e);
+    --ch-danger: var(--danger, #ef4444);
+    --ch-warn: var(--warning, #f59e0b);
+    --ch-accent: #38bdf8;
+
+    --ch-radius: var(--radius, 14px);
+    --ch-radius-sm: var(--radius-sm, 10px);
+    --ch-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .ch-shell{ padding:16px; max-width:1200px; margin:0 auto; display:grid; gap:16px; }
+
+  /* ================= Sticky header ================= */
+  .ch-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ch-line); border-radius: var(--ch-radius);
+    padding:12px; box-shadow: var(--ch-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; align-items:center; gap:10px;
+  }
+  .ch-title{ margin:0; font-size:1.2rem; letter-spacing:.2px; }
+  .ch-subtext{ color:var(--ch-muted); font-size:.9rem; margin-top:2px; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--ch-line);
+    background: var(--ch-card); color: var(--ch-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--ch-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+  .header-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+
+  /* ================= KPI cards ================= */
+  .kpis{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .kpi{
+    display:flex; gap:12px; align-items:center; background: var(--ch-card);
+    border:1px solid var(--ch-line); border-radius: var(--ch-radius); padding:14px; box-shadow: var(--ch-shadow);
+  }
+  .kpi .icon{ font-size:28px; }
+  .kpi .value{ font-size:22px; font-weight:800; }
+  .kpi .label{ font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color: var(--ch-muted); }
+
+  /* ================= Filters ================= */
+  .filters{
+    background: var(--ch-card); border:1px solid var(--ch-line);
+    border-radius: var(--ch-radius); padding:12px; box-shadow: var(--ch-shadow);
+    display:grid; gap:10px;
+  }
+  .filters-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  label{ font-size:.85rem; color: var(--ch-muted); }
+  select, input[type="search"]{
+    background:#0b1120; color: var(--ch-text); border:1px solid var(--ch-line);
+    border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  select:focus, input[type="search"]:focus{ border-color: var(--ch-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+
+  /* ================= Cards list ================= */
+  .consumables-list{ display:grid; gap:12px; }
+  .consumable-card{
+    background: var(--ch-sub); border:1px solid var(--ch-line); border-radius: var(--ch-radius);
+    overflow:hidden; box-shadow: var(--ch-shadow);
+  }
+  .consumable-card .card-header{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:12px 14px; background:#0b1120; border-bottom:1px dashed var(--ch-line);
+  }
+  .item-info h3{ margin:0; font-size:1.05rem; color: var(--ch-text); }
+  .brand{ color: var(--ch-muted); font-size:.9rem; margin-left:8px; }
+  .item-cost{ font-weight:800; color: var(--ch-success); }
+
+  .card-body{
+    padding:12px 14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:10px;
+    color: var(--ch-text);
+  }
+  .detail-row{ display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom: 1px dashed rgba(255,255,255,.04); }
+  .detail-row:last-child{ border-bottom: none; }
+  .detail-row.full-width{ grid-column:1 / -1; }
+  .detail-label{ color: var(--ch-muted); font-size:.9rem; }
+  .detail-value{ font-weight:600; }
+
+  .card-actions{
+    padding:12px 14px; background:#0b1120; border-top:1px dashed var(--ch-line);
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .action-btn{
+    padding:6px 10px; border-radius:10px; border:1px solid var(--ch-line); background:#0b1120; color: var(--ch-text);
+    text-decoration:none; font-size:.9rem; display:inline-flex; align-items:center; gap:6px;
+  }
+  .action-btn:hover{ border-color: var(--ch-primary); }
+  .action-btn.delete{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+
+  /* ================= Breakdown bars ================= */
+  .cost-breakdown{
+    background: var(--ch-card); border:1px solid var(--ch-line);
+    border-radius: var(--ch-radius); padding:14px; box-shadow: var(--ch-shadow);
+  }
+  .breakdown-bars{ display:grid; gap:12px; }
+  .breakdown-item{ display:grid; gap:6px; }
+  .breakdown-label{ display:flex; justify-content:space-between; font-size:.95rem; color: var(--ch-text); }
+  .breakdown-bar{ height:16px; background:#0b1120; border:1px solid var(--ch-line); border-radius:999px; overflow:hidden; }
+  .bar-fill{ height:100%; background: linear-gradient(90deg, #3498db, #2980b9); }
+
+  /* ================= Empty / Lightbox ================= */
+  .empty{
+    text-align:center; padding:40px 16px; background: var(--ch-card); border:1px dashed var(--ch-line);
+    border-radius: var(--ch-radius); color: var(--ch-muted);
+  }
+  .modal{ display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.9); }
+  .modal-content{ display:block; max-width:90%; max-height:90%; margin:40px auto 0; border-radius:12px; border:1px solid var(--ch-line); }
+
+  @media (max-width: 780px){
+    .ch-header{ grid-template-columns: 1fr; }
+    .detail-row{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="ch-shell">
+
+  {# =================== STICKY HEADER =================== #}
+  <div class="ch-header">
+    <div>
+      <h1 class="ch-title">Consumables History — {{ equipment.name }}</h1>
+      <div class="ch-subtext">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }}</div>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('equipment.add_consumable', id=equipment.id) }}" class="btn btn-primary">➕ Add Consumable</a>
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back to Equipment</a>
+      <button type="button" class="btn" id="exportCsvBtn">⬇️ Export CSV</button>
+      <button type="button" class="btn" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+
+  {# =================== KPI CARDS (dynamic with filters) =================== #}
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="icon">📊</div><div><div class="value" id="kpiSpent">${{ "%.2f"|format(total_cost) }}</div><div class="label">Total Spent</div></div></div>
+    <div class="kpi"><div class="icon">📦</div><div><div class="value" id="kpiItems">{{ consumables|length }}</div><div class="label">Total Items</div></div></div>
+    <div class="kpi"><div class="icon">📅</div><div><div class="value" id="kpiMonths">{{ months_tracked }}</div><div class="label">Months Tracked</div></div></div>
+    <div class="kpi"><div class="icon">💰</div><div><div class="value" id="kpiAvgMonthly">${{ "%.2f"|format(avg_monthly) }}</div><div class="label">Avg Monthly</div></div></div>
+  </div>
+
+  {# =================== FILTER BAR =================== #}
+  <div class="filters">
+    <div class="filters-row">
+      <div class="form-group">
+        <label for="typeFilter">Filter by Type</label>
+        <select id="typeFilter">
+          <option value="all">All Types</option>
+          {% for type in item_types %}
+            <option value="{{ type }}">{{ type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="periodFilter">Time Period</label>
+        <select id="periodFilter">
+          <option value="all">All Time</option>
+          <option value="30">Last 30 Days</option>
+          <option value="90">Last 3 Months</option>
+          <option value="180">Last 6 Months</option>
+          <option value="365">Last Year</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sortBy">Sort</label>
+        <select id="sortBy">
+          <option value="date_desc">Date (new → old)</option>
+          <option value="date_asc">Date (old → new)</option>
+          <option value="cost_desc">Cost (high → low)</option>
+          <option value="cost_asc">Cost (low → high)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="searchText">Search (brand, vendor, notes)</label>
+        <input type="search" id="searchText" placeholder="Type to filter…">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm" id="clearFilters">Clear Filters</button>
+    </div>
+  </div>
+
+  {# =================== LIST =================== #}
+  <div class="consumables-list" id="list">
+    {% if consumables %}
+      {% for item in consumables %}
+      <div class="consumable-card"
+           data-type="{{ item.item_type }}"
+           data-date="{{ item.date.strftime('%Y-%m-%d') }}"
+           data-cost="{{ '%.2f'|format(item.cost) }}"
+           data-text="{{ ( (item.brand or '') ~ ' ' ~ (item.vendor or '') ~ ' ' ~ (item.notes or '') ) | lower }}">
+        <div class="card-header">
+          <div class="item-info">
+            <h3>{{ item.item_type }}</h3>
+            {% if item.brand %}<span class="brand">{{ item.brand }}</span>{% endif %}
+          </div>
+          <div class="item-cost">${{ "%.2f"|format(item.cost) }}</div>
+        </div>
+
+        <div class="card-body">
+          <div class="detail-row">
+            <span class="detail-label">📅 Date</span>
+            <span class="detail-value">{{ item.date.strftime('%B %d, %Y') }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">📏 Quantity</span>
+            <span class="detail-value">{{ item.quantity }} {{ item.unit }}</span>
+          </div>
+
+          {% if item.vendor %}
+          <div class="detail-row">
+            <span class="detail-label">🏪 Vendor</span>
+            <span class="detail-value">{{ item.vendor }}</span>
+          </div>
+          {% endif %}
+
+          {% if item.odometer %}
+          <div class="detail-row">
+            <span class="detail-label">🚗 Odometer</span>
+            <span class="detail-value">{{ "{:,}".format(item.odometer) }} miles</span>
+          </div>
+          {% endif %}
+
+          {% if item.notes %}
+          <div class="detail-row full-width">
+            <span class="detail-label">📝 Notes</span>
+            <span class="detail-value">{{ item.notes }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="card-actions">
+          {% if item.receipt %}
+            {# If you store receipts in /static/uploads/ or another path, adjust below accordingly #}
+            <a href="{{ url_for('static', filename='uploads/' + item.receipt) }}"
+               class="action-btn"
+               onclick="openReceipt(event, this.href)">📷 Receipt</a>
+          {% endif %}
+
+          <a href="{{ url_for('equipment.edit_consumable', id=item.id) }}" class="action-btn">✏️ Edit</a>
+          <form method="POST" action="{{ url_for('equipment.delete_consumable', id=item.id) }}" style="display:inline;" onsubmit="return confirm('Delete this consumable record?');">
+            <button type="submit" class="action-btn delete">🗑️ Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div style="font-size:46px; margin-bottom:6px;">📦</div>
+        <div>No Consumables Logged Yet</div>
+        <a href="{{ url_for('equipment.add_consumable', id=equipment.id) }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Add First Consumable</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# =================== COST BREAKDOWN =================== #}
+  {% if consumables %}
+  <div class="cost-breakdown">
+    <h3 style="margin:0 0 10px 0;">Cost Breakdown by Type</h3>
+    <div class="breakdown-bars">
+      {% for type, cost in cost_by_type.items() %}
+      <div class="breakdown-item">
+        <div class="breakdown-label">
+          <span>{{ type }}</span>
+          <span>${{ "%.2f"|format(cost) }}</span>
+        </div>
+        <div class="breakdown-bar">
+          <div class="bar-fill" style="width: {{ (total_cost and (cost / total_cost * 100) or 0) }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# =================== RECEIPT LIGHTBOX =================== #}
+  <div id="receiptModal" class="modal" onclick="closeReceipt()">
+    <img id="receiptImg" class="modal-content" alt="">
+  </div>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="ch-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--ch-muted);">
+v1.0.0 — Dark UI; sticky header; live filters/search/sort; CSV export; print; dynamic KPIs; receipt lightbox.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /ch-shell -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Utilities
+============================================================================ */
+function money(n){ return '$' + (isFinite(n) ? Number(n).toFixed(2) : '0.00'); }
+function daysBetween(d1, d2){ return Math.round((d2 - d1)/(1000*60*60*24)); }
+function monthsBetweenInclusive(minD, maxD){
+  // Inclusive month span: 2024-01 to 2024-01 => 1 month
+  const a = {y:minD.getFullYear(), m:minD.getMonth()};
+  const b = {y:maxD.getFullYear(), m:maxD.getMonth()};
+  return (b.y - a.y)*12 + (b.m - a.m) + 1;
+}
+
+/* ============================================================================
+   Lightbox for receipts
+============================================================================ */
+function openReceipt(e, href){
+  e.preventDefault();
+  const m = document.getElementById('receiptModal');
+  const img = document.getElementById('receiptImg');
+  img.src = href; m.style.display = 'block';
+}
+function closeReceipt(){ document.getElementById('receiptModal').style.display = 'none'; }
+
+/* ============================================================================
+   Filtering / Sorting / Search + KPI recompute
+============================================================================ */
+const cards = Array.from(document.querySelectorAll('.consumable-card'));
+const list = document.getElementById('list');
+
+const typeFilter = document.getElementById('typeFilter');
+const periodFilter = document.getElementById('periodFilter');
+const sortBy = document.getElementById('sortBy');
+const searchText = document.getElementById('searchText');
+const clearBtn = document.getElementById('clearFilters');
+
+const kSpent = document.getElementById('kpiSpent');
+const kItems = document.getElementById('kpiItems');
+const kMonths = document.getElementById('kpiMonths');
+const kAvgMonthly = document.getElementById('kpiAvgMonthly');
+
+function applyFilters(){
+  const tVal = typeFilter?.value || 'all';
+  const pVal = periodFilter?.value || 'all';
+  const sVal = (searchText?.value || '').trim().toLowerCase();
+  const now = new Date();
+
+  let visible = [];
+
+  cards.forEach(card => {
+    // Type filter
+    const showType = (tVal === 'all') || (card.dataset.type === tVal);
+
+    // Period filter
+    let showPeriod = true;
+    if (pVal !== 'all'){
+      const dt = new Date(card.dataset.date);
+      const diff = daysBetween(dt, now);
+      showPeriod = diff <= parseInt(pVal);
+    }
+
+    // Text search (brand, vendor, notes)
+    const hay = (card.dataset.text || '').toLowerCase();
+    const showSearch = sVal.length === 0 || hay.includes(sVal);
+
+    const show = showType && showPeriod && showSearch;
+    card.style.display = show ? '' : 'none';
+    if (show) visible.push(card);
+  });
+
+  // Sort visible in DOM
+  const sortKey = sortBy?.value || 'date_desc';
+  visible.sort((a,b) => {
+    const ad = new Date(a.dataset.date).getTime();
+    const bd = new Date(b.dataset.date).getTime();
+    const ac = parseFloat(a.dataset.cost) || 0;
+    const bc = parseFloat(b.dataset.cost) || 0;
+    switch (sortKey){
+      case 'date_asc': return ad - bd;
+      case 'date_desc': return bd - ad;
+      case 'cost_asc': return ac - bc;
+      case 'cost_desc': return bc - ac;
+      default: return bd - ad;
+    }
+  });
+  visible.forEach(el => list.appendChild(el));
+
+  // KPIs recompute (based on visible)
+  const items = visible.length;
+  const spent = visible.reduce((s, el) => s + (parseFloat(el.dataset.cost) || 0), 0);
+
+  // Months tracked among visible (min->max date)
+  let months = 0;
+  if (visible.length){
+    const dates = visible.map(el => new Date(el.dataset.date)).sort((a,b)=>a-b);
+    months = Math.max(1, monthsBetweenInclusive(dates[0], dates[dates.length-1]));
+  }
+  const avgMonthly = months ? (spent / months) : 0;
+
+  kItems.textContent = items.toString();
+  kSpent.textContent = money(spent);
+  kMonths.textContent = months.toString();
+  kAvgMonthly.textContent = money(avgMonthly);
+}
+
+[typeFilter, periodFilter, sortBy, searchText].forEach(el => el?.addEventListener('input', applyFilters));
+clearBtn?.addEventListener('click', () => {
+  typeFilter.value = 'all';
+  periodFilter.value = 'all';
+  sortBy.value = 'date_desc';
+  searchText.value = '';
+  applyFilters();
+});
+document.addEventListener('DOMContentLoaded', applyFilters);
+
+/* ============================================================================
+   CSV Export (visible cards only)
+============================================================================ */
+document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+  const visible = cards.filter(c => c.style.display !== 'none');
+  const rows = [['Date','Item Type','Brand','Vendor','Quantity','Unit','Odometer','Notes','Cost']];
+
+  visible.forEach(c => {
+    const date = c.dataset.date;
+    const type = c.dataset.type;
+    const cost = c.dataset.cost;
+
+    // Pull text from DOM to avoid extra data-attrs
+    const body = c.querySelector('.card-body');
+    const brand = (c.querySelector('.brand')?.textContent || '').trim();
+    const vendor = [...body.querySelectorAll('.detail-row')].find(r => r.textContent.includes('Vendor'))?.querySelector('.detail-value')?.textContent?.trim() || '';
+    const qty = [...body.querySelectorAll('.detail-row')].find(r => r.textContent.includes('Quantity'))?.querySelector('.detail-value')?.textContent?.trim() || '';
+    const odo = [...body.querySelectorAll('.detail-row')].find(r => r.textContent.includes('Odometer'))?.querySelector('.detail-value')?.textContent?.trim() || '';
+    const notes = [...body.querySelectorAll('.detail-row.full-width')].find(r => r.textContent.includes('Notes'))?.querySelector('.detail-value')?.textContent?.trim() || '';
+
+    rows.push([date, type, brand, vendor, qty.split(' ')[0] || '', qty.split(' ').slice(1).join(' ') || '', odo, notes, cost]);
+  });
+
+  const csv = rows.map(r => r.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `consumables_history_{{ equipment.id }}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+</script>
+{% endblock %}

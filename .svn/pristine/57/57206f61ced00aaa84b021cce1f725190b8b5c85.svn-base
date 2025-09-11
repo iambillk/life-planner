@@ -1,0 +1,484 @@
+{# =============================================================================
+  FILE: fuel_add.html
+  PURPOSE: Log fuel purchase for a piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme with safe fallbacks to base.html
+  - Sticky mini-header (title + quick back)
+  - Quick fuel-type chips + station helper chips
+  - Date picker (defaults to today)
+  - Bidirectional math: price/gal ↔ gallons ↔ total (auto-sync)
+  - Odometer UX: delta since last + non-decreasing warning
+  - “Full tank” toggle (shows MPG hint when prev fill available later)
+  - Receipt preview (image thumbnail or PDF badge)
+  - Clear sectioning, comments, and changelog
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI, quick chips, date default, math auto-sync, odometer guardrails,
+         full-tank toggle, receipt preview, and extensive comments.
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Add Fuel - {{ equipment.name }}{% endblock %}
+{% block header %}Log Fuel Purchase for {{ equipment.name }}{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --fl-bg: var(--bg, #0b0f1a);
+    --fl-card: var(--card, #0f1625);
+    --fl-sub: #0c1322;
+    --fl-line: var(--line, #1f2a3d);
+    --fl-text: var(--text, #e6eaf2);
+    --fl-muted: var(--text-muted, #9fb0c8);
+    --fl-primary: var(--primary, #6ea8ff);
+    --fl-success: var(--success, #22c55e);
+    --fl-warn: var(--warning, #f59e0b);
+    --fl-danger: var(--danger, #ef4444);
+    --fl-info: #38bdf8;
+
+    --fl-radius: var(--radius, 14px);
+    --fl-radius-sm: var(--radius-sm, 10px);
+    --fl-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .fuel-shell{ max-width: 920px; margin: 0 auto; padding: 16px; display:grid; gap:16px; }
+
+  /* ================= Sticky header ================= */
+  .fl-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--fl-line); border-radius: var(--fl-radius);
+    padding:12px; box-shadow: var(--fl-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+  }
+  .fl-title{ margin:0; font-size:1.2rem; letter-spacing:.2px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--fl-line);
+    background: var(--fl-card); color: var(--fl-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--fl-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background: transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ================= Card/form ================= */
+  .fl-card{
+    background: var(--fl-card); border:1px solid var(--fl-line);
+    border-radius: var(--fl-radius); padding:14px; box-shadow: var(--fl-shadow);
+  }
+  .form-section{ margin-bottom: 14px; }
+  .sec-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--fl-line); padding-bottom:6px; margin-bottom:10px;
+  }
+  .sec-head h3{ margin:0; font-size:1.05rem; }
+  .hint{ font-size:.8rem; color: var(--fl-muted); }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ font-size:.9rem; color: var(--fl-muted); }
+
+  input[type="text"], input[type="date"], input[type="number"], select, textarea{
+    width:100%; background:#0b1120; color: var(--fl-text);
+    border:1px solid var(--fl-line); border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  textarea{ min-height: 80px; resize: vertical; }
+  input:focus, select:focus, textarea:focus{ border-color: var(--fl-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+
+  /* Chips */
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    padding:8px 12px; border-radius:999px; border:1px solid var(--fl-line);
+    background: var(--fl-sub); color: var(--fl-text); cursor:pointer;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    white-space: nowrap;
+  }
+  .chip:hover{ transform: translateY(-1px); border-color: var(--fl-primary); }
+  .chip.active{ background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
+
+  /* Math mini badges */
+  .inline-badge{
+    display:inline-flex; gap:6px; align-items:center; padding:4px 8px; border-radius:999px;
+    background:#0b2a38; color:#cbeafe; font-size:.78rem; border:1px solid #134b63;
+  }
+  .warn{ background:#3b2a0a; color:#fde68a; border-color:#6b4b0b; }
+
+  .form-actions{
+    display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed var(--fl-line); padding-top:10px; margin-top:4px;
+  }
+
+  /* Receipt preview */
+  .receipt-row{ display:grid; grid-template-columns: 140px 1fr; gap:10px; align-items:start; }
+  .receipt-drop{
+    width:140px; height:140px; border-radius:12px; background:#0b1120;
+    border:2px dashed var(--fl-line); display:flex; align-items:center; justify-content:center;
+    color:#94a3b8; text-align:center; padding:8px; cursor:pointer;
+    background-size: cover; background-position:center;
+  }
+  .receipt-drop.drag{ border-color: var(--fl-primary); }
+  .receipt-input{ display:none; }
+  .pdf-badge{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px;
+    background:#1f2937; border:1px solid var(--fl-line); color:#e5e7eb; font-size:.85rem;
+  }
+
+  @media (max-width: 860px){
+    .fl-header{ grid-template-columns: 1fr; }
+    .receipt-row{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="fuel-shell">
+
+  {# =================== STICKY MINI-HEADER =================== #}
+  <div class="fl-header" aria-label="Add fuel header">
+    <h1 class="fl-title">Log Fuel — {{ equipment.name }}</h1>
+    <a href="{{ url_for('equipment.fuel_history', id=equipment.id) }}" class="btn btn-secondary">← Back to Fuel History</a>
+  </div>
+
+  {# =================== FORM CARD =================== #}
+  <form method="POST"
+        action="{{ url_for('equipment.add_fuel', id=equipment.id) }}"
+        enctype="multipart/form-data"
+        class="fl-card"
+        id="fuelForm">
+
+    <!-- ===== STATION INFO ===== -->
+    <div class="form-section" id="sec-station">
+      <div class="sec-head">
+        <h3>Station</h3>
+        <span class="hint">Quick picks help you fill this out faster.</span>
+      </div>
+
+      <div class="form-group">
+        <div class="chip-row" id="stationChips">
+          <button type="button" class="chip" data-name="Shell">⛽ Shell</button>
+          <button type="button" class="chip" data-name="BP">🟢 BP</button>
+          <button type="button" class="chip" data-name="Chevron">🔵 Chevron</button>
+          <button type="button" class="chip" data-name="Costco">🛒 Costco</button>
+          <button type="button" class="chip" data-name="Pilot">🚚 Pilot</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="station_name">Station Name</label>
+          <input type="text" id="station_name" name="station_name" placeholder="e.g., Shell">
+        </div>
+
+        <div class="form-group">
+          <label for="station_location">Location</label>
+          <input type="text" id="station_location" name="station_location" placeholder="e.g., Main St &amp; 5th">
+        </div>
+
+        <div class="form-group">
+          <label for="date">Date *</label>
+          <input type="date" id="date" name="date" required value="{{ today }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FUEL DETAILS ===== -->
+    <div class="form-section" id="sec-fuel">
+      <div class="sec-head">
+        <h3>Fuel</h3>
+        <span class="hint">Numbers auto-calc in both directions.</span>
+      </div>
+
+      <div class="form-group">
+        <div class="chip-row" id="fuelTypeChips">
+          <button type="button" class="chip" data-type="Regular (87)">Regular 87</button>
+          <button type="button" class="chip" data-type="Mid-Grade (89)">Mid 89</button>
+          <button type="button" class="chip" data-type="Premium (91+)">Premium 91+</button>
+          <button type="button" class="chip" data-type="Diesel">Diesel</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fuel_type">Fuel Type</label>
+          <select id="fuel_type" name="fuel_type">
+            <option value="Regular (87)">Regular (87)</option>
+            <option value="Mid-Grade (89)">Mid-Grade (89)</option>
+            <option value="Premium (91+)">Premium (91+)</option>
+            <option value="Diesel">Diesel</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="gallons">Gallons *</label>
+          <input type="number" step="0.001" id="gallons" name="gallons" required>
+        </div>
+
+        <div class="form-group">
+          <label for="price_per_gallon">Price per Gallon *</label>
+          <input type="number" step="0.001" id="price_per_gallon" name="price_per_gallon" required>
+        </div>
+
+        <div class="form-group">
+          <label for="total_cost">Total Cost *</label>
+          <input type="number" step="0.01" id="total_cost" name="total_cost" required>
+          <span class="hint"><span id="calcEcho" class="inline-badge">$0.00 est.</span></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="inline">
+          <input type="checkbox" id="full_tank" name="full_tank">
+          Full tank
+        </label>
+        <span class="hint" id="mpgHint" style="display:none;">MPG will be estimated on your next fill.</span>
+      </div>
+    </div>
+
+    <!-- ===== MILEAGE & TRIP ===== -->
+    <div class="form-section" id="sec-mileage">
+      <div class="sec-head">
+        <h3>Mileage &amp; Trip</h3>
+        <span class="hint">We’ll warn if the odometer goes backwards.</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="odometer">Current Odometer</label>
+          <input type="number" id="odometer" name="odometer"
+                 value="{{ last_odometer or '' }}"
+                 placeholder="Current mileage">
+          {% if last_odometer %}
+            <span class="hint">Last recorded: {{ last_odometer }}</span>
+            <span class="hint" id="odoDelta"></span>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="trip_purpose">Trip Purpose</label>
+          <select id="trip_purpose" name="trip_purpose">
+            <option value="Personal">Personal</option>
+            <option value="Business">Business</option>
+            <option value="Mixed">Mixed</option>
+            <option value="Commute">Commute</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="2" placeholder="Any notes about this fill-up"></textarea>
+      </div>
+    </div>
+
+    <!-- ===== RECEIPT ===== -->
+    <div class="form-section" id="sec-receipt">
+      <div class="sec-head"><h3>Receipt</h3></div>
+
+      <div class="receipt-row">
+        <label for="receipt" class="receipt-drop" id="receiptDrop">
+          <span id="receiptDropText">Drop image/PDF or click</span>
+        </label>
+        <div class="form-group">
+          <input type="file" id="receipt" name="receipt" class="receipt-input" accept="image/*,application/pdf">
+          <span class="hint" id="receiptFileName">No file selected</span>
+          <span class="hint">Upload a photo or PDF of your receipt.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ACTIONS ===== -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Fuel Purchase</button>
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="fl-card" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--fl-muted);">
+v1.0.0 — Dark UI refactor; quick chips; date default; math auto-sync; odometer guardrails; full-tank toggle; receipt preview.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /fuel-shell -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Helpers
+============================================================================ */
+function toMoney(n){ return (isFinite(n) ? Number(n).toFixed(2) : '0.00'); }
+function to3(n){ return (isFinite(n) ? Number(n).toFixed(3) : '0.000'); }
+
+/* ============================================================================
+   Date default (today) if empty
+============================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  const d = document.getElementById('date');
+  if (d && !d.value) d.valueAsDate = new Date();
+});
+
+/* ============================================================================
+   Station quick chips
+============================================================================ */
+const stationChips = document.getElementById('stationChips');
+stationChips?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip'); if(!btn) return;
+  const name = btn.dataset.name;
+  const input = document.getElementById('station_name');
+  if (input) input.value = name;
+  stationChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+/* ============================================================================
+   Fuel-type chips -> set <select>
+============================================================================ */
+const fuelTypeChips = document.getElementById('fuelTypeChips');
+const fuelSelect = document.getElementById('fuel_type');
+fuelTypeChips?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip'); if(!btn) return;
+  fuelSelect.value = btn.dataset.type;
+  fuelTypeChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+/* ============================================================================
+   Math auto-sync (bidirectional)
+   - If user edits price/gal or gallons -> compute total.
+   - If user edits total -> back-compute price/gal (when gallons present).
+============================================================================ */
+const gallons = document.getElementById('gallons');
+const ppg = document.getElementById('price_per_gallon');
+const total = document.getElementById('total_cost');
+const echo = document.getElementById('calcEcho');
+
+function syncFromGallonsPrice(){
+  const g = parseFloat(gallons.value) || 0;
+  const p = parseFloat(ppg.value) || 0;
+  const t = g * p;
+  if (!isNaN(t) && t > 0) {
+    total.value = toMoney(t);
+    echo.textContent = `$${toMoney(t)} est.`;
+  } else {
+    echo.textContent = `$0.00 est.`;
+  }
+}
+function syncFromTotal(){
+  const g = parseFloat(gallons.value) || 0;
+  const t = parseFloat(total.value) || 0;
+  if (g > 0 && t >= 0) {
+    ppg.value = to3(t / g);
+    echo.textContent = `$${toMoney(t)} est.`;
+  } else {
+    echo.textContent = `$0.00 est.`;
+  }
+}
+
+[gallons, ppg].forEach(el => el?.addEventListener('input', syncFromGallonsPrice));
+total?.addEventListener('input', syncFromTotal);
+
+/* ============================================================================
+   Full tank hint
+============================================================================ */
+const fullTank = document.getElementById('full_tank');
+const mpgHint = document.getElementById('mpgHint');
+fullTank?.addEventListener('change', () => {
+  mpgHint.style.display = fullTank.checked ? 'inline' : 'none';
+});
+
+/* ============================================================================
+   Odometer guardrails + delta render
+============================================================================ */
+const odometer = document.getElementById('odometer');
+const last = {{ (last_odometer or 'null')|safe }};
+const deltaSpan = document.getElementById('odoDelta');
+
+function updateOdoDelta(){
+  const cur = parseFloat(odometer.value);
+  if (!isNaN(cur) && last !== null && !isNaN(last)) {
+    const diff = cur - last;
+    if (deltaSpan){
+      if (isFinite(diff)){
+        const nice = diff >= 0 ? `+${diff.toLocaleString()} mi since last` : `${diff.toLocaleString()} mi (warning)`;
+        deltaSpan.textContent = nice;
+        deltaSpan.className = 'hint ' + (diff < 0 ? 'warn' : '');
+      }
+    }
+  } else if (deltaSpan){
+    deltaSpan.textContent = '';
+  }
+}
+odometer?.addEventListener('input', updateOdoDelta);
+document.addEventListener('DOMContentLoaded', updateOdoDelta);
+
+document.getElementById('fuelForm')?.addEventListener('submit', (e) => {
+  if (last !== null && !isNaN(last)) {
+    const cur = parseFloat(odometer.value);
+    if (!isNaN(cur) && cur < last){
+      if (!confirm('Odometer is less than your last recorded value. Submit anyway?')) {
+        e.preventDefault();
+      }
+    }
+  }
+});
+
+/* ============================================================================
+   Receipt: click to open, drag&drop, preview image or show PDF badge
+============================================================================ */
+const rDrop = document.getElementById('receiptDrop');
+const rInput = document.getElementById('receipt');
+const rName = document.getElementById('receiptFileName');
+const rText = document.getElementById('receiptDropText');
+
+function setReceiptPreview(f){
+  if (!f){ return; }
+  rName.textContent = f.name;
+
+  if (f.type === 'application/pdf'){
+    rDrop.style.backgroundImage = 'none';
+    rText.innerHTML = '<span class="pdf-badge">📄 PDF attached</span>';
+    return;
+  }
+  if (f.type.startsWith('image/')){
+    const reader = new FileReader();
+    reader.onload = ev => {
+      rDrop.style.backgroundImage = `url('${ev.target.result}')`;
+      rText.textContent = '';
+    };
+    reader.readAsDataURL(f);
+  }
+}
+rDrop?.addEventListener('click', () => rInput?.click());
+['dragenter','dragover'].forEach(evt => {
+  rDrop?.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); rDrop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt => {
+  rDrop?.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); rDrop.classList.remove('drag'); });
+});
+rDrop?.addEventListener('drop', (e) => {
+  const f = e.dataTransfer?.files?.[0];
+  if (f){
+    const dt = new DataTransfer(); dt.items.add(f); rInput.files = dt.files;
+    setReceiptPreview(f);
+  }
+});
+rInput?.addEventListener('change', (e) => {
+  const f = e.target.files?.[0]; if (f) setReceiptPreview(f);
+});
+</script>
+{% endblock %}

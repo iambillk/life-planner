@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Weight Tracking{% endblock %}
+{% block header %}Weight Loss Module{% endblock %}
+
+{% block content %}
+<div class="weight-container">
+    <div class="add-weight-form">
+        <h3>Log Weight</h3>
+        <form method="POST" action="{{ url_for('health.add_weight') }}">
+            <input type="number" step="0.1" name="weight" placeholder="Weight (lbs)" required>
+            <input type="date" name="date" value="{{ datetime.now().strftime('%Y-%m-%d') }}">
+            <textarea name="notes" placeholder="Notes (optional)"></textarea>
+            <button type="submit">Log Entry</button>
+        </form>
+    </div>
+
+    <div class="weight-stats">
+        {% if stats %}
+        <div class="stat-card">
+            <h4>Current Weight</h4>
+            <p class="big-number">{{ "%.1f"|format(stats.current) }} lbs</p>
+        </div>
+        {% if stats.change_week is defined %}
+        <div class="stat-card">
+            <h4>Week Change</h4>
+            <p class="big-number {{ 'positive' if stats.change_week > 0 else 'negative' }}">
+                {{ "%+.1f"|format(stats.change_week) }} lbs
+            </p>
+        </div>
+        {% endif %}
+        {% if stats.change_month is defined %}
+        <div class="stat-card">
+            <h4>Month Change</h4>
+            <p class="big-number {{ 'positive' if stats.change_month > 0 else 'negative' }}">
+                {{ "%+.1f"|format(stats.change_month) }} lbs
+            </p>
+        </div>
+        {% endif %}
+        {% if stats.average is defined %}
+        <div class="stat-card">
+            <h4>Average</h4>
+            <p class="big-number">{{ "%.1f"|format(stats.average) }} lbs</p>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="weight-history">
+        <h3>History</h3>
+        {% if entries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Weight</th>
+                    <th>Change</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.date.strftime('%m/%d/%Y') }}</td>
+                    <td>{{ "%.1f"|format(entry.weight) }} lbs</td>
+                    <td>
+                        {% if not loop.last %}
+                            {% set prev_weight = entries[loop.index].weight %}
+                            {% set change = entry.weight - prev_weight %}
+                            <span class="{{ 'positive' if change > 0 else 'negative' }}">
+                                {{ "%+.1f"|format(change) }}
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.notes|default('') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('health.delete_weight', id=entry.id) }}" style="display: inline;" onsubmit="return confirm('Delete this entry?');">
+                            <button type="submit" class="btn-small-delete">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align: center; color: #7f8c8d; padding: 20px;">No weight entries yet. Start tracking above!</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.weight-container {
+    padding: 20px;
+}
+
+.add-weight-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-weight-form form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.add-weight-form input,
+.add-weight-form textarea {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-weight-form textarea {
+    min-height: 40px;
+    resize: vertical;
+}
+
+.add-weight-form button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.weight-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card h4 {
+    color: #7f8c8d;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.big-number {
+    font-size: 2.5rem !important;
+    color: #3498db;
+    font-weight: bold;
+}
+
+.big-number.positive {
+    color: #e74c3c;
+}
+
+.big-number.negative {
+    color: #2ecc71;
+}
+
+.weight-history {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.weight-history h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #34495e;
+    color: white;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+tbody tr {
+    border-bottom: 1px solid #eee;
+}
+
+tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.positive {
+    color: #e74c3c;
+}
+
+.negative {
+    color: #2ecc71;
+}
+
+.btn-small-delete {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-small-delete:hover {
+    background: #c0392b;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}Add Transaction{% endblock %}
+{% block header %}Add Transaction{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ==================== ADD TRANSACTION STYLES ==================== */
+    :root {
+        --fin-bg: var(--bg, #0b0f1a);
+        --fin-card: var(--card, #121a2a);
+        --fin-panel: var(--panel, #1a2234);
+        --fin-line: var(--line, #1f2a3d);
+        --fin-text: var(--text, #e6eaf2);
+        --fin-muted: var(--text-muted, #9fb0c8);
+        --fin-primary: var(--primary, #6ea8ff);
+        --fin-success: #22c55e;
+        --fin-radius: 14px;
+        --fin-radius-sm: 10px;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .form-card {
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius);
+        padding: 30px;
+    }
+
+    .form-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--fin-text);
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        color: var(--fin-text);
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        padding: 12px;
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        color: var(--fin-text);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: var(--fin-primary);
+        box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
+    }
+
+    .form-select option {
+        background: var(--fin-panel);
+        color: var(--fin-text);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .category-select-wrapper {
+        position: relative;
+    }
+
+    .new-category-input {
+        display: none;
+        margin-top: 10px;
+    }
+
+    .new-category-input.show {
+        display: block;
+    }
+
+    .form-help {
+        font-size: 0.875rem;
+        color: var(--fin-muted);
+        margin-top: 5px;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .file-input {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .file-input-label {
+        display: block;
+        padding: 12px;
+        background: var(--fin-panel);
+        border: 2px dashed var(--fin-line);
+        border-radius: var(--fin-radius-sm);
+        text-align: center;
+        color: var(--fin-muted);
+        transition: all 0.3s ease;
+    }
+
+    .file-input-wrapper:hover .file-input-label {
+        border-color: var(--fin-primary);
+        color: var(--fin-primary);
+    }
+
+    .form-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: var(--fin-radius-sm);
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: var(--fin-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #5a94eb;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: var(--fin-panel);
+        color: var(--fin-text);
+        border: 1px solid var(--fin-line);
+    }
+
+    .btn-secondary:hover {
+        background: var(--fin-card);
+        border-color: var(--fin-primary);
+    }
+
+    .btn-success {
+        background: var(--fin-success);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #1ea750;
+    }
+
+    .quick-fill {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .quick-fill-btn {
+        padding: 6px 12px;
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line);
+        border-radius: 20px;
+        color: var(--fin-muted);
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .quick-fill-btn:hover {
+        background: var(--fin-primary);
+        color: white;
+        border-color: var(--fin-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <form method="POST" enctype="multipart/form-data" class="form-card">
+        <h1 class="form-title">💳 Add Transaction</h1>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="date">Date</label>
+                <input type="date" 
+                       id="date" 
+                       name="date" 
+                       class="form-input" 
+                       value="{{ today }}" 
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="amount">Amount</label>
+                <input type="number" 
+                       id="amount" 
+                       name="amount" 
+                       class="form-input" 
+                       step="0.01" 
+                       placeholder="0.00"
+                       required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="merchant">Merchant</label>
+            <input type="text" 
+                   id="merchant" 
+                   name="merchant" 
+                   class="form-input" 
+                   list="merchant-list"
+                   placeholder="Type to search or enter new merchant"
+                   autocomplete="off"
+                   required>
+            <datalist id="merchant-list">
+                {% for merchant in merchants %}
+                <option value="{{ merchant }}">
+                {% endfor %}
+            </datalist>
+            <div class="quick-fill">
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Bueches Food World')">Bueches</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Tractor Supply')">Tractor Supply</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('BP Amoco')">BP Gas</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Meijers')">Meijers</button>
+                <button type="button" class="quick-fill-btn" onclick="setMerchant('Kroger')">Kroger</button>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="category_id">Category</label>
+                <div class="category-select-wrapper">
+                    <select id="category_id" name="category_id" class="form-select" onchange="checkNewCategory()">
+                        <option value="">-- Select Category --</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" 
+                                    {% if last_category == category.id|string %}selected{% endif %}>
+                                {{ category.icon }} {{ category.name }}
+                                {% if category.is_custom %}(custom){% endif %}
+                            </option>
+                        {% endfor %}
+                        <option value="new">➕ Add New Category</option>
+                    </select>
+                    <div id="new-category-wrapper" class="new-category-input">
+                        <input type="text" 
+                               name="new_category" 
+                               class="form-input" 
+                               placeholder="Enter new category name">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="card">Card</label>
+                <select id="card" name="card" class="form-select" required>
+                    {% for card in cards %}
+                        <option value="{{ card }}" 
+                                {% if last_card == card %}selected{% endif %}>
+                            {{ card }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes (optional)</label>
+            <textarea id="notes" 
+                      name="notes" 
+                      class="form-textarea" 
+                      rows="2" 
+                      placeholder="Any additional details..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Receipt Photo (optional)</label>
+            <div class="file-input-wrapper">
+                <input type="file" 
+                       name="receipt_photo" 
+                       class="file-input" 
+                       accept="image/*"
+                       onchange="updateFileName(this)">
+                <label class="file-input-label">
+                    <span id="file-name">📸 Click to upload receipt</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-buttons">
+            <button type="submit" name="add_another" value="1" class="btn btn-success">
+                ➕ Save & Add Another
+            </button>
+            <button type="submit" class="btn btn-primary">
+                💾 Save Transaction
+            </button>
+            <a href="{{ url_for('financial.dashboard') }}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+function setMerchant(name) {
+    document.getElementById('merchant').value = name;
+    // Try to suggest category
+    suggestCategory(name);
+}
+
+function checkNewCategory() {
+    const select = document.getElementById('category_id');
+    const newCategoryWrapper = document.getElementById('new-category-wrapper');
+    
+    if (select.value === 'new') {
+        newCategoryWrapper.classList.add('show');
+    } else {
+        newCategoryWrapper.classList.remove('show');
+    }
+}
+
+function updateFileName(input) {
+    const fileName = input.files[0]?.name || '📸 Click to upload receipt';
+    document.getElementById('file-name').textContent = fileName;
+}
+
+function suggestCategory(merchant) {
+    // Simple client-side category suggestion
+    const merchantLower = merchant.toLowerCase();
+    const categorySelect = document.getElementById('category_id');
+    
+    // Find matching category
+    for (let option of categorySelect.options) {
+        if (option.text.toLowerCase().includes('groceries') && 
+            ['kroger', 'walmart', 'target', 'whole foods', 'aldi', 'bueches', 'meijer'].some(store => merchantLower.includes(store))) {
+            categorySelect.value = option.value;
+            break;
+        } else if (option.text.toLowerCase().includes('amazon') && merchantLower.includes('amazon')) {
+            categorySelect.value = option.value;
+            break;
+        } else if (option.text.toLowerCase().includes('gas') && 
+            ['shell', 'exxon', 'bp', 'chevron', 'gas', 'amoco'].some(store => merchantLower.includes(store))) {
+            categorySelect.value = option.value;
+            break;
+        } else if (option.text.toLowerCase().includes('restaurant') && 
+            ['restaurant', 'cafe', 'coffee', 'mcdonald', 'subway', 'pizza'].some(store => merchantLower.includes(store))) {
+            categorySelect.value = option.value;
+            break;
+        }
+    }
+}
+
+// Auto-focus amount field for quick entry
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('amount').focus();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,599 @@
+{# =============================================================================
+  FILE: equipment_by_category.html
+  PURPOSE: Equipment listing by category with dark UI, filters, cards/table toggle
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-04
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme w/ safe fallbacks to base.css vars
+  - Sticky header w/ search, sort, status tabs, view toggle (Cards/Table), density toggle
+  - Responsive card grid + optional table view (client-side toggle)
+  - Quick Actions dropdown per item (View, Service, Edit)
+  - Category tabs row (keeps current category highlighted)
+  - Client-side search + sort + status filter (no backend changes required)
+  - CSV export of the CURRENT filtered list
+  - Cache-busted photos so updated thumbnails appear immediately
+  - Strong commenting + sectioning + changelog panel
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark restyle, sticky controls bar, search/sort/status filters
+  - NEW: Card grid + table view toggle; density toggle
+  - NEW: Quick Actions dropdown per card/row
+  - NEW: Client-side CSV export of filtered list
+  - IMP: Category tabs polished; better empty states
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Equipment — {{ category|title if category != 'all' else 'All' }}{% endblock %}
+{% block header %}{{ category|title if category != 'all' else 'All' }} Equipment{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ============================
+     Page-scoped dark variables
+  ============================ */
+  :root{
+    --el-bg: var(--bg, #0b0f1a);
+    --el-panel: var(--panel, #121a2a);
+    --el-card: var(--card, #0f1625);
+    --el-sub: #0c1322;
+    --el-line: var(--line, #1f2a3d);
+    --el-text: var(--text, #e6eaf2);
+    --el-muted: var(--text-muted, #9fb0c8);
+    --el-primary: var(--primary, #6ea8ff);
+    --el-primary-700: var(--primary-700, #3f7fe6);
+    --el-success: var(--success, #22c55e);
+    --el-warn: var(--warning, #f59e0b);
+    --el-danger: var(--danger, #ef4444);
+    --el-info: #38bdf8;
+
+    --el-radius: var(--radius, 14px);
+    --el-radius-sm: var(--radius-sm, 10px);
+    --el-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  /* ====== Layout shell ====== */
+  .equipment-list-container{
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+    display: grid; gap: 14px;
+  }
+
+  /* ====== Sticky header with actions and controls ====== */
+  .list-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--el-line);
+    border-radius: var(--el-radius);
+    padding: 12px;
+    box-shadow: var(--el-shadow);
+    backdrop-filter: blur(6px);
+  }
+  .list-header-row{
+    display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center;
+  }
+  .list-header h2{ margin:0; font-size:1.1rem; letter-spacing:.2px; }
+  .list-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--el-line);
+    background: var(--el-card); color: var(--el-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--el-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background:transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* Controls row */
+  .controls{
+    display:grid; gap:10px; margin-top:8px;
+  }
+  .controls-row{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    background: var(--el-card); border:1px solid var(--el-line);
+    border-radius: var(--el-radius); padding:10px;
+  }
+  .search-input, .select{
+    background:#0b1120; color: var(--el-text); border:1px solid var(--el-line);
+    border-radius:10px; padding:8px 12px; outline:none; font-size:.95rem;
+  }
+  .search-input{ min-width: 240px; }
+  .select{ min-width: 200px; }
+  .view-toggle{ display:flex; gap:6px; }
+  .toggle-btn{
+    border:1px solid var(--el-line); background:#0c1322; color:var(--el-muted);
+    border-radius:10px; padding:6px 10px; cursor:pointer;
+  }
+  .toggle-btn.active{ color:var(--el-text); border-color: var(--el-primary); background: rgba(110,168,255,.16); }
+
+  /* Status tabs */
+  .status-tabs{
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .tab{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; border:1px solid var(--el-line);
+    background: var(--el-card); color: var(--el-muted); text-decoration:none; font-size:.9rem;
+    transition: background .2s ease, border-color .2s ease, transform .1s ease;
+  }
+  .tab:hover{ background: rgba(255,255,255,.04); border-color: var(--el-primary); transform: translateY(-1px); }
+  .tab.active{ color:var(--el-text); background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
+
+  /* Category tabs (row under header) */
+  .category-tabs{
+    display:flex; gap:6px; flex-wrap:wrap; overflow-x:auto; padding:2px 0 4px;
+  }
+  .category-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; font-size:.9rem;
+    background:#0c1322; color:var(--el-muted); border:1px solid var(--el-line); text-decoration:none;
+  }
+  .category-tag.active{ background: rgba(110,168,255,.16); color:var(--el-text); border-color: rgba(110,168,255,.45); }
+  .category-tag:hover{ border-color: var(--el-primary); transform: translateY(-1px); }
+
+  /* ====== Cards grid ====== */
+  .cards-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap:12px;
+  }
+  .equip-card{
+    position:relative; background: var(--el-card); border:1px solid var(--el-line);
+    border-radius: var(--el-radius); padding:12px; box-shadow: var(--el-shadow);
+    transition: transform .15s ease, border-color .2s ease;
+  }
+  .equip-card:hover{ transform: translateY(-2px); border-color: var(--el-primary); }
+
+  .card-top{ display:flex; gap:10px; align-items:flex-start; }
+  .thumb{
+    width:64px; height:64px; border-radius:10px; border:1px solid var(--el-line); overflow:hidden; flex:0 0 auto; background:#0b1120;
+    display:flex; align-items:center; justify-content:center; font-size:1.4rem; color:#94a3b8;
+  }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .card-body{ flex:1; min-width:0; }
+  .card-title{ margin:0; font-size:1.02rem; display:flex; align-items:center; gap:8px; }
+  .mm-line{ color: var(--el-muted); font-size:.9rem; margin-top:2px; }
+  .meta-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px;
+    font-size:.78rem; border:1px solid var(--el-line); background:#0c1322; color:var(--el-text);
+  }
+  .chip.muted{ color: var(--el-muted); }
+
+  .status-badge{
+    padding:4px 10px; border-radius:999px; font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .status-active{ background: var(--el-success); color:#0a0f1a; }
+  .status-storage{ background:#64748b; color:#0a0f1a; }
+  .status-maintenance{ background: var(--el-warn); color:#0a0f1a; }
+  .status-needs_repair{ background:#e67e22; color:#0a0f1a; }
+  .status-retired{ background:#334155; color:#e2e8f0; }
+  .status-sold{ background: var(--el-danger); color:#0a0f1a; }
+
+  /* Card actions dropdown */
+  .actions{ position:relative; }
+  .actions .btn{ padding:6px 10px; font-size:.85rem; border-radius:10px; }
+  .dropdown{ position:relative; }
+  .dropdown-toggle{ cursor:pointer; }
+  .dropdown-menu{
+    position:absolute; right:0; top: calc(100% + 6px);
+    background: var(--el-card); border:1px solid var(--el-line); border-radius: 12px;
+    box-shadow: var(--el-shadow); min-width: 200px; padding:6px; display:none;
+  }
+  .dropdown.open .dropdown-menu{ display:block; }
+  .dropdown-item{
+    display:flex; gap:8px; align-items:center; padding:8px 10px; border-radius:10px;
+    color: var(--el-text); text-decoration:none; border:1px solid transparent;
+  }
+  .dropdown-item:hover{ background:#0c1322; border-color:var(--el-line); }
+
+  /* Dense mode tweaks */
+  .dense .equip-card{ padding:10px; }
+  .dense .thumb{ width:56px; height:56px; }
+
+  /* ====== Table view ====== */
+  .table-wrap{
+    background: var(--el-card); border:1px solid var(--el-line); border-radius: var(--el-radius); box-shadow: var(--el-shadow);
+    overflow:auto; display:none; /* hidden by default; JS toggles */
+  }
+  table{ width:100%; border-collapse: collapse; }
+  thead{ background:#0c1322; color: var(--el-text); }
+  th, td{ padding:10px; text-align:left; border-bottom:1px solid var(--el-line); }
+  tbody tr:hover{ background: rgba(255,255,255,.03); }
+  .table-photo{
+    width:44px; height:44px; border-radius:8px; border:1px solid var(--el-line); object-fit:cover; background:#0b1120;
+  }
+  .table-no-photo{
+    width:44px; height:44px; border-radius:8px; border:1px dashed var(--el-line); display:flex; align-items:center; justify-content:center;
+    color:#94a3b8;
+  }
+  .table-actions{ display:flex; gap:6px; }
+
+  /* ====== Empty state ====== */
+  .empty-state{
+    text-align:center; padding:50px 16px; background: var(--el-card); border:1px dashed var(--el-line);
+    border-radius: var(--el-radius); color: var(--el-muted);
+  }
+
+  /* ====== Footer / changelog ====== */
+  .page-foot{
+    background: var(--el-card); border:1px solid var(--el-line); border-radius: var(--el-radius); padding:8px;
+  }
+  .page-foot details{ border:1px dashed var(--el-line); border-radius:10px; padding:6px 8px; }
+  .page-foot summary{ cursor:pointer; font-weight:700; }
+  .page-foot code{ display:block; white-space:pre-wrap; margin-top:6px; color: var(--el-muted); }
+
+  /* Responsive */
+  @media (max-width: 780px){
+    .list-header-row{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="equipment-list-container" id="equipList">
+
+  {# =================== STICKY HEADER =================== #}
+  <div class="list-header">
+    <div class="list-header-row">
+      <h2>{{ category|title if category != 'all' else 'All' }} Equipment</h2>
+      <div class="list-actions">
+        <a href="{{ url_for('equipment.add') }}" class="btn btn-primary">➕ Add New</a>
+        <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        <button id="exportCsv" class="btn btn-outline">⬇️ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="controls-row" role="group" aria-label="Search and sort">
+        <input id="searchEquip" class="search-input" type="search" placeholder="Search by name, make, model…" autocomplete="off" />
+        <select id="sortEquip" class="select" aria-label="Sort equipment">
+          <option value="updated_desc">Sort: Recently Updated</option>
+          <option value="name_asc">Sort: Name (A–Z)</option>
+          <option value="status_asc">Sort: Status</option>
+          <option value="year_desc">Sort: Year (newest)</option>
+          <option value="service_desc">Sort: Last Service (newest)</option>
+        </select>
+
+        <div class="view-toggle" aria-label="View mode">
+          <button id="viewCards" class="toggle-btn active">🧱 Cards</button>
+          <button id="viewTable" class="toggle-btn">📋 Table</button>
+          <button id="densityToggle" class="toggle-btn">↕️ Density</button>
+        </div>
+      </div>
+
+      <div class="status-tabs" role="tablist" aria-label="Status filter">
+        {% set statuses = ['all','active','maintenance','needs_repair','storage','retired','sold'] %}
+        {% for s in statuses %}
+          <a href="javascript:void(0)" class="tab {% if s == 'all' %}active{% endif %}" data-status="{{ s }}">{{ s.replace('_',' ')|title }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# =================== CATEGORY TABS =================== #}
+  <div class="category-tabs" role="navigation" aria-label="Category filters">
+    <a href="{{ url_for('equipment.by_category', category='all') }}"
+       class="category-tag {% if category == 'all' %}active{% endif %}">All</a>
+    {% for cat in categories %}
+      <a href="{{ url_for('equipment.by_category', category=cat) }}"
+         class="category-tag {% if category == cat %}active{% endif %}">{{ cat }}</a>
+    {% endfor %}
+  </div>
+
+  {# =================== CARDS GRID (default view) =================== #}
+  {% if equipment %}
+  <div class="cards-grid" id="cardsGrid">
+    {% for item in equipment %}
+      {% set last = item.maintenance_records[0] if item.maintenance_records else None %}
+      {% set last_date = last.service_date.strftime('%Y-%m-%d') if last else '' %}
+      {% set last_human = last.service_date.strftime('%b %d, %Y') if last else 'No records' %}
+      <div class="equip-card"
+           data-name="{{ (item.name ~ ' ' ~ (item.make or '') ~ ' ' ~ (item.model or ''))|lower }}"
+           data-status="{{ item.status }}"
+           data-year="{{ item.year or '0' }}"
+           data-service="{{ last_date }}"
+           data-updated="{% if item.updated_at %}{{ item.updated_at.isoformat() }}{% else %}1970-01-01T00:00:00{% endif %}">
+        <div class="card-top">
+          <div class="thumb">
+            {% if item.profile_photo %}
+              <img src="{{ url_for('static',
+                                    filename='equipment_photos/equipment_profiles/' + item.profile_photo,
+                                    v=(item.updated_at.timestamp()|int if item.updated_at else 0)) }}"
+                   alt="{{ item.name }}">
+            {% else %}
+              <span>📷</span>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <h3 class="card-title">
+              <a href="{{ url_for('equipment.detail', id=item.id) }}" style="color:var(--el-text); text-decoration:none;">{{ item.name }}</a>
+              <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+            </h3>
+            <div class="mm-line">{{ item.make or '' }} {{ item.model or '' }}</div>
+            <div class="meta-row">
+              <span class="chip muted">Year: <strong>{{ item.year or 'N/A' }}</strong></span>
+              <span class="chip muted">Last Service: <strong>{{ last_human }}</strong></span>
+              {% if item.location %}<span class="chip muted">📍 {{ item.location }}</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="actions">
+            <div class="dropdown">
+              <button class="btn btn-sm dropdown-toggle">⚙️ Actions</button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{{ url_for('equipment.detail', id=item.id) }}">👁️ View</a>
+                <a class="dropdown-item" href="{{ url_for('equipment.add_maintenance', id=item.id) }}">🔧 Add Service</a>
+                <a class="dropdown-item" href="{{ url_for('equipment.edit', id=item.id) }}">✏️ Edit</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# =================== TABLE VIEW (hidden until toggled) =================== #}
+  <div class="table-wrap" id="tableWrap" aria-hidden="true">
+    <table id="equipTable">
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Name</th>
+          <th>Make / Model</th>
+          <th>Year</th>
+          <th>Status</th>
+          <th>Last Service</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in equipment %}
+          {% set last = item.maintenance_records[0] if item.maintenance_records else None %}
+          {% set last_date = last.service_date.strftime('%Y-%m-%d') if last else '' %}
+          {% set last_human = last.service_date.strftime('%b %d, %Y') if last else 'No records' %}
+          <tr
+            data-name="{{ (item.name ~ ' ' ~ (item.make or '') ~ ' ' ~ (item.model or ''))|lower }}"
+            data-status="{{ item.status }}"
+            data-year="{{ item.year or '0' }}"
+            data-service="{{ last_date }}"
+            data-updated="{% if item.updated_at %}{{ item.updated_at.isoformat() }}{% else %}1970-01-01T00:00:00{% endif %}">
+            <td>
+              {% if item.profile_photo %}
+                <img class="table-photo"
+                     src="{{ url_for('static',
+                                     filename='equipment_photos/equipment_profiles/' + item.profile_photo,
+                                     v=(item.updated_at.timestamp()|int if item.updated_at else 0)) }}"
+                     alt="{{ item.name }}">
+              {% else %}
+                <div class="table-no-photo">📷</div>
+              {% endif %}
+            </td>
+            <td><strong style="color:var(--el-text);">{{ item.name }}</strong></td>
+            <td style="color:var(--el-muted);">{{ item.make or '' }} {{ item.model or '' }}</td>
+            <td>{{ item.year or 'N/A' }}</td>
+            <td><span class="status-badge status-{{ item.status }}">{{ item.status }}</span></td>
+            <td>{{ last_human }}</td>
+            <td>
+              <div class="table-actions">
+                <a href="{{ url_for('equipment.detail', id=item.id) }}" class="btn btn-sm">View</a>
+                <div class="dropdown">
+                  <button class="btn btn-sm dropdown-toggle">More</button>
+                  <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{{ url_for('equipment.add_maintenance', id=item.id) }}">🔧 Add Service</a>
+                    <a class="dropdown-item" href="{{ url_for('equipment.edit', id=item.id) }}">✏️ Edit</a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-state">
+      <div style="font-size:42px; margin-bottom:6px;">📦</div>
+      <div>No equipment found in this category.</div>
+      <a href="{{ url_for('equipment.add') }}" class="btn btn-primary" style="margin-top:8px;">Add Your First Equipment</a>
+    </div>
+  {% endif %}
+
+  {# =================== PAGE FOOT / CHANGELOG =================== #}
+  <div class="page-foot">
+    <details>
+      <summary>Page Info & Changelog (Equipment by Category)</summary>
+      <code>
+v1.0.0 — Dark restyle; sticky controls; search/sort/status filters; cards/table toggle; density toggle; quick actions; CSV export.
+      </code>
+    </details>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Cards/Table view logic + search/sort/filter + CSV export
+   - Fully client-side; no backend changes required
+============================================================================ */
+(function(){
+  const root = document.getElementById('equipList');
+  if (!root) return;
+
+  const cardsGrid = document.getElementById('cardsGrid');
+  const tableWrap = document.getElementById('tableWrap');
+  const equipTable = document.getElementById('equipTable');
+  const searchEl = document.getElementById('searchEquip');
+  const sortEl = document.getElementById('sortEquip');
+  const viewCardsBtn = document.getElementById('viewCards');
+  const viewTableBtn = document.getElementById('viewTable');
+  const densityBtn = document.getElementById('densityToggle');
+  const exportBtn = document.getElementById('exportCsv');
+
+  // Status tabs
+  const statusTabs = Array.from(document.querySelectorAll('.status-tabs .tab'));
+  let activeStatus = 'all';
+
+  // Gather items (cards + rows)
+  const cardItems = cardsGrid ? Array.from(cardsGrid.children) : [];
+  const rowItems = equipTable ? Array.from(equipTable.querySelectorAll('tbody tr')) : [];
+
+  function setView(mode){
+    const isCards = (mode === 'cards');
+    viewCardsBtn.classList.toggle('active', isCards);
+    viewTableBtn.classList.toggle('active', !isCards);
+    if (cardsGrid) cardsGrid.style.display = isCards ? '' : 'none';
+    if (tableWrap) {
+      tableWrap.style.display = isCards ? 'none' : '';
+      tableWrap.setAttribute('aria-hidden', isCards ? 'true' : 'false');
+    }
+  }
+
+  function matchesStatus(item){
+    if (activeStatus === 'all') return true;
+    const s = (item.dataset.status || '').toLowerCase();
+    return s === activeStatus;
+  }
+  function matchesQuery(item, q){
+    if (!q) return true;
+    const name = (item.dataset.name || '').toLowerCase();
+    return name.includes(q);
+  }
+
+  function applyFilters(){
+    const q = (searchEl?.value || '').trim().toLowerCase();
+
+    // Cards
+    cardItems.forEach(el => {
+      const show = matchesStatus(el) && matchesQuery(el, q);
+      el.style.display = show ? '' : 'none';
+    });
+
+    // Table
+    rowItems.forEach(el => {
+      const show = matchesStatus(el) && matchesQuery(el, q);
+      el.style.display = show ? '' : 'none';
+    });
+
+    applySort(); // keep sorted after filtering
+  }
+
+  function applySort(){
+    const mode = sortEl?.value || 'updated_desc';
+    const sorters = {
+      updated_desc: (a,b) => (new Date(b.dataset.updated) - new Date(a.dataset.updated)),
+      name_asc: (a,b) => (a.dataset.name > b.dataset.name ? 1 : -1),
+      status_asc: (a,b) => (a.dataset.status > b.dataset.status ? 1 : -1),
+      year_desc: (a,b) => (parseInt(b.dataset.year||'0',10) - parseInt(a.dataset.year||'0',10)),
+      service_desc: (a,b) => ((b.dataset.service||'') > (a.dataset.service||'') ? 1 : -1),
+    };
+
+    // Cards
+    if (cardsGrid){
+      const visible = cardItems.filter(n => n.style.display !== 'none');
+      visible.sort(sorters[mode] || (() => 0)).forEach(n => cardsGrid.appendChild(n));
+    }
+
+    // Table
+    if (equipTable){
+      const tbody = equipTable.querySelector('tbody');
+      const visible = rowItems.filter(n => n.style.display !== 'none');
+      visible.sort(sorters[mode] || (() => 0)).forEach(n => tbody.appendChild(n));
+    }
+  }
+
+  // Status tabs handlers
+  statusTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      statusTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeStatus = tab.getAttribute('data-status') || 'all';
+      applyFilters();
+    });
+  });
+
+  // Search + Sort handlers
+  searchEl?.addEventListener('input', applyFilters);
+  sortEl?.addEventListener('change', () => { applySort(); });
+
+  // View toggles
+  viewCardsBtn?.addEventListener('click', () => setView('cards'));
+  viewTableBtn?.addEventListener('click', () => setView('table'));
+
+  // Density toggle
+  densityBtn?.addEventListener('click', () => {
+    root.classList.toggle('dense');
+  });
+
+  // Quick actions dropdowns (cards + table)
+  function wireDropdowns(scope){
+    const dds = scope.querySelectorAll('.dropdown');
+    dds.forEach(dd => {
+      const toggle = dd.querySelector('.dropdown-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dd.classList.toggle('open');
+      });
+    });
+  }
+  wireDropdowns(document);
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+  });
+
+  // CSV export of current filtered view
+  function exportCSV(){
+    const isCardsVisible = cardsGrid && cardsGrid.style.display !== 'none';
+    const nodes = isCardsVisible ? cardItems : rowItems;
+    const visible = nodes.filter(n => n.style.display !== 'none');
+
+    const header = ['Name','Make','Model','Year','Status','Last Service','Location'];
+    const rows = [header];
+
+    visible.forEach(n => {
+      // We rely on nearby DOM content for display, fall back to dataset
+      let name = n.querySelector('h3 a, td:nth-child(2) strong')?.textContent?.trim() || '';
+      let mm = n.querySelector('.mm-line')?.textContent?.trim() ||
+               n.querySelector('td:nth-child(3)')?.textContent?.trim() || '';
+      let make = '';
+      let model = '';
+      if (mm){
+        const parts = mm.split(' ').filter(Boolean);
+        // crude split; better than nothing
+        make = parts[0] || '';
+        model = parts.slice(1).join(' ');
+      }
+      let year = n.dataset.year || '';
+      let status = n.dataset.status || '';
+      let service = n.dataset.service || '';
+      let location = '';
+      const locChip = n.querySelector('.chip.muted:nth-child(3)');
+      if (locChip && locChip.textContent.includes('📍')) location = locChip.textContent.replace('📍','').trim();
+
+      rows.push([name, make, model, year, status, service, location]);
+    });
+
+    const csv = rows.map(r => r.map(x => `"${(x||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'equipment_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  exportBtn?.addEventListener('click', exportCSV);
+
+  // Initial render
+  applyFilters();
+  setView('cards');
+})();
+</script>
+{% endblock %}

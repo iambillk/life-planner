@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Daily Planner{% endblock %}
+{% block header %}Today's Plan{% endblock %}
+
+{% block content %}
+<div class="daily-container">
+    <div class="add-task-form">
+        <form method="POST" action="{{ url_for('daily.add_task') }}">
+            <input type="text" name="task" placeholder="Add a new task..." required>
+            <select name="priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
+
+    <div class="tasks-list">
+        <h3>Today's Tasks</h3>
+        {% if tasks %}
+            {% for task in tasks %}
+            <div class="task-item {{ 'completed' if task.completed }}">
+                <a href="{{ url_for('daily.toggle_task', id=task.id) }}" class="task-checkbox">
+                    {% if task.completed %}✅{% else %}⬜{% endif %}
+                </a>
+                <span class="task-text">{{ task.task }}</span>
+                <span class="priority priority-{{ task.priority }}">{{ task.priority }}</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #7f8c8d; padding: 20px;">No tasks for today. Add one above!</p>
+        {% endif %}
+    </div>
+
+    <div class="daily-stats">
+        <div class="stat-card">
+            <h4>Tasks Completed</h4>
+            <p>{{ tasks|selectattr('completed')|list|length }} / {{ tasks|length }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Completion Rate</h4>
+            <p>{% if tasks %}{{ ((tasks|selectattr('completed')|list|length) / tasks|length * 100)|round }}%{% else %}0%{% endif %}</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.daily-container {
+    padding: 20px;
+}
+
+.add-task-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-task-form form {
+    display: flex;
+    gap: 10px;
+}
+
+.add-task-form input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-task-form select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-task-form button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.add-task-form button:hover {
+    background: #2980b9;
+}
+
+.tasks-list {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.task-item.completed .task-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.task-checkbox {
+    margin-right: 15px;
+    font-size: 1.2rem;
+    text-decoration: none;
+}
+
+.task-text {
+    flex: 1;
+    color: #2c3e50;
+}
+
+.priority {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.priority-low {
+    background: #95a5a6;
+    color: white;
+}
+
+.priority-medium {
+    background: #f39c12;
+    color: white;
+}
+
+.priority-high {
+    background: #e74c3c;
+    color: white;
+}
+
+.daily-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card h4 {
+    color: #7f8c8d;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.stat-card p {
+    color: #2c3e50;
+    font-size: 2rem;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

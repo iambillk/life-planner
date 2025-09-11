@@ -1,0 +1,575 @@
+<!-- templates/tch_projects.html - ENHANCED VERSION with Grid/List toggle -->
+{% extends "base.html" %}
+{% block title %}TCH Projects{% endblock %}
+{% block header %}TCH Projects{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ========= Page-scoped CSS (dark theme) ======================================= */
+  :root{
+    --tch-bg: var(--bg, #0b0f1a);
+    --tch-panel: var(--panel, #121a2a);
+    --tch-card: var(--card, #0f1625);
+    --tch-line: var(--line, #1f2a3d);
+    --tch-text: var(--text, #e6eaf2);
+    --tch-muted: var(--text-muted, #9fb0c8);
+    --tch-primary: var(--primary, #6ea8ff);
+    --tch-primary-700: var(--primary-700, #3f7fe6);
+    --tch-success: var(--success, #22c55e);
+    --tch-warn: var(--warning, #f59e0b);
+    --tch-danger: var(--danger, #ef4444);
+
+    --tch-radius: var(--radius, 14px);
+    --tch-radius-sm: var(--radius-sm, 10px);
+    --tch-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .projects-container{ display:grid; gap:16px; }
+
+  /* ======= Page Header ======= */
+  .page-header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--tch-line); border-radius: var(--tch-radius);
+    box-shadow: var(--tch-shadow);
+  }
+  .page-header h1{ margin:0; font-size:1.15rem; letter-spacing:.2px; font-weight:650; }
+  .page-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--tch-line);
+    background:var(--tch-card); color:var(--tch-text); text-decoration:none;
+    transition:transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--tch-primary); transform:translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary:hover{ background: rgba(110,168,255,.25); }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* === View Toggle === */
+  .view-toggle{ display:inline-flex; border:1px solid var(--tch-line); border-radius:12px; overflow:hidden; }
+  .view-toggle .toggle-btn{
+    background:var(--tch-card); border:0; border-right:1px solid var(--tch-line);
+    padding:6px 10px; color:var(--tch-muted); cursor:pointer; font-size:.9rem;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .view-toggle .toggle-btn:last-child{ border-right:0; }
+  .view-toggle .toggle-btn:hover{ color:var(--tch-text); }
+  .view-toggle .toggle-btn.active{
+    background: rgba(110,168,255,.18); color: var(--tch-primary);
+    border-color: rgba(110,168,255,.45);
+  }
+
+  /* ======= Controls Row ======= */
+  .controls{ display:grid; gap:12px; }
+  .controls-row{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius:var(--tch-radius-sm);
+  }
+  .search-input{
+    flex:1; padding:10px 14px; border:1px solid var(--tch-line);
+    background:var(--tch-panel); border-radius:10px; color:var(--tch-text);
+    min-width:200px; font-size:.95rem;
+  }
+  .search-input:focus{ outline:none; border-color:var(--tch-primary); }
+  .search-input::placeholder{ color:var(--tch-muted); }
+  .select{
+    padding:10px 14px; border:1px solid var(--tch-line);
+    background:var(--tch-panel); border-radius:10px; color:var(--tch-text);
+    font-size:.95rem; cursor:pointer;
+  }
+  .select:focus{ outline:none; border-color:var(--tch-primary); }
+
+  /* ======= Filter Tabs ======= */
+  .filter-tabs{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius:var(--tch-radius-sm);
+  }
+  .tab{
+    padding:8px 14px; border-radius:10px; text-decoration:none;
+    background:var(--tch-panel); color:var(--tch-muted); transition:all .2s;
+    border:1px solid transparent; font-size:.9rem; cursor:pointer;
+  }
+  .tab:hover{ border-color:var(--tch-primary); color:var(--tch-text); }
+  .tab.active{
+    background:rgba(110,168,255,.18); color:var(--tch-primary);
+    border-color:rgba(110,168,255,.45);
+  }
+  .tab .badge{
+    display:inline-block; margin-left:4px; padding:1px 6px;
+    background:rgba(110,168,255,.25); border-radius:999px;
+    font-size:.75rem; font-weight:700;
+  }
+
+  /* ======= Category Chips ======= */
+  .category-chips{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding:12px; background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius:var(--tch-radius-sm);
+  }
+  .chip{
+    padding:6px 12px; border-radius:999px; font-size:.85rem;
+    background:var(--tch-panel); color:var(--tch-muted); cursor:pointer;
+    border:1px solid transparent; transition:all .2s;
+  }
+  .chip:hover{ border-color:var(--tch-primary); color:var(--tch-text); }
+  .chip.active{
+    background:rgba(110,168,255,.18); color:var(--tch-primary);
+    border-color:rgba(110,168,255,.45);
+  }
+
+  /* ======= Projects Grid ======= */
+  .projects-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr));
+    gap:16px;
+  }
+
+  /* ======= Project Card ======= */
+  .project-card{
+    background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius:var(--tch-radius); padding:14px;
+    box-shadow:var(--tch-shadow); transition:transform .15s ease, border-color .2s;
+    display:flex; flex-direction:column; gap:10px;
+    position:relative; overflow:visible;
+  }
+  .project-card:hover{ transform:translateY(-2px); border-color:var(--tch-primary); }
+
+  /* Priority Ribbon */
+  .priority-ribbon{
+    position:absolute; top:-1px; right:14px;
+    padding:6px 12px; border-radius:0 0 8px 8px;
+    font-size:.7rem; font-weight:800; letter-spacing:.5px;
+    text-transform:uppercase; z-index:2;
+  }
+  .priority-low{ background:#4b5563; color:#e2e8f0; }
+  .priority-medium{ background:#3b82f6; color:#0a0f1a; }
+  .priority-high{ background:#f59e0b; color:#0a0f1a; }
+  .priority-critical{ background:#ef4444; color:#fff; animation: pulse 2s infinite; }
+  .priority-urgent{ background:#ef4444; color:#fff; animation: pulse 2s infinite; }
+
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.8;} }
+
+  /* Card Header */
+  .project-header{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .project-name{ font-size:1.05rem; font-weight:700; color:var(--tch-text); margin:0 0 8px 0; letter-spacing:.3px; }
+
+  /* Status & Category Badges */
+  .project-badges{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .status-badge{
+    padding:4px 10px; border-radius:8px; font-size:.7rem;
+    font-weight:800; text-transform:uppercase; letter-spacing:.3px;
+  }
+  .status-planning{ background:#64748b; color:#0a0f1a; }
+  .status-active{ background:#3b82f6; color:#0a0f1a; }
+  .status-on_hold{ background:#f59e0b; color:#0a0f1a; }
+  .status-completed{ background:#22c55e; color:#0a0f1a; }
+  .status-cancelled{ background:#ef4444; color:#fff; }
+
+  /* Category-specific colors */
+  .category-badge{
+    padding:4px 10px; border-radius:8px; font-size:.7rem;
+    font-weight:700; text-transform:uppercase;
+  }
+  .category-dc-work{ background:#3b82f6; color:#0a0f1a; }
+  .category-coding{ background:#8b5cf6; color:#0a0f1a; }
+  .category-managerial{ background:#f59e0b; color:#0a0f1a; }
+  .category-sales{ background:#10b981; color:#0a0f1a; }
+  .category-client-health{ background:#ef4444; color:#fff; }
+  .category-operations{ background:#6366f1; color:#0a0f1a; }
+  .category-research{ background:#06b6d4; color:#0a0f1a; }
+  .category-development{ background:#22c55e; color:#0a0f1a; }
+  .category-marketing{ background:#ec4899; color:#0a0f1a; }
+  .category-general{ background:#6b7280; color:#fff; }
+
+  /* Goal & Description boxes */
+  .project-goal, .project-desc{
+    background:#0c1322; border:1px solid var(--tch-line); border-radius:10px;
+    color:var(--tch-text); font-size:.92rem; padding:10px; margin-bottom:10px;
+  }
+  .project-goal strong, .project-desc strong{ color:var(--tch-primary); font-weight:700; }
+
+  /* Project Meta */
+  .project-meta{ margin:12px 0; padding-top:10px; border-top:1px dashed var(--tch-line); }
+  .deadline{ color:var(--tch-muted); font-size:.9rem; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .overdue-badge{
+    display:inline-block; margin-left:6px; padding:2px 6px; border-radius:6px;
+    background:var(--tch-danger); color:#0a0f1a; font-size:.72rem; font-weight:800; animation: blink 2s infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.6;} }
+
+  /* Progress Bar */
+  .progress-bar{
+    background:#0c1322; border:1px solid var(--tch-line);
+    height:10px; border-radius:999px; overflow:hidden; margin-bottom:6px;
+  }
+  .progress-fill{ background: linear-gradient(90deg, var(--tch-primary), var(--tch-primary-700)); height:100%; transition: width .3s; }
+  .progress-text{ font-size:.8rem; color:var(--tch-muted); text-align:center; margin-bottom:8px; }
+
+  /* Stats */
+  .project-stats{ display:flex; gap:12px; margin:10px 0; font-size:.85rem; color:var(--tch-muted); flex-wrap:wrap; }
+  .project-stats span{ display:inline-flex; align-items:center; gap:6px; }
+
+  /* Actions */
+  .project-actions{ display:flex; gap:8px; margin-top:auto; padding-top:8px; }
+
+  /* Empty State */
+  .empty-state{
+    grid-column:1 / -1; text-align:center; padding:60px 20px; color:var(--tch-muted);
+    background:var(--tch-card); border:1px dashed var(--tch-line); border-radius: var(--tch-radius);
+  }
+  .empty-state .icon{ font-size:48px; margin-bottom:16px; opacity:.5; }
+  .empty-state h3{ margin:6px 0 12px; color:var(--tch-text); font-size:1.2rem; }
+  .empty-state p{ margin-bottom:20px; }
+
+  /* Stats summary bar */
+  .stats-bar{
+    display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
+    padding:14px; background:var(--tch-card); border:1px solid var(--tch-line);
+    border-radius:var(--tch-radius-sm); margin-bottom:16px;
+  }
+  .stat-item{ display:flex; align-items:center; gap:8px; color:var(--tch-muted); }
+  .stat-item .number{ font-size:1.2rem; font-weight:700; color:var(--tch-text); }
+
+  /* ================= List View ================= */
+  /* Container becomes one column; card turns into compact row */
+  #projectsGrid.list-view{
+    grid-template-columns: 1fr;
+  }
+  #projectsGrid.list-view .project-card{
+    display:grid;
+    grid-template-columns: 1.2fr 0.9fr 0.7fr auto;
+    grid-template-areas: "name badges meta actions";
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+  }
+  #projectsGrid.list-view .priority-ribbon{
+    position:static; justify-self:end; grid-column: 4 / 5; margin-right:8px;
+    border-radius:8px; padding:4px 8px;
+  }
+  #projectsGrid.list-view .project-name{ grid-area:name; margin:0; }
+  #projectsGrid.list-view .project-badges{ grid-area:badges; margin:0; }
+  #projectsGrid.list-view .project-meta{
+    grid-area:meta; margin:0; border-top:0; padding-top:0;
+  }
+  #projectsGrid.list-view .project-actions{ grid-area:actions; justify-self:end; padding-top:0; margin-top:0; }
+  /* Hide long text in list view for scanability */
+  #projectsGrid.list-view .project-goal,
+  #projectsGrid.list-view .project-desc,
+  #projectsGrid.list-view .project-stats{ display:none; }
+  /* Tighter deadline/progress in list view */
+  #projectsGrid.list-view .deadline{ margin:0 0 6px 0; }
+  #projectsGrid.list-view .progress-text{ margin:0; }
+
+  /* ======= Responsive ======= */
+  @media (max-width: 1024px){
+    #projectsGrid.list-view .project-card{
+      grid-template-columns: 1fr 1fr auto;
+      grid-template-areas:
+        "name badges actions"
+        "meta meta actions";
+      row-gap:8px;
+    }
+  }
+  @media (max-width: 768px){
+    .projects-grid{ grid-template-columns: 1fr; }
+    .controls-row{ flex-direction:column; }
+    .search-input{ width:100%; }
+    #projectsGrid.list-view .project-card{
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "name"
+        "badges"
+        "meta"
+        "actions";
+      justify-items:stretch;
+    }
+    .view-toggle .toggle-btn span.label{ display:none; } /* icons only on small screens */
+  }
+
+  /* Screen reader only */
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="projects-container" id="tch-projects">
+
+  <!-- ====================== HEADER ======================= -->
+  <div class="page-header">
+    <h1>
+      <span aria-hidden="true">💼</span> TCH Projects
+    </h1>
+    <div class="page-actions">
+      <!-- View Toggle (new) -->
+      <div class="view-toggle" role="group" aria-label="Change projects view">
+        <button id="btnGrid" class="toggle-btn active" type="button" aria-pressed="true" title="Grid view">
+          <span aria-hidden="true">🔲</span><span class="label">Grid</span>
+        </button>
+        <button id="btnList" class="toggle-btn" type="button" aria-pressed="false" title="List view">
+          <span aria-hidden="true">☰</span><span class="label">List</span>
+        </button>
+      </div>
+
+      <!-- New Project -->
+      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary" title="Create a new TCH project">
+        <span aria-hidden="true">➕</span> New Project
+      </a>
+    </div>
+  </div>
+
+  <!-- =================== STATS SUMMARY =================== -->
+  <div class="stats-bar">
+    <div class="stat-item"><span aria-hidden="true">📊</span><span class="number">{{ projects|length }}</span><span>Total Projects</span></div>
+    <div class="stat-item"><span aria-hidden="true">🚀</span><span class="number">{{ status_counts.active }}</span><span>Active</span></div>
+    <div class="stat-item"><span aria-hidden="true">📝</span><span class="number">{{ status_counts.planning }}</span><span>Planning</span></div>
+    <div class="stat-item"><span aria-hidden="true">⏸️</span><span class="number">{{ status_counts.on_hold }}</span><span>On Hold</span></div>
+    <div class="stat-item"><span aria-hidden="true">✅</span><span class="number">{{ status_counts.completed }}</span><span>Completed</span></div>
+  </div>
+
+  <!-- =================== CONTROLS ======================== -->
+  <div class="controls">
+    <!-- Search & Sort Row -->
+    <div class="controls-row" role="group" aria-label="Search and sort">
+      <input id="searchProjects" class="search-input" type="search"
+             placeholder="🔍 Search projects..." autocomplete="off" />
+      <select id="sortProjects" class="select" aria-label="Sort projects">
+        <option value="updated_desc">📅 Recently Updated</option>
+        <option value="deadline_asc">⏰ Earliest Deadline</option>
+        <option value="progress_desc">📈 Highest Progress</option>
+        <option value="priority_desc">🔥 Highest Priority</option>
+        <option value="name_asc">🔤 Name (A-Z)</option>
+        <option value="created_desc">✨ Newest First</option>
+      </select>
+    </div>
+
+    <!-- Status Filter Tabs -->
+    <div class="filter-tabs" role="tablist" aria-label="Status filter">
+      <a href="{{ url_for('projects.tch_index', status='all', category=category_filter) }}"
+         class="tab {% if status_filter == 'all' %}active{% endif %}" role="tab" aria-selected="{{ 'true' if status_filter == 'all' else 'false' }}">
+        All Projects
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='planning', category=category_filter) }}"
+         class="tab {% if status_filter == 'planning' %}active{% endif %}" role="tab">
+        📝 Planning {% if status_counts.planning > 0 %}<span class="badge">{{ status_counts.planning }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='active', category=category_filter) }}"
+         class="tab {% if status_filter == 'active' %}active{% endif %}" role="tab">
+        🚀 Active {% if status_counts.active > 0 %}<span class="badge">{{ status_counts.active }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='on_hold', category=category_filter) }}"
+         class="tab {% if status_filter == 'on_hold' %}active{% endif %}" role="tab">
+        ⏸️ On Hold {% if status_counts.on_hold > 0 %}<span class="badge">{{ status_counts.on_hold }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('projects.tch_index', status='completed', category=category_filter) }}"
+         class="tab {% if status_filter == 'completed' %}active{% endif %}" role="tab">
+        ✅ Completed {% if status_counts.completed > 0 %}<span class="badge">{{ status_counts.completed }}</span>{% endif %}
+      </a>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="category-chips" role="group" aria-label="Category filter">
+      <a href="{{ url_for('projects.tch_index', status=status_filter, category='all') }}"
+         class="chip {% if category_filter == 'all' %}active{% endif %}">
+        All Categories
+      </a>
+      {% for cat in categories %}
+      <a href="{{ url_for('projects.tch_index', status=status_filter, category=cat) }}"
+         class="chip {% if category_filter == cat %}active{% endif %}">
+        {{ cat }} {% if category_counts[cat] > 0 %}({{ category_counts[cat] }}){% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- =================== PROJECTS GRID =================== -->
+  <div class="projects-grid" id="projectsGrid">
+    {% for project in projects %}
+    <div class="project-card"
+         data-name="{{ project.name|lower }}"
+         data-category="{{ project.category|lower|replace(' ', '-') }}"
+         data-status="{{ project.status }}"
+         data-priority="{{ project.priority }}"
+         data-progress="{{ project.progress }}"
+         data-created="{{ project.created_at.isoformat() }}"
+         data-updated="{{ project.updated_at.isoformat() }}"
+         data-deadline="{{ project.deadline.isoformat() if project.deadline else '9999' }}">
+
+      <!-- Priority Ribbon -->
+      <div class="priority-ribbon priority-{{ project.priority }}">
+        {% if project.priority in ['critical', 'urgent'] %}🔥 {% endif %}{{ project.priority|upper }}
+      </div>
+
+      <!-- Project Name -->
+      <h3 class="project-name">{{ project.name }}</h3>
+
+      <!-- Status & Category Badges -->
+      <div class="project-badges">
+        <span class="status-badge status-{{ project.status }}">
+          {{ project.status|replace('_', ' ')|upper }}
+        </span>
+        <span class="category-badge category-{{ project.category|lower|replace(' ', '-') }}">
+          <span aria-hidden="true">🏷️</span> {{ project.category }}
+        </span>
+      </div>
+
+      <!-- Goal (if exists) -->
+      {% if project.goal %}
+      <div class="project-goal">
+        <strong>Goal:</strong> {{ project.goal|truncate(150) }}
+      </div>
+      {% endif %}
+
+      <!-- Description (if exists) -->
+      {% if project.description %}
+      <div class="project-desc">
+        <strong>Description:</strong> {{ project.description|truncate(200) }}
+      </div>
+      {% endif %}
+
+      <!-- Meta Section -->
+      <div class="project-meta">
+        {% if project.deadline %}
+        <div class="deadline">
+          <span aria-hidden="true">📅</span>
+          <span>Due: {{ project.deadline.strftime('%b %d, %Y') }}</span>
+          {% if project.deadline < datetime.now().date() and project.status != 'completed' %}
+            <span class="overdue-badge">OVERDUE</span>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ project.progress }}%"></div>
+        </div>
+        <div class="progress-text">{{ project.progress }}% Complete</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="project-stats">
+        <span><span aria-hidden="true">✅</span> {{ project.tasks|selectattr('completed')|list|length }}/{{ project.tasks|length }} tasks</span>
+        <span><span aria-hidden="true">💡</span> {{ project.ideas|length }} ideas</span>
+        <span><span aria-hidden="true">🏁</span> {{ project.milestones|selectattr('completed')|list|length }}/{{ project.milestones|length }} milestones</span>
+        {% if project.files %}
+        <span><span aria-hidden="true">📎</span> {{ project.files|length }} files</span>
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div class="project-actions">
+        <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn btn-sm btn-primary">
+          <span aria-hidden="true">👁️</span> View
+        </a>
+        <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">✏️</span> Edit
+        </a>
+        <a href="{{ url_for('projects.add_tch_task', project_id=project.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">➕</span> Quick Task
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+      <div class="icon" aria-hidden="true">📂</div>
+      <h3>No TCH projects found</h3>
+      <p>
+        {% if status_filter != 'all' %}
+          No {{ status_filter|replace('_', ' ') }} projects yet.
+        {% elif category_filter != 'all' %}
+          No projects in the {{ category_filter }} category.
+        {% else %}
+          Start your first work project!
+        {% endif %}
+      </p>
+      <a href="{{ url_for('projects.add_tch') }}" class="btn btn-primary">
+        <span aria-hidden="true">➕</span> Create Your First Project
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- JavaScript for search, sort, and view toggle -->
+<script>
+(function(){
+  const grid = document.getElementById('projectsGrid');
+  const searchInput = document.getElementById('searchProjects');
+  const sortSelect = document.getElementById('sortProjects');
+  const btnGrid = document.getElementById('btnGrid');
+  const btnList = document.getElementById('btnList');
+
+  // ---- View persistence ----
+  const savedView = localStorage.getItem('tchProjectsView') || 'grid';
+  setView(savedView);
+
+  btnGrid.addEventListener('click', () => setView('grid'));
+  btnList.addEventListener('click', () => setView('list'));
+
+  function setView(view){
+    if(view === 'list'){
+      grid.classList.add('list-view');
+      btnList.classList.add('active'); btnList.setAttribute('aria-pressed', 'true');
+      btnGrid.classList.remove('active'); btnGrid.setAttribute('aria-pressed', 'false');
+    }else{
+      grid.classList.remove('list-view');
+      btnGrid.classList.add('active'); btnGrid.setAttribute('aria-pressed', 'true');
+      btnList.classList.remove('active'); btnList.setAttribute('aria-pressed', 'false');
+      view = 'grid';
+    }
+    localStorage.setItem('tchProjectsView', view);
+  }
+
+  // ---- Search ----
+  if (searchInput){
+    searchInput.addEventListener('input', function(e) {
+      const term = e.target.value.toLowerCase();
+      document.querySelectorAll('.project-card').forEach(card => {
+        const name = card.dataset.name || '';
+        card.style.display = name.includes(term) ? '' : 'none';
+      });
+    });
+  }
+
+  // ---- Sort ----
+  if (sortSelect){
+    sortSelect.addEventListener('change', applySort);
+  }
+
+  function applySort(){
+    const sortBy = sortSelect.value;
+    const cards = Array.from(grid.querySelectorAll('.project-card'))
+      .filter(card => card.style.display !== 'none'); // keep filtered state
+
+    cards.sort((a, b) => {
+      switch(sortBy) {
+        case 'updated_desc':   return (b.dataset.updated || '').localeCompare(a.dataset.updated || '');
+        case 'created_desc':   return (b.dataset.created || '').localeCompare(a.dataset.created || '');
+        case 'deadline_asc':   return (a.dataset.deadline || '9999').localeCompare(b.dataset.deadline || '9999');
+        case 'progress_desc':  return (parseInt(b.dataset.progress||'0') - parseInt(a.dataset.progress||'0'));
+        case 'priority_desc': {
+          const order = {'urgent':0,'critical':0,'high':1,'medium':2,'low':3};
+          return (order[a.dataset.priority] ?? 9) - (order[b.dataset.priority] ?? 9);
+        }
+        case 'name_asc':       return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+        default: return 0;
+      }
+    });
+
+    cards.forEach(card => grid.appendChild(card));
+  }
+
+  // Initial sort (keep your default)
+  applySort();
+})();
+</script>
+{% endblock %}

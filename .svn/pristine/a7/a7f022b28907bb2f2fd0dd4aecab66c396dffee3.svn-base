@@ -1,0 +1,288 @@
+/* ============================================================================
+   FILE: static/css/style.css
+   VERSION: v0.3.0
+   UPDATED: 2025-09-04
+
+   CHANGELOG
+   v0.3.0
+   - Dark theme palette to match base.html
+   - Tight sidebar spacing (row ≈ 36px) + smaller gaps
+   - Align container to grid layout used by base.html
+   - Dark cards/forms/tables to avoid mixed themes
+
+   v0.2.x and older (legacy)
+   - Light theme styles (superseded)
+============================================================================ */
+
+/* --------- Dark variables (mirror base.html) --------- */
+:root{
+  --bg:#0b0f1a; --panel:#121a2a; --muted:#1a2336; --card:#0f1625; --line:#1f2a3d;
+  --text:#e6eaf2; --text-muted:#9fb0c8;
+  --primary:#6ea8ff; --primary-700:#3f7fe6;
+  --success:#22c55e; --warning:#f59e0b; --danger:#ef4444; --info:#38bdf8;
+  --radius:14px; --radius-sm:10px;
+}
+
+/* --------- Resets --------- */
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+  /* allow scrolling; the old file had overflow:hidden which felt “stuck” */
+  overflow: auto;
+}
+
+/* --------- Layout shell (match base.html grid) --------- */
+.container{
+  display:grid;
+  grid-template-columns: 280px minmax(0,1fr);
+  min-height: 100vh;
+}
+
+/* ============================================================================
+   SIDEBAR
+============================================================================ */
+.sidebar{
+  width:auto; /* grid defines column width */
+  background: linear-gradient(180deg,var(--panel) 0%, var(--muted) 100%);
+  color: var(--text);
+  display:flex; flex-direction:column;
+  border-right: 1px solid var(--line);
+}
+.sidebar-header{
+  padding:12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.sidebar-header h2{ font-size:1.1rem; font-weight:650; }
+.sidebar-date{ color:var(--text-muted); font-size:.9rem; }
+
+/* >>> Tight spacing here <<< */
+.sidebar-nav{
+  flex:1;
+  padding: 6px 0 !important;         /* was 20px 0 */
+  display:grid;
+  row-gap: 4px;                       /* was very airy */
+}
+
+.nav-item{
+  display:grid;
+  grid-template-columns: 22px 1fr;    /* smaller icon column */
+  align-items:center;
+  gap:8px;                            /* closer icon/label */
+  padding: 6px 10px !important;       /* was 12px 20px */
+  min-height: 36px;                   /* ≈ 36–38px rows */
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration:none;
+  border: 1px solid transparent;
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.nav-item .icon{
+  font-size:16px; line-height:1; width:22px; text-align:center;
+}
+.nav-item:hover{
+  background: rgba(255,255,255,.04);
+  border-color: var(--line);
+  transform: translateY(-1px);
+}
+.nav-item.active{
+  background: linear-gradient(180deg, rgba(110,168,255,.16), rgba(110,168,255,.10));
+  border-color: rgba(110,168,255,.45);
+  /* remove the old blue left bar */
+  border-left-width: 1px;
+}
+
+/* Sidebar footer widgets */
+.sidebar-footer{ margin-top: 10px; border-top: 1px dashed var(--line); padding: 10px 12px; }
+.quick-stats{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.quick-stats p{ font-weight:600; margin-bottom:4px; }
+.quick-stats small{ color: var(--text-muted); display:block; margin-top:2px; }
+
+/* ============================================================================
+   MAIN
+============================================================================ */
+.main-content{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  background: radial-gradient(600px 400px at 100% -10%, rgba(110,168,255,.10), transparent 60%), var(--bg);
+  overflow:hidden;
+}
+.top-bar{
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:center;
+  position: sticky; top:0; z-index:10;
+  backdrop-filter: blur(6px);
+}
+.top-bar h1{ color: var(--text); font-size: 1.2rem; font-weight:650; }
+.date-time{ color: var(--text-muted); font-size:.95rem; }
+
+.content{
+  flex:1;
+  padding: 20px;
+  overflow-y: auto;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ============================================================================
+   FORMS / BUTTONS (dark)
+============================================================================ */
+.add-task-form, .add-project-form, .add-vehicle-form, .add-goal-form, .add-weight-form{
+  background: var(--card);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+}
+.add-task-form form, .add-project-form form, .add-vehicle-form form, .add-goal-form form, .add-weight-form form{
+  display:flex; gap:10px; flex-wrap:wrap;
+}
+
+input[type="text"], input[type="number"], input[type="date"], textarea, select{
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  font-size:14px;
+  background:#0c1322; color:var(--text);
+  min-width:200px;
+}
+textarea{ min-height:60px; resize:vertical; }
+
+button{
+  background: var(--primary);
+  color: #0a0f1a;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background .2s ease, transform .06s ease;
+}
+button:hover{ background: var(--primary-700); }
+button:active{ transform: translateY(1px); }
+
+/* ============================================================================
+   LISTS / CARDS (dark)
+============================================================================ */
+.tasks-list, .project-card, .goal-card, .vehicle-card, .stat-card{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.task-item{
+  display:flex; align-items:center; padding:12px; border-bottom:1px solid var(--line);
+}
+.task-item:last-child{ border-bottom:0; }
+.task-item.completed .task-text{ text-decoration: line-through; opacity:.6; }
+.task-checkbox{ margin-right:12px; font-size:1.1rem; text-decoration:none; }
+.task-text{ flex:1; color:var(--text); }
+
+.priority{ padding:4px 8px; border-radius:8px; font-size:12px; font-weight:700; }
+.priority-low{ background:#4b5563; color:#fff; }
+.priority-medium{ background:#f59e0b; color:#0a0f1a; }
+.priority-high{ background:#ef4444; color:#0a0f1a; }
+
+.daily-stats, .weight-stats{
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px; margin-bottom:20px;
+}
+.stat-card h4{ color: var(--text-muted); margin-bottom: 8px; font-size: 12px; text-transform: uppercase; }
+.stat-card p{ color: var(--text); font-size: 1.8rem; font-weight: 800; }
+.big-number{ font-size:2.2rem !important; color: var(--primary); }
+
+.projects-grid{
+  display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+}
+.project-card h3, .goal-card h3, .vehicle-card h4{ color: var(--text); margin-bottom: 10px; }
+.project-meta, .goal-card span{ display:inline-block; margin-right:10px; margin-top:10px; }
+
+.status{ padding:4px 8px; border-radius:8px; font-size:12px; font-weight:700; }
+.status-active{ background:#22c55e; color:#0a0f1a; }
+.deadline, .target-date{ color:var(--text-muted); font-size:14px; }
+.category{ background: var(--primary); color:#0a0f1a; padding:4px 8px; border-radius:8px; font-size:12px; }
+
+/* ============================================================================
+   PROGRESS
+============================================================================ */
+.progress-bar{
+  background:#0c1322; height: 14px; border-radius: 999px; margin-top:12px; overflow:hidden; border:1px solid var(--line);
+}
+.progress-fill{ background: var(--primary); height:100%; transition: width .3s; }
+
+/* ============================================================================
+   TABLES (dark)
+============================================================================ */
+table{
+  width:100%; background: var(--card); border-radius: var(--radius-sm);
+  overflow:hidden; border:1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+thead{ background:#172033; color:var(--text); }
+th, td{ padding:12px; text-align:left; }
+tbody tr{ border-bottom:1px solid var(--line); }
+tbody tr:hover{ background:#0c1322; }
+
+/* ============================================================================
+   MISC
+============================================================================ */
+.maintenance-item{
+  background: var(--card);
+  padding: 12px;
+  border-radius: 10px;
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:10px;
+  border:1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.alert{ color:#ef4444; font-weight:700; }
+
+/* ===== Sidebar spacing hot-fix (v0.3.1) — lock rows to ~34–36px ===== */
+aside.sidebar nav.sidebar-nav{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;            /* tiny space between rows */
+  padding: 6px 0 !important;
+}
+
+aside.sidebar nav.sidebar-nav .nav-item{
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 36px !important;        /* <-- hard cap row height */
+  padding: 0 10px !important;     /* vertical padding = 0 */
+  margin: 0 !important;
+  border-radius: 12px !important;
+  line-height: 1 !important;      /* stop emoji from stretching rows */
+  font-size: 0.95rem !important;
+  box-sizing: border-box !important;
+}
+
+aside.sidebar nav.sidebar-nav .nav-item .icon{
+  font-size: 16px !important;
+  line-height: 1 !important;
+  width: 20px !important;
+  text-align: center !important;
+  flex: 0 0 20px !important;
+}
+
+/* keep the active look without changing size */
+aside.sidebar nav.sidebar-nav .nav-item.active{
+  background: linear-gradient(180deg, rgba(110,168,255,.16), rgba(110,168,255,.10)) !important;
+  border: 1px solid rgba(110,168,255,.45) !important;
+}

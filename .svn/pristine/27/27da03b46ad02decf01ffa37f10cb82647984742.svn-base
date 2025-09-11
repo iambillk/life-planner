@@ -1,0 +1,574 @@
+{# =============================================================================
+  FILE: fuel_history.html
+  PURPOSE: Fuel history + analytics for a single piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, modern UI with page-scoped CSS vars (safe fallbacks to base vars)
+  - Sticky header w/ station search, filters, sort, CSV export, quick actions
+  - Smart filters: time window, fuel type (auto-discovered), price range
+  - Client-side sort by Date, Gallons, $/Gal, Total, MPG
+  - Load-more pagination (first 25 rows, then batch reveal)
+  - Delete confirmation modal (replaces alert/confirm)
+  - Mini analytics:
+      • Price per Gallon trend
+      • MPG trend (if data present)
+      • Monthly Spend (last 12 months)
+  - Accessible, responsive, and keyboard-friendly
+  - No backend changes required (same routes/fields)
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Complete UX/visual refactor, filters/sort/export/charts, modal delete
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Fuel History - {{ equipment.name }}{% endblock %}
+{% block header %}Fuel History - {{ equipment.name }}{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --fh-bg: var(--bg, #0b0f1a);
+    --fh-card: var(--card, #0f1625);
+    --fh-sub: #0c1322;
+    --fh-line: var(--line, #1f2a3d);
+    --fh-text: var(--text, #e6eaf2);
+    --fh-muted: var(--text-muted, #9fb0c8);
+    --fh-primary: var(--primary, #6ea8ff);
+    --fh-success: var(--success, #22c55e);
+    --fh-warn: #f59e0b;
+    --fh-danger: #ef4444;
+    --fh-radius: var(--radius, 14px);
+    --fh-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  .fh-shell{ max-width:1200px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+
+  /* Sticky page header */
+  .fh-header{
+    position: sticky; top:12px; z-index:5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--fh-line); border-radius: var(--fh-radius);
+    padding:12px; box-shadow: var(--fh-shadow); backdrop-filter: blur(6px);
+  }
+  .fh-header-row{ display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; }
+  .fh-title{ margin:0; font-size:1.2rem; }
+  .fh-meta{ margin-top:4px; display:flex; gap:8px; flex-wrap:wrap; color:var(--fh-muted); }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    background:#0b1120; color:var(--fh-muted); border:1px solid var(--fh-line); font-size:.85rem;
+  }
+  .chip strong{ color: var(--fh-text); }
+
+  .header-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--fh-line);
+    background: var(--fh-card); color: var(--fh-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--fh-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  .input, select{
+    background:#0b1120; color: var(--fh-text); border:1px solid var(--fh-line);
+    border-radius:10px; padding:8px 10px; outline:none;
+  }
+  .input:focus, select:focus{ border-color: var(--fh-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.12); }
+
+  /* Cards / sections */
+  .card{ background: var(--fh-card); border:1px solid var(--fh-line);
+    border-radius: var(--fh-radius); padding:16px; box-shadow: var(--fh-shadow); }
+
+  /* Summary stats */
+  .stats-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; }
+  .stat-card{ background:#0c1322; border:1px solid var(--fh-line); border-radius:12px; padding:14px; }
+  .stat-card h4{ margin:0 0 6px 0; color: var(--fh-muted); font-weight:600; }
+  .stat-value{ font-size:1.6rem; font-weight:800; color: var(--fh-text); }
+
+  /* Filters bar */
+  .filters{ display:grid; grid-template-columns: 1fr 240px 180px 220px auto; gap:8px; align-items:center; }
+  .filters .range{ display:flex; gap:6px; align-items:center; }
+  .filters .label{ color: var(--fh-muted); font-size:.85rem; }
+
+  /* Table */
+  .table-wrap{ overflow:auto; border-radius:12px; border:1px solid var(--fh-line); }
+  table{ width:100%; border-collapse: collapse; background:#0c1322; }
+  thead th{
+    position: sticky; top:0; z-index:1; background:#0b1120;
+    color: var(--fh-muted); font-weight:700; text-align:left; padding:10px; font-size:.9rem;
+    border-bottom:1px solid var(--fh-line);
+  }
+  tbody td{ padding:10px; border-bottom:1px solid var(--fh-line); color: var(--fh-text); }
+  tbody tr:hover{ background:#0b1120; }
+
+  .action-cell{ display:flex; gap:6px; }
+  .btn-table{ padding:6px 10px; border-radius:8px; border:1px solid var(--fh-line); background:#0b1120; color:var(--fh-text); }
+  .btn-edit{ border-color: rgba(110,168,255,.45); }
+  .btn-delete{ border-color: rgba(239,68,68,.45); color:#fecaca; background:#3b1115; }
+
+  /* Pagination / footer */
+  .table-footer{ display:flex; justify-content:space-between; align-items:center; padding-top:10px; color:var(--fh-muted); }
+  .btn-link{ background:transparent; border:none; color: var(--fh-primary); cursor:pointer; text-decoration: underline; }
+
+  /* Charts */
+  .charts{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:12px; }
+  .chart{ background:#0c1322; border:1px solid var(--fh-line); border-radius:12px; padding:12px; }
+  .chart h5{ margin:0 0 8px 0; color: var(--fh-muted); }
+  .chart-rail{ height:120px; display:flex; align-items:flex-end; gap:4px; overflow:hidden; }
+  .bar{ width:8px; border-radius:3px 3px 0 0; background: linear-gradient(180deg, #6ea8ff, #3f7fe6); }
+  .dot{ width:6px; height:6px; border-radius:50%; background:#6ea8ff; }
+  .spark{ display:flex; align-items:flex-end; gap:4px; height:120px; }
+
+  /* Empty state */
+  .empty{ text-align:center; padding:40px 16px; background:#0c1322; border:1px dashed var(--fh-line); border-radius:12px; color: var(--fh-muted); }
+
+  /* Delete modal */
+  .modal{ display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.6); }
+  .modal-card{ width:min(92vw,420px); margin:12vh auto; background: var(--fh-card); border:1px solid var(--fh-line);
+    border-radius:16px; padding:18px; box-shadow: var(--fh-shadow); color: var(--fh-text); text-align:center; }
+  .modal-actions{ margin-top:12px; display:flex; justify-content:center; gap:10px; }
+
+  @media (max-width:1020px){
+    .filters{ grid-template-columns: 1fr 200px 160px 200px auto; }
+  }
+  @media (max-width:780px){
+    .fh-header-row{ grid-template-columns: 1fr; }
+    .filters{ grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="fh-shell">
+
+  {# =================== STICKY HEADER (meta + actions) =================== #}
+  <div class="fh-header">
+    <div class="fh-header-row">
+      <div>
+        <h1 class="fh-title">Fuel History — {{ equipment.name }}</h1>
+        <div class="fh-meta">
+          <span class="chip"><strong>{{ fuel_logs|length }}</strong> fills</span>
+          {% if stats %}
+            <span class="chip"><strong>{{ "%.1f"|format(stats.total_gallons) }}</strong> gal</span>
+            <span class="chip"><strong>${{ "%.2f"|format(stats.total_cost) }}</strong> total</span>
+            <span class="chip">avg $/gal <strong>{{ "%.3f"|format(stats.avg_price) }}</strong></span>
+            {% if stats.avg_mpg %}<span class="chip">avg mpg <strong>{{ "%.1f"|format(stats.avg_mpg) }}</strong></span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <input id="searchStation" class="input" type="search" placeholder="Search station… (e.g., Shell)">
+        <button id="exportCsv" class="btn btn-primary">⬇️ Export CSV</button>
+        <a href="{{ url_for('equipment.add_fuel', id=equipment.id) }}" class="btn btn-primary">⛽ Add Fuel</a>
+        <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back</a>
+      </div>
+    </div>
+
+    {# Filters & Sort #}
+    <div class="filters" style="margin-top:8px;">
+      <input id="priceMin" class="input" type="number" step="0.001" placeholder="Min $/gal">
+      <input id="priceMax" class="input" type="number" step="0.001" placeholder="Max $/gal">
+      <select id="period" class="input">
+        <option value="all">All time</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last year</option>
+      </select>
+      <select id="fuelType" class="input">
+        <option value="all">All fuel types</option>
+        {# JS will auto-populate additional types it discovers #}
+      </select>
+      <select id="sortBy" class="input">
+        <option value="date-desc">Sort: Date ↓</option>
+        <option value="date-asc">Sort: Date ↑</option>
+        <option value="gallons-desc">Sort: Gallons ↓</option>
+        <option value="gallons-asc">Sort: Gallons ↑</option>
+        <option value="price-desc">Sort: $/gal ↓</option>
+        <option value="price-asc">Sort: $/gal ↑</option>
+        <option value="total-desc">Sort: Total ↓</option>
+        <option value="total-asc">Sort: Total ↑</option>
+        <option value="mpg-desc">Sort: MPG ↓</option>
+        <option value="mpg-asc">Sort: MPG ↑</option>
+      </select>
+      <button id="resetFilters" class="btn btn-sm">Reset</button>
+    </div>
+  </div>
+
+  {# =================== SUMMARY (server-provided) =================== #}
+  {% if stats %}
+  <div class="card">
+    <div class="stats-grid">
+      <div class="stat-card"><h4>Total Gallons</h4><div class="stat-value">{{ "%.1f"|format(stats.total_gallons) }}</div></div>
+      <div class="stat-card"><h4>Total Cost</h4><div class="stat-value">${{ "%.2f"|format(stats.total_cost) }}</div></div>
+      <div class="stat-card"><h4>Avg Price/Gal</h4><div class="stat-value">${{ "%.3f"|format(stats.avg_price) }}</div></div>
+      {% if stats.avg_mpg %}<div class="stat-card"><h4>Average MPG</h4><div class="stat-value">{{ "%.1f"|format(stats.avg_mpg) }}</div></div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# =================== CHARTS (client-calculated) =================== #}
+  {% if fuel_logs %}
+  <div class="charts">
+    <div class="chart">
+      <h5>Price per Gallon Trend</h5>
+      <div id="chartPrice" class="spark" aria-label="Price per gallon trend"></div>
+    </div>
+    <div class="chart">
+      <h5>MPG Trend</h5>
+      <div id="chartMPG" class="spark" aria-label="MPG trend"></div>
+      <div class="label" style="color:var(--fh-muted); font-size:.8rem; margin-top:6px;">Only rows with MPG are included.</div>
+    </div>
+    <div class="chart">
+      <h5>Monthly Spend (last 12 months)</h5>
+      <div id="chartMonthly" class="chart-rail" aria-label="Monthly spend bars"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# =================== TABLE =================== #}
+  <div class="card">
+    {% if fuel_logs %}
+      <div class="table-wrap">
+        <table id="fuelTable">
+          <thead>
+            <tr>
+              <th data-key="date">Date</th>
+              <th data-key="station">Station</th>
+              <th data-key="type">Type</th>
+              <th data-key="gallons">Gallons</th>
+              <th data-key="price">Price/Gal</th>
+              <th data-key="total">Total</th>
+              <th data-key="odometer">Odometer</th>
+              <th data-key="mpg">MPG</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fuelTbody">
+            {% for log in fuel_logs %}
+            <tr
+              data-date="{{ log.date.strftime('%Y-%m-%d') }}"
+              data-station="{{ (log.station_name or 'N/A')|lower }}"
+              data-type="{{ log.fuel_type or '' }}"
+              data-gallons="{{ '%.3f'|format(log.gallons) if log.gallons is not none else '' }}"
+              data-price="{{ '%.3f'|format(log.price_per_gallon) if log.price_per_gallon is not none else '' }}"
+              data-total="{{ '%.2f'|format(log.total_cost) if log.total_cost is not none else '' }}"
+              data-odometer="{{ log.odometer or '' }}"
+              data-mpg="{{ '%.1f'|format(log.mpg) if log.mpg is not none else '' }}"
+            >
+              <td>{{ log.date.strftime('%m/%d/%Y') }}</td>
+              <td>{{ log.station_name or 'N/A' }}</td>
+              <td>{{ log.fuel_type or '—' }}</td>
+              <td>{{ "%.3f"|format(log.gallons) if log.gallons is not none else '—' }}</td>
+              <td>${{ "%.3f"|format(log.price_per_gallon) if log.price_per_gallon is not none else '—' }}</td>
+              <td>${{ "%.2f"|format(log.total_cost) if log.total_cost is not none else '—' }}</td>
+              <td>{{ "{:,}".format(log.odometer) if log.odometer else '—' }}</td>
+              <td>{{ "%.1f"|format(log.mpg) if log.mpg is not none else '—' }}</td>
+              <td class="action-cell">
+                <a href="{{ url_for('equipment.edit_fuel', fuel_id=log.id) }}" class="btn-table btn-edit" title="Edit">✏️</a>
+                <button type="button" class="btn-table btn-delete"
+                        onclick="openDeleteFuel({{ log.id }})" title="Delete">🗑️</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <div><span id="visibleCount">0</span> shown • <span id="totalCount">{{ fuel_logs|length }}</span> total</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="loadMore" class="btn-link">Load 25 more</button>
+          <button id="showAll" class="btn-link">Show all</button>
+        </div>
+      </div>
+
+      {# Delete modal + form #}
+      <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+        <div class="modal-card">
+          <h3 id="delTitle" style="margin:0 0 6px 0; color:#fecaca;">Delete this fuel record?</h3>
+          <p style="color:var(--fh-muted); margin:0;">This cannot be undone.</p>
+          <div class="modal-actions">
+            <button type="button" class="btn" onclick="closeDeleteFuel()">Cancel</button>
+            <form id="deleteFuelForm" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty">
+        <div style="font-size:44px; margin-bottom:6px;">⛽</div>
+        <div>No fuel records yet.</div>
+        <a href="{{ url_for('equipment.add_fuel', id=equipment.id) }}" class="btn btn-primary" style="margin-top:8px;">Add First Fuel Record</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="fh-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--fh-muted);">
+v1.0.0 — Dark UI, sticky header, filters & sort, CSV export, charts, load-more, delete modal.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /fh-shell -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Fuel History — client utilities
+   - Filters (search, period, type, price range)
+   - Sorting
+   - Pagination (load more)
+   - CSV export (respects current filters)
+   - Charts (price trend, mpg trend, monthly spend)
+   - Delete modal
+============================================================================ */
+(function(){
+  const tbody = document.getElementById('fuelTbody');
+  if(!tbody){ return; }
+
+  // ------- Helpers
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const fmtNum = (n, dec=2) => (isNaN(n) ? '' : n.toFixed(dec));
+  const parseNum = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; }
+  const getData = (tr) => ({
+    date: tr.dataset.date, // 'YYYY-MM-DD'
+    station: tr.dataset.station || '',
+    type: tr.dataset.type || '',
+    gallons: parseNum(tr.dataset.gallons),
+    price: parseNum(tr.dataset.price),
+    total: parseNum(tr.dataset.total),
+    odometer: parseNum(tr.dataset.odometer),
+    mpg: parseNum(tr.dataset.mpg),
+  });
+
+  // ------- Populate fuel type filter (from data)
+  const typeSel = document.getElementById('fuelType');
+  const uniqueTypes = Array.from(new Set(rows.map(r => (r.dataset.type||'').trim()).filter(Boolean))).sort();
+  uniqueTypes.forEach(t => {
+    const opt = document.createElement('option'); opt.value = t; opt.textContent = t; typeSel.appendChild(opt);
+  });
+
+  // ------- Filtering controls
+  const search = document.getElementById('searchStation');
+  const priceMin = document.getElementById('priceMin');
+  const priceMax = document.getElementById('priceMax');
+  const period = document.getElementById('period');
+  const sortBy = document.getElementById('sortBy');
+  const resetBtn = document.getElementById('resetFilters');
+  const visibleCount = document.getElementById('visibleCount');
+  const totalCount = document.getElementById('totalCount');
+
+  // Pagination
+  const loadMoreBtn = document.getElementById('loadMore');
+  const showAllBtn = document.getElementById('showAll');
+  let pageSize = 25, shown = 0, filteredOrder = [];
+
+  function withinPeriod(dateStr, days){
+    if(days === 'all') return true;
+    const d = new Date(dateStr+'T12:00:00');
+    const now = new Date();
+    const diff = (now - d) / (1000*60*60*24);
+    return diff <= Number(days);
+  }
+  function withinPrice(v, min, max){
+    if(v == null) return true;
+    if(min !== '' && !isNaN(parseFloat(min)) && v < parseFloat(min)) return false;
+    if(max !== '' && !isNaN(parseFloat(max)) && v > parseFloat(max)) return false;
+    return true;
+  }
+
+  // Sorter
+  function sortRows(rows, key, dir){
+    const mult = dir === 'asc' ? 1 : -1;
+    return rows.sort((a,b)=>{
+      const A = getData(a), B = getData(b);
+      let va, vb;
+      switch(key){
+        case 'date': va = A.date; vb = B.date; return (va>vb?1:va<vb?-1:0)*mult;
+        case 'gallons': va=A.gallons??-Infinity; vb=B.gallons??-Infinity; return (va - vb)*mult;
+        case 'price': va=A.price??-Infinity; vb=B.price??-Infinity; return (va - vb)*mult;
+        case 'total': va=A.total??-Infinity; vb=B.total??-Infinity; return (va - vb)*mult;
+        case 'mpg': va=A.mpg??-Infinity; vb=B.mpg??-Infinity; return (va - vb)*mult;
+        case 'station': va=A.station; vb=B.station; return (va>vb?1:va<vb?-1:0)*mult;
+        case 'type': va=A.type; vb=B.type; return (va>vb?1:va<vb?-1:0)*mult;
+      }
+      return 0;
+    });
+  }
+
+  // Filter + sort + paginate pipeline
+  function apply(){
+    const q = (search.value||'').trim().toLowerCase();
+    const t = typeSel.value || 'all';
+    const p = period.value || 'all';
+    const pMin = priceMin.value.trim();
+    const pMax = priceMax.value.trim();
+
+    // Filter
+    let working = rows.filter(tr=>{
+      const d = getData(tr);
+      const matchQ = !q || d.station.includes(q);
+      const matchT = (t==='all') || (d.type === t);
+      const matchP = withinPeriod(d.date, p);
+      const matchPrice = withinPrice(d.price, pMin, pMax);
+      return matchQ && matchT && matchP && matchPrice;
+    });
+
+    // Sort
+    const [key, dir] = (sortBy.value||'date-desc').split('-'); 
+    working = sortRows(working, key, dir);
+
+    // Hide all
+    rows.forEach(r => r.style.display='none');
+
+    // Reset pagination
+    filteredOrder = working;
+    shown = 0;
+    reveal(pageSize);
+
+    // Update visible counter
+    visibleCount.textContent = shown;
+  }
+
+  function reveal(count){
+    for(let i=shown; i<Math.min(shown+count, filteredOrder.length); i++){
+      filteredOrder[i].style.display = '';
+    }
+    shown = Math.min(shown+count, filteredOrder.length);
+    visibleCount.textContent = shown;
+    // Toggle buttons
+    loadMoreBtn.style.display = (shown < filteredOrder.length) ? 'inline' : 'none';
+    showAllBtn.style.display = (shown < filteredOrder.length) ? 'inline' : 'none';
+  }
+
+  // Bindings
+  [search, priceMin, priceMax, period, typeSel, sortBy].forEach(el=> el && el.addEventListener('input', apply));
+  resetBtn && resetBtn.addEventListener('click', ()=>{
+    search.value=''; priceMin.value=''; priceMax.value=''; period.value='all'; typeSel.value='all'; sortBy.value='date-desc';
+    apply();
+  });
+  loadMoreBtn && loadMoreBtn.addEventListener('click', ()=> reveal(pageSize));
+  showAllBtn && showAllBtn.addEventListener('click', ()=> reveal(filteredOrder.length));
+
+  // Initial apply
+  apply();
+
+  // ------- CSV export (respects current filters and ordering)
+  document.getElementById('exportCsv')?.addEventListener('click', ()=>{
+    const header = ['Date','Station','Type','Gallons','Price/Gal','Total','Odometer','MPG'];
+    const visibleRows = filteredOrder.slice(0, shown);
+    const lines = [header.join(',')];
+    visibleRows.forEach(tr=>{
+      const cells = tr.querySelectorAll('td');
+      // Extract by index except actions (last cell)
+      const vals = Array.from(cells).slice(0, 8).map(td=>{
+        const text = td.textContent.trim().replaceAll(',', ''); // keep CSV simple
+        return `"${text}"`;
+      });
+      lines.push(vals.join(','));
+    });
+    const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fuel_history_{{ equipment.id }}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ------- Charts (simple, dependency-free)
+  function buildPriceTrend(){
+    const container = document.getElementById('chartPrice'); if(!container) return;
+    container.innerHTML = '';
+    const pts = rows.map(r => ({date:r.dataset.date, v: parseNum(r.dataset.price)}))
+                    .filter(p => p.v!=null)
+                    .sort((a,b)=> a.date.localeCompare(b.date));
+    if(!pts.length){ container.innerHTML = '<div style="color:var(--fh-muted);">No price data</div>'; return; }
+    const min = Math.min(...pts.map(p=>p.v)), max = Math.max(...pts.map(p=>p.v));
+    pts.forEach(p=>{
+      const h = Math.max(4, Math.round(100 * (p.v - min) / (max - min || 1)));
+      const d = document.createElement('div'); d.className='dot'; d.style.height = h+'px';
+      container.appendChild(d);
+    });
+  }
+
+  function buildMPGTrend(){
+    const container = document.getElementById('chartMPG'); if(!container) return;
+    container.innerHTML = '';
+    const pts = rows.map(r => ({date:r.dataset.date, v: parseNum(r.dataset.mpg)}))
+                    .filter(p => p.v!=null)
+                    .sort((a,b)=> a.date.localeCompare(b.date));
+    if(!pts.length){ container.innerHTML = '<div style="color:var(--fh-muted);">No MPG data</div>'; return; }
+    const min = Math.min(...pts.map(p=>p.v)), max = Math.max(...pts.map(p=>p.v));
+    pts.forEach(p=>{
+      const h = Math.max(4, Math.round(100 * (p.v - min) / (max - min || 1)));
+      const d = document.createElement('div'); d.className='dot'; d.style.height = h+'px';
+      container.appendChild(d);
+    });
+  }
+
+  function buildMonthlySpend(){
+    const rail = document.getElementById('chartMonthly'); if(!rail) return;
+    rail.innerHTML = '';
+    // Map YYYY-MM to total
+    const map = new Map();
+    rows.forEach(r=>{
+      const d = r.dataset.date;
+      const total = parseNum(r.dataset.total);
+      if(!d || total==null) return;
+      const ym = d.slice(0,7);
+      map.set(ym, (map.get(ym)||0) + total);
+    });
+    // Last 12 months
+    const now = new Date();
+    const months = [];
+    for(let i=11;i>=0;i--){
+      const dt = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const ym = dt.toISOString().slice(0,7);
+      months.push({label: dt.toLocaleString(undefined,{month:'short'}), ym, val: map.get(ym)||0});
+    }
+    const max = Math.max(1, ...months.map(m=>m.val));
+    months.forEach(m=>{
+      const bar = document.createElement('div');
+      bar.className='bar';
+      bar.style.height = Math.max(4, Math.round(100 * m.val / max)) + '%';
+      bar.title = `${m.label}: $${fmtNum(m.val,0)}`;
+      rail.appendChild(bar);
+    });
+  }
+
+  buildPriceTrend(); buildMPGTrend(); buildMonthlySpend();
+
+  // Rebuild charts after filtering? We’ll build from ALL data, not filtered, to reflect overall trend.
+  // (Change to filteredOrder to reflect current selection if you prefer.)
+
+  // ------- Delete modal
+  const modal = document.getElementById('deleteModal');
+  window.openDeleteFuel = function(id){
+    const form = document.getElementById('deleteFuelForm');
+    form.action = "{{ url_for('equipment.delete_fuel', fuel_id=999) }}".replace('999', id);
+    modal.style.display = 'block';
+  }
+  window.closeDeleteFuel = function(){ modal.style.display='none'; }
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDeleteFuel(); });
+  window.addEventListener('click', e=>{ if(e.target===modal) closeDeleteFuel(); });
+
+})();
+</script>
+{% endblock %}

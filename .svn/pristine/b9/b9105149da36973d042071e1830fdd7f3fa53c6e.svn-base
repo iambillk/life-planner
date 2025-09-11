@@ -1,0 +1,765 @@
+================================================================================
+LIFE MANAGEMENT SYSTEM - API DOCUMENTATION
+Version 1.3.1
+================================================================================
+
+BASE URL: http://localhost:5000
+
+================================================================================
+AUTHENTICATION
+================================================================================
+Currently NO authentication is implemented. This is a personal-use application.
+DO NOT deploy publicly without adding authentication.
+
+================================================================================
+DAILY PLANNER MODULE (/daily)
+================================================================================
+
+GET /daily/
+-----------
+Main dashboard view
+Returns: HTML page with daily command center
+
+POST /daily/human/update
+------------------------
+Update human maintenance status
+Form Data:
+  - task: string (meds|shower|teeth_am|breakfast|lunch|dinner|teeth_pm|water)
+Returns: Redirect to dashboard with flash message
+
+GET /daily/calendar
+-------------------
+Calendar view (week or month)
+Query Parameters:
+  - view: string (week|month) - Default from settings
+  - week_offset: integer - Weeks from current (week view)
+  - month: string (YYYY-MM) - Specific month (month view)
+Returns: HTML calendar page
+
+POST /daily/events/add
+----------------------
+Add new calendar event
+Form Data:
+  - event_date: string (YYYY-MM-DD)
+  - event_time: string (optional, e.g., "2:00 PM" or "Morning")
+  - event_type: string
+  - who: string (Me|Wife|Ziggy|Gus|Family)
+  - description: string (optional)
+  - recurring_days: string (optional, comma-separated days)
+  - until_date: string (optional, YYYY-MM-DD)
+Returns: Redirect to calendar
+
+GET /daily/events/<int:event_id>/edit
+--------------------------------------
+Edit event form
+Returns: HTML edit page
+
+POST /daily/events/<int:event_id>/edit
+---------------------------------------
+Update event
+Form Data: Same as add event
+  - update_all_recurring: string (yes|no) - For recurring events
+Returns: Redirect to previous page
+
+POST /daily/events/<int:event_id>/delete
+-----------------------------------------
+Delete event
+Form Data:
+  - delete_all_recurring: string (yes|no) - For recurring events
+  - return_to: string (calendar|dashboard)
+Returns: Redirect to previous page
+
+POST /daily/events/<int:event_id>/quick-delete
+-----------------------------------------------
+Quick delete via AJAX
+Returns: JSON
+  {
+    "success": boolean,
+    "message": string,
+    "deleted_event": object
+  }
+
+GET /daily/api/events/<date_str>
+---------------------------------
+Get events for specific date
+Path Parameters:
+  - date_str: string (YYYY-MM-DD)
+Returns: JSON
+  {
+    "events": [...],
+    "deadlines": [...]
+  }
+
+GET /daily/api/events/<int:event_id>
+-------------------------------------
+Get single event details
+Returns: JSON with event data
+
+POST /daily/tasks/complete/<int:task_id>
+-----------------------------------------
+Mark daily task as complete
+Returns: Redirect to dashboard
+
+GET /daily/tasks/select
+------------------------
+Select projects for today
+Returns: HTML project selection page
+
+POST /daily/tasks/add
+---------------------
+Add task to today
+Form Data:
+  - project_id: integer
+  - project_type: string (TCH|Personal)
+  - task_description: string
+Returns: Redirect to dashboard
+
+GET /daily/evening-review
+--------------------------
+Evening review and grading
+Returns: HTML review page
+
+POST /daily/notes/add
+---------------------
+Add quick note
+Form Data:
+  - category: string
+  - note: string
+Returns: Redirect to dashboard
+
+GET /daily/notes/resolve/<int:note_id>
+----------------------------------------
+Mark note as resolved
+Returns: Redirect to dashboard
+
+GET /daily/settings
+--------------------
+Settings page
+Returns: HTML settings page
+
+POST /daily/settings/save
+--------------------------
+Save settings
+Form Data: Various settings fields
+Returns: Redirect to settings
+
+================================================================================
+EQUIPMENT MODULE (/equipment)
+================================================================================
+
+GET /equipment/
+----------------
+Equipment dashboard
+Query Parameters:
+  - category: string (filter by category)
+Returns: HTML equipment list
+
+GET /equipment/<int:id>
+------------------------
+Equipment detail view
+Returns: HTML detail page
+
+POST /equipment/add
+-------------------
+Add new equipment
+Form Data:
+  - name: string (required)
+  - category: string (required)
+  - make: string
+  - model: string
+  - year: integer
+  - serial_number: string
+  - purchase_date: string (YYYY-MM-DD)
+  - purchase_price: float
+  - current_hours: float
+  - current_miles: float
+  - photo: file (optional)
+Returns: Redirect to detail page
+
+POST /equipment/<int:id>/edit
+------------------------------
+Update equipment
+Form Data: Same as add
+Returns: Redirect to detail page
+
+POST /equipment/<int:id>/delete
+--------------------------------
+Delete equipment
+Returns: Redirect to dashboard
+
+POST /equipment/<int:id>/maintenance/add
+-----------------------------------------
+Add maintenance record
+Form Data:
+  - service_date: string (YYYY-MM-DD)
+  - service_type: string
+  - description: string
+  - mileage: float
+  - hours: float
+  - performed_by: string
+  - cost: float
+  - parts_cost: float
+  - labor_cost: float
+  - notes: string
+  - photos: files (multiple)
+  - receipt: file
+Returns: Redirect to detail page
+
+GET /equipment/maintenance/<int:id>/edit
+-----------------------------------------
+Edit maintenance record
+Returns: HTML edit form
+
+POST /equipment/maintenance/<int:id>/edit
+------------------------------------------
+Update maintenance record
+Form Data: Same as add maintenance
+Returns: Redirect to equipment detail
+
+POST /equipment/maintenance/<int:id>/delete
+--------------------------------------------
+Delete maintenance record
+Returns: Redirect to equipment detail
+
+POST /equipment/<int:id>/fuel/add
+----------------------------------
+Add fuel log entry
+Form Data:
+  - date: string (YYYY-MM-DD)
+  - gallons: float
+  - price_per_gallon: float
+  - total_cost: float
+  - odometer: float
+  - station: string
+  - location: string
+  - trip_purpose: string
+  - receipt_photo: file
+Returns: Redirect to detail page
+
+POST /equipment/<int:id>/consumable/add
+----------------------------------------
+Add consumable/parts log
+Form Data:
+  - date: string (YYYY-MM-DD)
+  - item_type: string
+  - brand: string
+  - quantity: float
+  - unit: string
+  - cost: float
+  - vendor: string
+  - notes: string
+Returns: Redirect to detail page
+
+POST /equipment/<int:id>/carwash/add
+-------------------------------------
+Add car wash log (Auto category only)
+Form Data:
+  - date: string (YYYY-MM-DD)
+  - wash_type: string
+  - location: string
+  - cost: float
+  - notes: string
+Returns: Redirect to detail page
+
+GET /equipment/photo/<int:photo_id>/delete
+-------------------------------------------
+Delete equipment photo
+Returns: Redirect to equipment detail
+
+================================================================================
+PROJECT MODULES (/projects and /personal)
+================================================================================
+
+GET /projects/
+--------------
+TCH projects dashboard
+Returns: HTML project list
+
+GET /projects/tch/<int:id>
+---------------------------
+TCH project detail
+Returns: HTML detail page
+
+POST /projects/tch/add
+----------------------
+Add TCH project
+Form Data:
+  - name: string
+  - description: string
+  - category: string
+  - priority: string (low|medium|high|critical)
+  - status: string (planning|active|on-hold|completed)
+  - start_date: string (YYYY-MM-DD)
+  - deadline: string (YYYY-MM-DD)
+  - goal: string
+  - motivation: string
+  - strategy: string
+Returns: Redirect to detail page
+
+POST /projects/tch/<int:id>/edit
+---------------------------------
+Update TCH project
+Form Data: Same as add
+Returns: Redirect to detail page
+
+POST /projects/tch/<int:id>/delete
+-----------------------------------
+Delete TCH project
+Returns: Redirect to dashboard
+
+POST /projects/<int:project_id>/task/add
+-----------------------------------------
+Add task to project
+Form Data:
+  - title: string
+  - description: string
+  - category: string
+  - priority: integer
+Returns: Redirect to project detail
+
+POST /projects/task/<int:task_id>/complete
+-------------------------------------------
+Toggle task completion
+Returns: Redirect to project detail
+
+POST /projects/<int:project_id>/idea/add
+-----------------------------------------
+Add idea to project
+Form Data:
+  - title: string
+  - description: string
+  - category: string
+Returns: Redirect to project detail
+
+POST /projects/<int:project_id>/milestone/add
+----------------------------------------------
+Add milestone
+Form Data:
+  - title: string
+  - description: string
+  - target_date: string (YYYY-MM-DD)
+Returns: Redirect to project detail
+
+POST /projects/<int:project_id>/note/add
+-----------------------------------------
+Add project note
+Form Data:
+  - content: string
+  - category: string
+Returns: Redirect to project detail
+
+GET /personal/
+--------------
+Personal projects dashboard
+Returns: HTML project list
+
+[Personal projects have identical endpoints to TCH projects, 
+ just replace /projects with /personal]
+
+================================================================================
+HEALTH MODULE (/health)
+================================================================================
+
+GET /health/weight
+------------------
+Weight tracking dashboard
+Returns: HTML dashboard
+
+POST /health/weight/add
+------------------------
+Add weight entry
+Form Data:
+  - weight: float
+  - date: string (YYYY-MM-DD)
+  - time: string (HH:MM)
+  - had_breakfast: checkbox
+  - had_soda: checkbox
+  - soda_count: integer
+  - exercised: checkbox
+  - exercise_type: string
+  - exercise_duration: integer
+  - notes: string
+Returns: Redirect to dashboard
+
+GET /health/weight/history
+---------------------------
+Weight history view
+Query Parameters:
+  - days: integer (default 30)
+Returns: HTML history page
+
+POST /health/weight/goal
+------------------------
+Set weight goal
+Form Data:
+  - goal_weight: float
+  - target_date: string (YYYY-MM-DD)
+  - weekly_target: float
+Returns: Redirect to dashboard
+
+GET /health/weight/settings
+----------------------------
+Health settings page
+Returns: HTML settings page
+
+POST /health/weight/settings
+-----------------------------
+Update health settings
+Form Data:
+  - harassment_level: string
+  - morning_weigh_time: string
+  - soda_limit: integer
+  - water_goal: integer
+  - exercise_minimum: integer
+  - weight_goal: float
+  - weekly_loss_goal: float
+  - ai_harassment: string (true|false)
+Returns: Redirect to settings
+
+GET /health/weight/daily-check
+-------------------------------
+Check weight status (AJAX)
+Returns: JSON
+  {
+    "logged": boolean,
+    "weight": float,
+    "failures": integer,
+    "message": string
+  }
+
+================================================================================
+FINANCIAL MODULE (/financial)
+================================================================================
+
+GET /financial/
+---------------
+Financial dashboard
+Returns: HTML dashboard with monthly summary
+
+GET /financial/transactions
+----------------------------
+Transaction list
+Query Parameters:
+  - month: integer
+  - year: integer
+  - category: string
+Returns: HTML transaction list
+
+POST /financial/transaction/add
+--------------------------------
+Add transaction
+Form Data:
+  - date: string (YYYY-MM-DD)
+  - merchant: string
+  - category_id: integer
+  - amount: float
+  - transaction_type: string (expense|income)
+  - notes: string
+  - receipt: file
+Returns: Redirect to dashboard
+
+POST /financial/transaction/<int:id>/edit
+------------------------------------------
+Update transaction
+Form Data: Same as add
+Returns: Redirect to previous page
+
+POST /financial/transaction/<int:id>/delete
+--------------------------------------------
+Delete transaction
+Returns: Redirect to previous page
+
+GET /financial/categories
+--------------------------
+Category management
+Returns: HTML category list
+
+POST /financial/category/add
+-----------------------------
+Add category
+Form Data:
+  - name: string
+  - category_type: string (expense|income|both)
+  - monthly_budget: float
+  - color: string (hex color)
+Returns: Redirect to categories
+
+================================================================================
+REAL ESTATE MODULE (/property)
+================================================================================
+
+GET /property/
+--------------
+Property dashboard
+Returns: HTML property list
+
+GET /property/<int:id>
+-----------------------
+Property detail
+Returns: HTML detail page
+
+POST /property/add
+------------------
+Add property
+Form Data:
+  - nickname: string
+  - address: string
+  - city: string
+  - state: string
+  - zip_code: string
+  - property_type: string
+  - bedrooms: integer
+  - bathrooms: float
+  - square_feet: integer
+  - lot_size: float
+  - year_built: integer
+  - purchase_date: string (YYYY-MM-DD)
+  - purchase_price: float
+  - current_value: float
+  - monthly_payment: float
+  - property_tax: float
+  - insurance: float
+  - hoa_fee: float
+  - rental_income: float
+  - photos: files
+Returns: Redirect to detail page
+
+POST /property/<int:id>/maintenance/add
+----------------------------------------
+Add property maintenance
+Form Data:
+  - category: string
+  - task: string
+  - description: string
+  - date_completed: string (YYYY-MM-DD)
+  - performed_by: string
+  - cost: float
+  - photos: files
+  - receipt: file
+Returns: Redirect to property detail
+
+POST /property/<int:id>/vendor/add
+-----------------------------------
+Add vendor
+Form Data:
+  - company_name: string
+  - contact_name: string
+  - phone: string
+  - email: string
+  - service_type: string
+  - notes: string
+  - rating: integer (1-5)
+Returns: Redirect to property detail
+
+================================================================================
+TODO MODULE (/todo)
+================================================================================
+
+GET /todo/
+----------
+Todo lists dashboard
+Returns: HTML todo lists
+
+POST /todo/list/add
+-------------------
+Create todo list
+Form Data:
+  - name: string
+  - description: string
+Returns: Redirect to dashboard
+
+POST /todo/<int:list_id>/item/add
+----------------------------------
+Add todo item
+Form Data:
+  - title: string
+  - priority: string (low|medium|high)
+  - due_date: string (YYYY-MM-DD)
+Returns: Redirect to list
+
+POST /todo/item/<int:item_id>/toggle
+-------------------------------------
+Toggle item completion
+Returns: JSON {"success": boolean}
+
+POST /todo/item/<int:item_id>/delete
+-------------------------------------
+Delete todo item
+Returns: Redirect to list
+
+================================================================================
+GOALS MODULE (/goals)
+================================================================================
+
+GET /goals/
+-----------
+Goals dashboard
+Returns: HTML goals list
+
+POST /goals/add
+---------------
+Add goal
+Form Data:
+  - title: string
+  - description: string
+  - category: string
+  - target_date: string (YYYY-MM-DD)
+  - target_value: float
+  - current_value: float
+Returns: Redirect to dashboard
+
+POST /goals/<int:id>/update
+----------------------------
+Update goal progress
+Form Data:
+  - current_value: float
+  - notes: string
+Returns: Redirect to dashboard
+
+POST /goals/<int:id>/complete
+------------------------------
+Mark goal as complete
+Returns: Redirect to dashboard
+
+================================================================================
+WEEKLY MODULE (/weekly)
+================================================================================
+
+GET /weekly/
+------------
+Weekly planning view
+Query Parameters:
+  - week_offset: integer
+Returns: HTML weekly planner
+
+POST /weekly/plan/add
+---------------------
+Add weekly plan item
+Form Data:
+  - week_start: string (YYYY-MM-DD)
+  - item_type: string
+  - description: string
+  - priority: integer
+Returns: Redirect to weekly view
+
+================================================================================
+RESPONSE FORMATS
+================================================================================
+
+HTML RESPONSES
+--------------
+Most endpoints return rendered HTML templates with:
+- Flash messages for success/error notifications
+- Redirect after POST to prevent double submission
+
+JSON RESPONSES
+--------------
+AJAX endpoints return JSON:
+Success:
+  {
+    "success": true,
+    "data": {...},
+    "message": "Operation successful"
+  }
+
+Error:
+  {
+    "success": false,
+    "error": "Error description",
+    "message": "User-friendly message"
+  }
+
+================================================================================
+ERROR CODES
+================================================================================
+
+200 OK - Successful GET/POST
+201 Created - Resource created successfully
+204 No Content - Successful DELETE
+301 Moved Permanently - Redirect
+400 Bad Request - Invalid form data
+404 Not Found - Resource not found
+500 Internal Server Error - Server error
+
+================================================================================
+FILE UPLOADS
+================================================================================
+
+ACCEPTED FORMATS
+----------------
+Images: .jpg, .jpeg, .png, .gif, .webp
+Documents: .pdf
+
+SIZE LIMITS
+-----------
+Maximum file size: 50 MB (configurable in config.py)
+
+UPLOAD DIRECTORIES
+------------------
+/static/uploads/equipment_profiles/     - Equipment profile photos
+/static/uploads/maintenance_photos/     - Maintenance documentation
+/static/uploads/receipts/               - Receipt images
+/static/uploads/property_profiles/      - Property photos
+/static/uploads/property_maintenance/   - Property maintenance photos
+/static/uploads/personal_project_files/ - Project attachments
+
+================================================================================
+DEVELOPMENT NOTES
+================================================================================
+
+TESTING WITH CURL
+-----------------
+# Add weight entry
+curl -X POST http://localhost:5000/health/weight/add \
+  -F "weight=185.5" \
+  -F "date=2025-01-09"
+
+# Add calendar event
+curl -X POST http://localhost:5000/daily/events/add \
+  -F "event_date=2025-01-10" \
+  -F "event_type=Meeting" \
+  -F "who=Me" \
+  -F "event_time=2:00 PM"
+
+# Quick delete event (AJAX)
+curl -X POST http://localhost:5000/daily/events/1/quick-delete \
+  -H "Content-Type: application/json"
+
+DATABASE QUERIES
+----------------
+# Access database directly
+sqlite3 planner.db
+
+# Common queries
+.tables                                    # List all tables
+SELECT * FROM calendar_events LIMIT 10;   # View events
+SELECT * FROM daily_config;               # View settings
+.schema equipment                         # Show table structure
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+CURRENT STATE
+-------------
+- NO authentication implemented
+- NO HTTPS configured
+- NO rate limiting
+- NO CORS configuration
+
+BEFORE PUBLIC DEPLOYMENT
+------------------------
+1. Implement user authentication (Flask-Login recommended)
+2. Add HTTPS with SSL certificates
+3. Configure CORS headers appropriately
+4. Implement rate limiting (Flask-Limiter)
+5. Use environment variables for secrets
+6. Add CSRF protection (Flask-WTF)
+7. Sanitize all user inputs
+8. Implement proper session management
+9. Add logging and monitoring
+10. Regular security updates
+
+================================================================================
+END OF API DOCUMENTATION
+================================================================================

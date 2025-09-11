@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <!--
+    =============================================================================
+      FILE: base.html  (Billas Planner — Base Layout)
+      TEMPLATE VERSION: v1.0.3
+      LAST UPDATED: 2025-09-04
+
+      CHANGELOG:
+        v1.0.3 (2025-09-04)
+        - TUNE: Much tighter sidebar spacing with high-specificity overrides so
+                external CSS can't re-inflate padding/margins.
+                • nav row-gap → 2px (forced)
+                • row height ≈ 34–36px (min-height + padding)
+                • icon font-size 16px, column 22px; gap 8px
+                • line-height normalized to 1.15
+        v1.0.2 (2025-09-04)
+        - TUNE: Initial density pass; normalized emoji sizing.
+        v1.0.1 (2025-09-04)
+        - FIX: Duplicate 'extra_css' block from comments.
+        v1.0.0 (2025-09-04)
+        - NEW: Dark refactor, sticky header, flash polish, About/Changelog.
+
+      NOTES:
+        - Override the visible version badge via {{ base_version|default('v1.0.3') }}
+    =============================================================================
+    -->
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Billas Planner 1.03 Beta — {% block title %}{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    {% block extra_css %}{% endblock %}
+
+    <style>
+      :root{
+        --bg:#0b0f1a;--bg-elev:#101724;--panel:#121a2a;--muted:#1a2336;--card:#0f1625;--line:#1f2a3d;
+        --text:#e6eaf2;--text-muted:#9fb0c8;--primary:#6ea8ff;--primary-700:#3f7fe6;
+        --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#38bdf8;
+        --radius:14px;--radius-sm:10px;--shadow-1:0 4px 16px rgba(0,0,0,.35);--ring:0 0 0 2px rgba(110,168,255,.35)
+      }
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{
+        margin:0;
+        font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";
+        background:radial-gradient(1200px 600px at 20% -10%,#12203a 0%,var(--bg) 50%) fixed,var(--bg);
+        color:var(--text);line-height:1.45;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
+      }
+
+      .skip-link{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+      .skip-link:focus{left:12px;top:12px;width:auto;height:auto;background:var(--panel);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);box-shadow:var(--shadow-1);z-index:9999}
+
+      .container{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100dvh}
+
+      aside.sidebar{
+        background:linear-gradient(180deg,var(--panel) 0%,var(--muted) 100%);
+        border-right:1px solid var(--line);padding:16px 14px;position:sticky;top:0;height:100dvh;overflow-y:auto
+      }
+      .sidebar-header{padding:12px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);margin-bottom:10px}
+      .sidebar-header h2{margin:0 0 6px 0;font-size:1.1rem;letter-spacing:.2px}
+      .sidebar-date{margin:0;font-size:.875rem;color:var(--text-muted)}
+
+      /* —— HARD TIGHTENED NAV (beats external CSS) ——————————————— */
+      aside.sidebar nav.sidebar-nav{display:grid;row-gap:2px!important;margin:6px 0 10px}
+      aside.sidebar nav.sidebar-nav a.nav-item{
+        display:grid;grid-template-columns:22px 1fr;align-items:center;gap:8px;
+        padding:6px 10px!important;min-height:34px!important;
+        border:1px solid transparent;border-radius:12px;
+        color:var(--text);text-decoration:none;background:transparent;
+        transition:transform 120ms ease,background 120ms ease,border-color 120ms ease;outline:none;
+        margin:0!important;line-height:1.15!important;font-size:.93rem!important;
+      }
+      aside.sidebar nav.sidebar-nav a.nav-item:hover{background:rgba(255,255,255,.04);border-color:var(--line);transform:translateY(-1px)}
+      aside.sidebar nav.sidebar-nav a.nav-item:focus-visible{box-shadow:var(--ring)}
+      aside.sidebar nav.sidebar-nav a.nav-item.active{background:linear-gradient(180deg,rgba(110,168,255,.16),rgba(110,168,255,.10));border-color:rgba(110,168,255,.45)}
+      aside.sidebar nav.sidebar-nav a.nav-item .icon{
+        display:inline-block;text-align:center;font-size:16px;line-height:1;width:22px
+      }
+
+      .sidebar-footer{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+      .quick-stats{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+      .quick-stats p{margin:0 0 4px 0;font-weight:600;letter-spacing:.2px}
+      .quick-stats small{display:block;color:var(--text-muted);margin-top:2px}
+
+      .main-content{display:grid;grid-template-rows:auto 1fr;min-width:0;background:radial-gradient(600px 400px at 100% -10%,rgba(110,168,255,.10),transparent 60%),var(--bg)}
+
+      .top-bar{
+        position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+        backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between
+      }
+      .top-bar h1{margin:0;font-size:1.2rem;font-weight:650;letter-spacing:.25px}
+      .top-bar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+
+      .badge{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text);background:rgba(110,168,255,.14);border:1px solid rgba(110,168,255,.45);border-radius:999px;padding:6px 10px}
+
+      .flash{display:grid;grid-auto-flow:column;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-1);font-size:.95rem}
+      .flash-info{border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.12)}
+      .flash-success{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
+      .flash-warning{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.12)}
+      .flash-error{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+      .flash-close{appearance:none;background:transparent;color:var(--text);border:none;font-size:1rem;cursor:pointer;opacity:.85}
+      .flash-close:hover{opacity:1}
+
+      main .content{padding:20px;max-width:1200px;width:100%;margin:0 auto}
+      .kcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);padding:16px}
+      .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+      details.about{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);padding:10px 12px}
+      details.about>summary{cursor:pointer;font-weight:600;outline:none}
+      details.about[open]{border-color:rgba(110,168,255,.4)}
+      .about-grid{display:grid;gap:8px;margin-top:8px}
+      .about-grid small{color:var(--text-muted)}
+      .about-changelog{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+      .about-changelog code{display:block;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:.85rem;color:var(--text)}
+
+      @media (max-height: 760px){
+        aside.sidebar nav.sidebar-nav a.nav-item{padding:5px 9px!important;min-height:32px!important;font-size:.92rem!important}
+      }
+    </style>
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <div class="container">
+        <aside class="sidebar" aria-label="Primary">
+            <div class="sidebar-header">
+                <h2>📋 Billas Planner 1.03Beta</h2>
+                <p class="sidebar-date">{{ datetime.now().strftime('%B %d, %Y') }}</p>
+            </div>
+
+            <nav class="sidebar-nav" role="navigation">
+                <a href="{{ url_for('daily.index') }}" class="nav-item {{ 'active' if active == 'daily' }}">
+                    <span class="icon">📅</span><span>Daily Planner</span>
+                </a>
+                <a href="{{ url_for('weekly.index') }}" class="nav-item {{ 'active' if active == 'weekly' }}">
+                    <span class="icon">📆</span><span>Weekly/Monthly</span>
+                </a>
+                <a href="{{ url_for('projects.tch_index') }}" class="nav-item {{ 'active' if active == 'tch' }}">
+                    <span class="icon">💼</span><span>TCH Projects</span>
+                </a>
+                <a href=" {{ url_for('persprojects.index') }}" class="nav-item {{ 'active' if active == 'personal' }}">
+                    <span class="icon">🏠</span><span>Personal Projects</span>
+                </a>
+                <a href="{{ url_for('equipment.index') }}" class="nav-item {{ 'active' if active == 'equipment' }}">
+                    <span class="icon">🔧</span><span>Equipment Center</span>
+                </a>
+                {# Add this link to the navigation section in base.html #}
+                {# Place it after Equipment Center and before Goal Tracking #}
+                <a href="{{ url_for('realestate.dashboard') }}" class="nav-item {{ 'active' if active == 'realestate' }}">
+                    <span class="icon">🏠</span><span>Real Estate</span>
+                </a>
+                <a href="{{ url_for('financial.dashboard') }}" class="nav-item {{ 'active' if active == 'financial' }}">
+                    <span class="icon">💳</span><span>Spending</span>
+                </a>
+                <a href="{{ url_for('goals.index') }}" class="nav-item {{ 'active' if active == 'goals' }}">
+                    <span class="icon">🎯</span><span>Goal Tracking</span>
+                </a>
+                <a href="{{ url_for('health.weight_index') }}" class="nav-item {{ 'active' if active == 'weight' }}">
+                    <span class="icon">⚖️</span><span>Weight Loss</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="quick-stats">
+                    <p>Quick Stats</p>
+                    <small>Today's Tasks: <span id="task-count">0</span></small>
+                    <small>Active Projects: <span id="project-count">0</span></small>
+                </div>
+
+                <details class="about">
+                  <summary>About & Changelog</summary>
+                  <div class="about-grid">
+                    <div><strong>Template:</strong> base.html</div>
+                    <div><strong>Version:</strong> <span class="badge">{{ base_version|default('v1.0.3') }}</span></div>
+                    <small>Last updated: 2025-09-04</small>
+                  </div>
+                  <div class="about-changelog">
+                    <code>
+v1.0.3 — Strong overrides to significantly reduce sidebar spacing.
+v1.0.2 — Initial tightening and emoji normalization.
+v1.0.1 — Fixed duplicate 'extra_css' block from comments.
+v1.0.0 — Dark refactor, a11y, sticky header, flash polish, changelog panel.
+                    </code>
+                  </div>
+                </details>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <header class="top-bar" role="banner">
+                <h1>{% block header %}{% endblock %}</h1>
+                <div class="top-bar-actions">
+                    <span class="badge" title="Base template version">
+                      <span aria-hidden="true">🏷️</span> {{ base_version|default('v1.0.3') }}
+                    </span>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                      {% if messages %}
+                        {% for category, message in messages %}
+                          <div class="flash flash-{{ category }}">
+                              <span>{{ message }}</span>
+                              <button class="flash-close" aria-label="Dismiss message" title="Dismiss">&times;</button>
+                          </div>
+                        {% endfor %}
+                      {% endif %}
+                    {% endwith %}
+
+                    <div class="date-time" aria-live="polite" aria-atomic="true">
+                        <span id="current-time">{{ datetime.now().strftime('%I:%M %p') }}</span>
+                    </div>
+                </div>
+            </header>
+
+            <main id="main-content" class="content" role="main">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script>
+      function updateTime(){
+        const now=new Date();
+        const s=now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+        const el=document.getElementById('current-time'); if(el) el.textContent=s;
+      }
+      updateTime(); setInterval(updateTime,30_000);
+
+      function wireFlash(){
+        document.querySelectorAll('.flash .flash-close').forEach(btn=>{
+          btn.addEventListener('click',e=>{
+            const wrap=e.currentTarget.closest('.flash'); if(!wrap) return;
+            wrap.style.transition='opacity 180ms ease'; wrap.style.opacity='0';
+            setTimeout(()=>wrap.remove(),180);
+          });
+        });
+        setTimeout(()=>{
+          document.querySelectorAll('.flash').forEach(f=>{
+            f.style.transition='opacity 280ms ease'; f.style.opacity='0';
+            setTimeout(()=>f.remove(),280);
+          });
+        },5000);
+      }
+      wireFlash();
+
+      (function applyCounts(){
+        const c=window.PLANNER_COUNTS||null; if(!c) return;
+        const t=document.getElementById('task-count'); const p=document.getElementById('project-count');
+        if(t&&typeof c.tasksToday==='number') t.textContent=c.tasksToday;
+        if(p&&typeof c.activeProjects==='number') p.textContent=c.activeProjects;
+      })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/pimp-splash.js') }}"></script>
+  </body>
+  </html>
+

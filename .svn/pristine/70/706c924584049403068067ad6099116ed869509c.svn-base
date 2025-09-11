@@ -1,0 +1,410 @@
+{# =============================================================================
+  FILE: consumable_add.html
+  PURPOSE: Add a consumable purchase/usage record for equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe fallbacks to base.html)
+  - Sticky mini-header w/ equipment summary & quick back
+  - Quick Select presets that set type, unit, and sensible quantity
+  - Smart helpers: cost & quantity +/- bumpers; auto-fill unit by type
+  - Receipt UX: filename + live image preview
+  - Today default date; odometer hint from equipment
+  - Clear sectioning, accessible labels, keyboard-friendly focus states
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Full dark refactor, sticky header, quick presets, smart unit/qty,
+         cost/qty bumpers, receipt preview, and structured comments
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Add Consumable — {{ equipment.name }}{% endblock %}
+{% block header %}Add Consumable{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --cs-bg: var(--bg, #0b0f1a);
+    --cs-panel: var(--panel, #121a2a);
+    --cs-card: var(--card, #0f1625);
+    --cs-sub: #0c1322;
+    --cs-line: var(--line, #1f2a3d);
+    --cs-text: var(--text, #e6eaf2);
+    --cs-muted: var(--text-muted, #9fb0c8);
+    --cs-primary: var(--primary, #6ea8ff);
+    --cs-primary-700: var(--primary-700, #3f7fe6);
+    --cs-success: var(--success, #22c55e);
+    --cs-warn: var(--warning, #f59e0b);
+    --cs-danger: var(--danger, #ef4444);
+
+    --cs-radius: var(--radius, 14px);
+    --cs-radius-sm: var(--radius-sm, 10px);
+    --cs-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .consumable-wrap{ max-width: 920px; margin: 0 auto; padding: 16px; display:grid; gap:16px; }
+
+  /* ================= Sticky header ================= */
+  .cs-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--cs-line); border-radius: var(--cs-radius);
+    padding: 12px; box-shadow: var(--cs-shadow); backdrop-filter: blur(6px);
+  }
+  .cs-row{ display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; }
+  .equip-sub{ color: var(--cs-muted); margin-top:4px; }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--cs-line);
+    background: var(--cs-card); color: var(--cs-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--cs-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background: transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ================= Card + form ================= */
+  .cs-card{
+    background: var(--cs-card); border:1px solid var(--cs-line);
+    border-radius: var(--cs-radius); padding:14px; box-shadow: var(--cs-shadow);
+  }
+  .form-section{ margin-bottom: 14px; }
+  .sec-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--cs-line); padding-bottom:6px; margin-bottom:10px;
+  }
+  .sec-head h3{ margin:0; font-size:1.05rem; }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ font-size:.9rem; color: var(--cs-muted); }
+  input[type="text"], input[type="date"], input[type="number"], select, textarea, input[type="file"]{
+    width:100%; background:#0b1120; color: var(--cs-text);
+    border:1px solid var(--cs-line); border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  textarea{ min-height: 92px; resize: vertical; }
+  input:focus, select:focus, textarea:focus{ border-color: var(--cs-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+
+  /* ================= Quick Select ================= */
+  .quick-select-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:10px;
+  }
+  .quick-btn{
+    padding:12px; background: var(--cs-sub); border:1px solid var(--cs-line); border-radius:12px;
+    display:flex; justify-content:center; align-items:center; gap:8px; cursor:pointer;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+  }
+  .quick-btn:hover{ transform: translateY(-1px); border-color: var(--cs-primary); }
+  .quick-btn.active{ background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
+
+  /* ================= Helpers ================= */
+  .hint{ font-size:.8rem; color: var(--cs-muted); }
+  .grid-bumpers{ display:grid; grid-template-columns: 1fr auto auto; gap:6px; align-items:center; }
+  .unit-row{ display:grid; grid-template-columns: 1fr auto; gap:6px; align-items:center; }
+
+  /* ================= Receipt preview ================= */
+  .photo-row{ display:grid; grid-template-columns: 1fr 160px; gap:10px; align-items:start; }
+  .preview{
+    width:100%; height:100%; min-height:120px; border:1px dashed var(--cs-line); border-radius:12px;
+    background:#0b1120 center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:#94a3b8;
+  }
+
+  .form-actions{
+    display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed var(--cs-line); padding-top:10px; margin-top:4px;
+  }
+
+  @media (max-width: 860px){
+    .cs-row{ grid-template-columns: 1fr; }
+    .photo-row{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="consumable-wrap">
+
+  {# =================== STICKY MINI-HEADER =================== #}
+  <div class="cs-header" aria-label="Equipment summary and actions">
+    <div class="cs-row">
+      <div>
+        <h2 style="margin:0;">Add Consumable</h2>
+        <div class="equip-sub">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }} — <strong>{{ equipment.name }}</strong></div>
+      </div>
+      <div>
+        <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back to {{ equipment.name }}</a>
+      </div>
+    </div>
+  </div>
+
+  {# =================== FORM CARD =================== #}
+  <form method="POST"
+        action="{{ url_for('equipment.add_consumable', id=equipment.id) }}"
+        enctype="multipart/form-data"
+        class="cs-card"
+        id="consumableForm">
+
+    <!-- Quick Select -->
+    <div class="form-section" id="sec-quick">
+      <div class="sec-head">
+        <h3>Quick Select</h3>
+        <span class="hint">Presets will fill item type, unit, and a sensible quantity</span>
+      </div>
+      <div class="quick-select-grid">
+        <button type="button" class="quick-btn" data-type="Engine Oil" data-unit="quarts" data-qty="5">🛢️ Engine Oil</button>
+        <button type="button" class="quick-btn" data-type="Washer Fluid" data-unit="gallons" data-qty="1">💧 Washer Fluid</button>
+        <button type="button" class="quick-btn" data-type="Wiper Blades" data-unit="pair" data-qty="1">🚿 Wiper Blades</button>
+        <button type="button" class="quick-btn" data-type="Air Filter" data-unit="each" data-qty="1">🌬️ Air Filter</button>
+        <button type="button" class="quick-btn" data-type="Coolant" data-unit="gallons" data-qty="1">🧊 Coolant</button>
+        <button type="button" class="quick-btn" data-type="Brake Fluid" data-unit="quarts" data-qty="1">🛑 Brake Fluid</button>
+        <button type="button" class="quick-btn" data-type="Power Steering" data-unit="quarts" data-qty="1">🔄 Power Steering</button>
+        <button type="button" class="quick-btn" data-type="Transmission Fluid" data-unit="quarts" data-qty="4">⚙️ Trans Fluid</button>
+      </div>
+    </div>
+
+    <!-- Item Details -->
+    <div class="form-section" id="sec-item">
+      <div class="sec-head"><h3>Item Details</h3></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="item_type">Item Type*</label>
+          <input type="text" id="item_type" name="item_type" required placeholder="e.g., Engine Oil, Washer Fluid" list="itemTypeList" autocomplete="on">
+          <datalist id="itemTypeList">
+            <option>Engine Oil</option><option>Washer Fluid</option><option>Wiper Blades</option>
+            <option>Air Filter</option><option>Cabin Filter</option><option>Coolant</option>
+            <option>Brake Fluid</option><option>Power Steering</option><option>Transmission Fluid</option>
+          </datalist>
+        </div>
+
+        <div class="form-group">
+          <label for="brand">Brand</label>
+          <input type="text" id="brand" name="brand" placeholder="e.g., Mobil 1, Rain-X">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quantity">Quantity*</label>
+          <div class="grid-bumpers">
+            <input type="number" step="0.01" id="quantity" name="quantity" required placeholder="1" min="0">
+            <button type="button" class="btn btn-outline btn-sm" data-qstep="-1">−1</button>
+            <button type="button" class="btn btn-outline btn-sm" data-qstep="+1">+1</button>
+          </div>
+          <span class="hint">Tip: decimals allowed (e.g., 0.5 gallons).</span>
+        </div>
+
+        <div class="form-group">
+          <label for="unit">Unit*</label>
+          <div class="unit-row">
+            <select id="unit" name="unit" required>
+              <option value="">Select Unit</option>
+              <option value="quarts">Quarts</option>
+              <option value="gallons">Gallons</option>
+              <option value="liters">Liters</option>
+              <option value="ounces">Ounces</option>
+              <option value="each">Each</option>
+              <option value="pair">Pair</option>
+              <option value="set">Set</option>
+            </select>
+            <button type="button" class="btn btn-outline btn-sm" id="suggestUnitBtn">Suggest</button>
+          </div>
+          <span class="hint">“Suggest” uses the item type to pick a likely unit.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Purchase Details -->
+    <div class="form-section" id="sec-purchase">
+      <div class="sec-head"><h3>Purchase Details</h3></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cost">Cost ($)*</label>
+          <div class="grid-bumpers">
+            <input type="number" step="0.01" id="cost" name="cost" required placeholder="0.00" inputmode="decimal" min="0">
+            <button type="button" class="btn btn-outline btn-sm" data-cstep="-5">−5</button>
+            <button type="button" class="btn btn-outline btn-sm" data-cstep="+5">+5</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="vendor">Vendor/Store</label>
+          <input type="text" id="vendor" name="vendor" placeholder="e.g., AutoZone, Walmart">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="date">Date*</label>
+          <input type="date" id="date" name="date" required value="{{ today }}">
+        </div>
+
+        <div class="form-group">
+          <label for="odometer">Odometer (miles)</label>
+          <input type="number" id="odometer" name="odometer" placeholder="{{ equipment.mileage or 'Current mileage' }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Info -->
+    <div class="form-section" id="sec-more">
+      <div class="sec-head"><h3>Additional Information</h3></div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="e.g., Top-off between oil changes, replaced both front wipers"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="receipt">Receipt Photo</label>
+        <div class="photo-row">
+          <div>
+            <input type="file" id="receipt" name="receipt" accept="image/*">
+            <span class="hint" id="fileNameHint">No file selected</span>
+          </div>
+          <div id="receiptPreview" class="preview">Receipt preview</div>
+        </div>
+        <span class="hint">Optional, but helpful for record keeping.</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Consumable</button>
+    </div>
+  </form>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="cs-card" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--cs-muted);">
+v1.0.0 — Dark UI refactor, sticky header, quick presets, unit/qty helpers, bumpers, receipt preview, comments & structure.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /consumable-wrap -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Quick Select: fills type, unit, and quantity with sensible defaults
+============================================================================ */
+function activateQuick(btn){
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const type = btn.dataset.type;
+    const unit = btn.dataset.unit;
+    const qty  = btn.dataset.qty;
+
+    const typeEl = document.getElementById('item_type');
+    const unitEl = document.getElementById('unit');
+    const qtyEl  = document.getElementById('quantity');
+
+    if (typeEl) typeEl.value = type;
+    if (unitEl && unit) unitEl.value = unit;
+    if (qtyEl && qty) qtyEl.value = qty;
+
+    activateQuick(btn);
+  });
+});
+
+/* ============================================================================
+   Suggest Unit: map common item types to likely units
+============================================================================ */
+const unitMap = {
+  'engine oil': 'quarts',
+  'washer fluid': 'gallons',
+  'wiper blades': 'pair',
+  'air filter': 'each',
+  'cabin filter': 'each',
+  'coolant': 'gallons',
+  'brake fluid': 'quarts',
+  'power steering': 'quarts',
+  'transmission fluid': 'quarts',
+  'gear oil': 'quarts',
+  'additive': 'ounces'
+};
+document.getElementById('suggestUnitBtn')?.addEventListener('click', () => {
+  const item = (document.getElementById('item_type').value || '').trim().toLowerCase();
+  const unit = unitMap[item];
+  if (unit) document.getElementById('unit').value = unit;
+});
+
+/* ============================================================================
+   Bumpers: quantity and cost quick +/- helpers
+============================================================================ */
+document.querySelectorAll('button[data-qstep]').forEach(b => {
+  b.addEventListener('click', () => {
+    const step = parseFloat(b.dataset.qstep.replace('+',''));
+    const input = document.getElementById('quantity');
+    const val = parseFloat(input.value || '0') + step;
+    input.value = Math.max(0, val);
+  });
+});
+document.querySelectorAll('button[data-cstep]').forEach(b => {
+  b.addEventListener('click', () => {
+    const step = parseFloat(b.dataset.cstep.replace('+',''));
+    const input = document.getElementById('cost');
+    const val = parseFloat(input.value || '0') + step;
+    input.value = Math.max(0, val).toFixed(2);
+  });
+});
+
+/* ============================================================================
+   Receipt filename + preview
+============================================================================ */
+const fileInput = document.getElementById('receipt');
+const fileNameHint = document.getElementById('fileNameHint');
+const preview = document.getElementById('receiptPreview');
+
+if (fileInput){
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    fileNameHint.textContent = file ? file.name : 'No file selected';
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => { preview.style.backgroundImage = `url('${ev.target.result}')`; preview.textContent = ''; };
+      reader.readAsDataURL(file);
+    } else {
+      preview.style.backgroundImage = 'none';
+      preview.textContent = 'Receipt preview';
+    }
+  });
+}
+
+/* ============================================================================
+   Sensible defaults
+============================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  const dateEl = document.getElementById('date');
+  if (dateEl && !dateEl.value) dateEl.valueAsDate = new Date();
+
+  // If user chose a type before unit, auto-suggest when unit still empty
+  const typeEl = document.getElementById('item_type');
+  typeEl?.addEventListener('blur', () => {
+    const unitEl = document.getElementById('unit');
+    if (unitEl && !unitEl.value){
+      const guess = unitMap[(typeEl.value || '').trim().toLowerCase()];
+      if (guess) unitEl.value = guess;
+    }
+  });
+});
+</script>
+{% endblock %}

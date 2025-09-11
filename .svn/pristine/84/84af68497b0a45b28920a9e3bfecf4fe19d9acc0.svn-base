@@ -1,0 +1,293 @@
+{# =============================================================================
+  FILE: projects_edit_task.html
+  PURPOSE: Edit a single task inside a TCH Project
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-04
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI & compact layout consistent with base
+  - NEW: Sticky header with Back/Save actions
+  - NEW: Live character counters (title, description)
+  - NEW: Due-date hint if date is in the past
+  - NEW: Single-submit guard with “Saving…” state
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Edit Task - {{ project.name }}{% endblock %}
+{% block header %}Edit Task{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --et-card: var(--card, #0f1625);
+    --et-line: var(--line, #1f2a3d);
+    --et-text: var(--text, #e6eaf2);
+    --et-muted: var(--text-muted, #9fb0c8);
+    --et-primary: var(--primary, #6ea8ff);
+    --et-danger: var(--danger, #ef4444);
+    --et-radius: var(--radius, 14px);
+    --et-radius-sm: var(--radius-sm, 10px);
+    --et-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  /* Container + sticky header */
+  .form-container{
+    max-width: 820px; margin: 0 auto; padding: 14px; display:grid; gap:14px;
+  }
+  .form-header{
+    position: sticky; top: 12px; z-index: 5;
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--et-line); border-radius: var(--et-radius);
+    padding:10px 12px; box-shadow: var(--et-shadow); backdrop-filter: blur(6px);
+  }
+  .form-header h1{ margin:0; font-size:1.1rem; letter-spacing:.2px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--et-line);
+    background: var(--et-card); color: var(--et-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ transform: translateY(-1px); border-color: var(--et-primary); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary[disabled]{ opacity:.6; cursor:progress; }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#2a0f15; border-color:#7f1d1d; color:#fecaca; }
+  .btn-danger:hover{ border-color: var(--et-danger); color:#fee2e2; }
+
+  /* Project context pill */
+  .project-context{
+    background: var(--et-card); border:1px solid var(--et-line);
+    border-radius: var(--et-radius); padding:10px; color: var(--et-muted);
+  }
+  .project-context strong{ color: var(--et-text); }
+
+  /* Carded form */
+  .task-form{
+    background: var(--et-card); border:1px solid var(--et-line);
+    border-radius: var(--et-radius); box-shadow: var(--et-shadow);
+    padding:14px; display:grid; gap:18px;
+  }
+  .form-section{
+    border:1px dashed var(--et-line); border-radius: var(--et-radius-sm);
+    padding:12px; display:grid; gap:12px;
+  }
+  .form-section h2{
+    margin:0; font-size:1.02rem; padding-bottom:6px;
+    border-bottom:1px dashed var(--et-line);
+  }
+
+  .form-row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  @media (max-width: 740px){ .form-row{ grid-template-columns: 1fr; } }
+
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ color: var(--et-muted); font-weight:600; }
+  .required{ color: var(--et-danger); }
+
+  /* Inputs */
+  .task-form input[type="text"],
+  .task-form input[type="date"],
+  .task-form select,
+  .task-form textarea{
+    width:100%; background:#0b1120; color: var(--et-text);
+    border:1px solid var(--et-line); border-radius:10px; padding:10px 12px;
+    font-size:.95rem;
+  }
+  .task-form textarea{ resize: vertical; min-height: 100px; }
+  .counter{ color: var(--et-muted); font-size:.8rem; text-align:right; }
+
+  /* Status box */
+  .status-info{
+    background:#0c1322; border:1px solid var(--et-line);
+    border-radius:10px; padding:10px; color: var(--et-muted);
+  }
+  .status-badge{
+    display:inline-block; padding:6px 10px; border-radius:999px; font-weight:800; font-size:.8rem;
+  }
+  .status-badge.completed{ background:#22c55e; color:#0a0f1a; }
+  .status-badge.pending{ background:#f59e0b; color:#0a0f1a; }
+  .help-text{ color: var(--et-muted); font-size:.85rem; font-style: italic; }
+
+  /* Actions */
+  .form-actions{ padding-top:6px; border-top:1px dashed var(--et-line); }
+  .actions-left{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* Delete section */
+  .delete-section{
+    margin-top:14px; padding:14px;
+    background:#160f12; border:1px solid rgba(239,68,68,.45);
+    border-radius: var(--et-radius); box-shadow: var(--et-shadow);
+    text-align:center;
+  }
+
+  /* Due date hint */
+  #dueHint{ color: var(--et-danger); font-size:.85rem; min-height: 1em; }
+
+  /* Responsive buttons */
+  @media (max-width: 680px){
+    .actions-left{ flex-direction:column; }
+    .actions-left .btn{ width:100%; justify-content:center; }
+    .header-actions .btn{ width:100%; justify-content:center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <!-- Sticky header -->
+  <div class="form-header">
+    <h1>Edit Task</h1>
+    <div class="header-actions">
+      <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn">← Back to Project</a>
+      <button form="editTaskForm" class="btn btn-primary" id="saveTop">💾 Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Project context -->
+  <div class="project-context">
+    Project: <strong>{{ project.name }}</strong>
+  </div>
+
+  <!-- Main form -->
+  <form id="editTaskForm" method="POST" class="task-form">
+    <div class="form-section">
+      <h2>Task Details</h2>
+
+      <div class="form-group">
+        <label for="title">Task Title <span class="required">*</span></label>
+        <input type="text" id="title" name="title" value="{{ task.title }}" required maxlength="160">
+        <div class="counter" data-for="title"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4" maxlength="2000">{{ task.description or '' }}</textarea>
+        <div class="counter" data-for="description"></div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            <option value="">No Category</option>
+            {% for cat in task_categories %}
+              <option value="{{ cat }}" {% if task.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            {% for priority in priorities %}
+              <option value="{{ priority }}" {% if task.priority == priority %}selected{% endif %}>
+                {{ priority|title }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="due_date">Due Date</label>
+          <input type="date" id="due_date" name="due_date"
+                 value="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}">
+          <div id="dueHint"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="assigned_to">Assigned To</label>
+          <input type="text" id="assigned_to" name="assigned_to"
+                 value="{{ task.assigned_to or '' }}" placeholder="Person responsible">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <div class="status-info">
+          {% if task.completed %}
+            <span class="status-badge completed">Completed</span>
+            {% if task.completed_date %}
+              on {{ task.completed_date.strftime('%b %d, %Y at %I:%M %p') }}
+            {% endif %}
+          {% else %}
+            <span class="status-badge pending">Pending</span>
+          {% endif %}
+        </div>
+        <p class="help-text">To toggle completion, use the checkbox on the project page’s Tasks section.</p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <div class="actions-left">
+        <button type="submit" class="btn btn-primary" id="saveBottom">💾 Save Changes</button>
+        <a href="{{ url_for('projects.tch_detail', id=project.id) }}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Delete Task (separate form) -->
+  <div class="delete-section">
+    <form method="POST" action="{{ url_for('projects.delete_tch_task', task_id=task.id) }}"
+      onsubmit="return confirm('Delete this task? This cannot be undone.');">
+      <button type="submit" class="btn btn-danger">🗑️ Delete Task</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Edit Task — client helpers
+   - char counters
+   - due-date hint if date is in the past
+   - single-submit guard with "Saving…" state
+============================================================================ */
+(function(){
+  const $ = s => document.querySelector(s);
+
+  // Counters
+  function wireCounter(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const counter = document.querySelector(`.counter[data-for="${id}"]`);
+    const limit = parseInt(el.getAttribute('maxlength') || 1000, 10);
+    const update = () => { if(counter) counter.textContent = `${el.value.length}/${limit}`; };
+    el.addEventListener('input', update); update();
+  }
+  ['title','description'].forEach(wireCounter);
+
+  // Due date hint (warn if past today)
+  const due = $('#due_date');
+  const hint = $('#dueHint');
+  function checkDue(){
+    if(!due?.value){ hint.textContent=''; return; }
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dd = new Date(due.value);
+    if(dd < today){
+      hint.textContent = '⚠️ This due date is in the past.';
+    }else{
+      hint.textContent = '';
+    }
+  }
+  due?.addEventListener('change', checkDue); checkDue();
+
+  // Single-submit guard
+  const form = document.getElementById('editTaskForm');
+  const saveTop = document.getElementById('saveTop');
+  const saveBottom = document.getElementById('saveBottom');
+  function setSaving(s){
+    [saveTop, saveBottom].forEach(b => { if(b){ b.disabled = s; b.textContent = s ? 'Saving…' : '💾 Save Changes'; }});
+  }
+  form?.addEventListener('submit', () => setSaving(true));
+})();
+</script>
+{% endblock %}

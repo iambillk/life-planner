@@ -1,0 +1,506 @@
+{# =============================================================================
+  FILE: car_wash_history.html
+  PURPOSE: Car Wash history + analytics for a single piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-05
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe fallbacks to base.html)
+  - Sticky header with key actions (Add, Back, Export CSV, Print)
+  - Live filters: type + time window + text search + sort (date/cost)
+  - KPI cards (Total, Total Spent, Average, Days Since Last) that update as you filter
+  - Timeline cards with photo lightbox; clean mobile stacking
+  - Distribution bars + monthly trend (pure CSS, no extra libs)
+  - Zero backend changes: everything computed client-side from the DOM
+  - Big comments + clear sectioning
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI, sticky header, filters/search/sort, CSV export, print,
+         dynamic KPIs (react to current filter), photo lightbox.
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Car Wash History - {{ equipment.name }}{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --cw-bg: var(--bg, #0b0f1a);
+    --cw-card: var(--card, #0f1625);
+    --cw-sub: #0c1322;
+    --cw-line: var(--line, #1f2a3d);
+    --cw-text: var(--text, #e6eaf2);
+    --cw-muted: var(--text-muted, #9fb0c8);
+    --cw-primary: var(--primary, #6ea8ff);
+    --cw-success: var(--success, #22c55e);
+    --cw-danger: var(--danger, #ef4444);
+    --cw-warn: var(--warning, #f59e0b);
+    --cw-accent: #38bdf8;
+
+    --cw-radius: var(--radius, 14px);
+    --cw-radius-sm: var(--radius-sm, 10px);
+    --cw-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .cw-shell{ padding:16px; max-width:1200px; margin:0 auto; display:grid; gap:16px; }
+
+  /* ================= Sticky header (actions) ================= */
+  .cw-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--cw-line); border-radius: var(--cw-radius);
+    padding:12px; box-shadow: var(--cw-shadow); backdrop-filter: blur(6px);
+    display:grid; grid-template-columns: 1fr auto; align-items:center; gap:10px;
+  }
+  .cw-title{ margin:0; font-size:1.2rem; letter-spacing:.2px; }
+  .cw-subtext{ color:var(--cw-muted); font-size:.9rem; margin-top:2px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--cw-line);
+    background: var(--cw-card); color: var(--cw-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem;
+  }
+  .btn:hover{ border-color: var(--cw-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-danger{ background:#3b1115; border-color:#7f1d1d; color:#fecaca; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+  .header-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+
+  /* ================= KPI cards ================= */
+  .kpis{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .kpi{
+    display:flex; gap:12px; align-items:center; background: var(--cw-card);
+    border:1px solid var(--cw-line); border-radius: var(--cw-radius); padding:14px; box-shadow: var(--cw-shadow);
+  }
+  .kpi .icon{ font-size:28px; }
+  .kpi .value{ font-size:22px; font-weight:800; }
+  .kpi .label{ font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color: var(--cw-muted); }
+
+  /* ================= Filters ================= */
+  .filters{
+    background: var(--cw-card); border:1px solid var(--cw-line);
+    border-radius: var(--cw-radius); padding:12px; box-shadow: var(--cw-shadow);
+    display:grid; gap:10px;
+  }
+  .filters-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  label{ font-size:.85rem; color: var(--cw-muted); }
+  select, input[type="search"]{
+    background:#0b1120; color: var(--cw-text); border:1px solid var(--cw-line);
+    border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  select:focus, input[type="search"]:focus{ border-color: var(--cw-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+
+  /* ================= Timeline cards ================= */
+  .timeline{ display:grid; gap:12px; }
+  .wash-card{
+    display:flex; gap:0; overflow:hidden; border:1px solid var(--cw-line);
+    background: var(--cw-sub); border-radius: var(--cw-radius); box-shadow: var(--cw-shadow);
+  }
+  .wash-date{
+    min-width:100px; padding:16px; color:#fff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .date-month{ font-size:.75rem; text-transform:uppercase; opacity:.9; letter-spacing:.08em; }
+  .date-day{ font-size:1.8rem; font-weight:800; line-height:1; margin:4px 0; }
+  .date-year{ font-size:.8rem; opacity:.85; }
+
+  .wash-content{ flex:1; padding:14px; background: var(--cw-card); }
+  .wash-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+  .wash-header h3{ margin:0; font-size:1.05rem; }
+  .wash-cost{ font-weight:800; color: var(--cw-success); }
+
+  .wash-details{ display:grid; gap:8px; margin-bottom:10px; }
+  .detail-item{ display:flex; gap:8px; align-items:flex-start; color: var(--cw-muted); }
+  .detail-item span:last-child{ color: var(--cw-text); }
+  .detail-item.services span:last-child{ color: var(--cw-accent); }
+  .detail-item.notes span:last-child{ font-style: italic; }
+
+  .wash-actions{ display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px dashed var(--cw-line); }
+  .action-btn{
+    padding:6px 10px; border-radius:10px; border:1px solid var(--cw-line); background:#0b1120; color: var(--cw-text);
+    text-decoration:none; font-size:.9rem; display:inline-flex; align-items:center; gap:6px;
+  }
+  .action-btn:hover{ border-color: var(--cw-primary); }
+  .view-photo{ background:#2b1933; border-color:#6b21a8; color:#f5e1ff; }
+
+  /* ================= Analytics ================= */
+  .analytics{
+    background: var(--cw-card); border:1px solid var(--cw-line);
+    border-radius: var(--cw-radius); padding:14px; box-shadow: var(--cw-shadow); display:grid; gap:16px;
+  }
+  .type-stat{ display:grid; gap:6px; margin-bottom:10px; }
+  .stat-header{ display:flex; justify-content:space-between; color: var(--cw-muted); font-size:.9rem; }
+  .stat-bar{ height:16px; background:#0b1120; border:1px solid var(--cw-line); border-radius:999px; overflow:hidden; }
+  .bar-fill{ height:100%; background: linear-gradient(90deg, #3498db, #2980b9); }
+
+  .monthly-trend{ display:flex; gap:10px; align-items:flex-end; height:200px; overflow-x:auto; padding:10px 2px; }
+  .month-bar{ min-width:52px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .month-bar .bar{ width:100%; min-height: 6px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius:4px 4px 0 0; position:relative; }
+  .month-bar .amount{ position:absolute; top:-18px; font-size:11px; color: var(--cw-muted); font-weight:700; }
+  .month-label{ font-size:.8rem; color: var(--cw-muted); }
+
+  /* ================= Empty state ================= */
+  .empty{
+    text-align:center; padding:40px 16px; background: var(--cw-card); border:1px dashed var(--cw-line);
+    border-radius: var(--cw-radius); color: var(--cw-muted);
+  }
+
+  /* ================= Lightbox ================= */
+  .modal{ display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.9); }
+  .modal-content{ display:block; max-width:90%; max-height:90%; margin:40px auto 0; border-radius:12px; border:1px solid var(--cw-line); }
+  @media (max-width: 780px){
+    .cw-header{ grid-template-columns: 1fr; }
+    .wash-card{ flex-direction:column; }
+    .wash-date{ flex-direction:row; gap:12px; justify-content:center; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="cw-shell">
+
+  {# =================== STICKY HEADER =================== #}
+  <div class="cw-header">
+    <div>
+      <h1 class="cw-title">Car Wash History — {{ equipment.name }}</h1>
+      <div class="cw-subtext">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }}</div>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" class="btn btn-primary">➕ Add Car Wash</a>
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back to Equipment</a>
+      <button type="button" class="btn" id="exportCsvBtn">⬇️ Export CSV</button>
+      <button type="button" class="btn" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+
+  {# =================== KPI CARDS (will update on filter) =================== #}
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="icon">🚗</div><div><div class="value" id="kpiTotal">{{ washes|length }}</div><div class="label">Total Washes</div></div></div>
+    <div class="kpi"><div class="icon">💰</div><div><div class="value" id="kpiSpent">${{ "%.2f"|format(total_spent) }}</div><div class="label">Total Spent</div></div></div>
+    <div class="kpi"><div class="icon">📊</div><div><div class="value" id="kpiAvg">${{ "%.2f"|format(avg_cost) }}</div><div class="label">Average Cost</div></div></div>
+    <div class="kpi"><div class="icon">📅</div><div><div class="value" id="kpiSince">{{ days_since_last }}</div><div class="label">Days Since Last</div></div></div>
+  </div>
+
+  {# =================== FILTER BAR =================== #}
+  <div class="filters">
+    <div class="filters-row">
+      <div class="form-group">
+        <label for="typeFilter">Filter by Type</label>
+        <select id="typeFilter">
+          <option value="all">All Types</option>
+          {% for wash_type in wash_types %}
+            <option value="{{ wash_type }}">{{ wash_type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="periodFilter">Time Period</label>
+        <select id="periodFilter">
+          <option value="all">All Time</option>
+          <option value="30">Last 30 Days</option>
+          <option value="90">Last 3 Months</option>
+          <option value="180">Last 6 Months</option>
+          <option value="365">Last Year</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sortBy">Sort</label>
+        <select id="sortBy">
+          <option value="date_desc">Date (new → old)</option>
+          <option value="date_asc">Date (old → new)</option>
+          <option value="cost_desc">Cost (high → low)</option>
+          <option value="cost_asc">Cost (low → high)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="searchText">Search (notes, location)</label>
+        <input type="search" id="searchText" placeholder="Type to filter…">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm" id="clearFilters">Clear Filters</button>
+    </div>
+  </div>
+
+  {# =================== TIMELINE =================== #}
+  <div class="timeline" id="timeline">
+    {% if washes %}
+      {% for wash in washes %}
+      <div class="wash-card"
+           data-type="{{ wash.wash_type }}"
+           data-date="{{ wash.date.strftime('%Y-%m-%d') }}"
+           data-cost="{{ '%.2f'|format(wash.cost) }}"
+           data-text="{{ (wash.location ~ ' ' ~ (wash.services or '') ~ ' ' ~ (wash.notes or '')) | lower }}">
+        <div class="wash-date">
+          <div class="date-month">{{ wash.date.strftime('%b') }}</div>
+          <div class="date-day">{{ wash.date.strftime('%d') }}</div>
+          <div class="date-year">{{ wash.date.strftime('%Y') }}</div>
+        </div>
+
+        <div class="wash-content">
+          <div class="wash-header">
+            <h3>{{ wash.wash_type }}</h3>
+            <span class="wash-cost">${{ "%.2f"|format(wash.cost) }}</span>
+          </div>
+
+          <div class="wash-details">
+            <div class="detail-item">
+              <span class="detail-icon">📍</span>
+              <span>{{ wash.location }}</span>
+            </div>
+
+            {% if wash.services %}
+            <div class="detail-item services">
+              <span class="detail-icon">✅</span>
+              <span>{{ wash.services }}</span>
+            </div>
+            {% endif %}
+
+            {% if wash.notes %}
+            <div class="detail-item notes">
+              <span class="detail-icon">📝</span>
+              <span>{{ wash.notes }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="wash-actions">
+            {% if wash.photo %}
+              {# Keep your existing storage path; open in lightbox instead of new tab #}
+              <a href="{{ url_for('static', filename='uploads/' + wash.photo) }}"
+                 class="action-btn view-photo"
+                 onclick="openPhoto(event, this.href)">
+                📷 Photo
+              </a>
+            {% endif %}
+
+            {# NOTE: keeping your existing endpoints as-is to avoid backend changes #}
+            <a href="{{ url_for('equipment.edit_car_wash', id=wash.id) }}" class="action-btn">✏️ Edit</a>
+
+            <form method="POST"
+                  action="{{ url_for('equipment.delete_car_wash', id=wash.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Delete this car wash record?');">
+              <button type="submit" class="action-btn" style="background:#3b1115;border-color:#7f1d1d;color:#fecaca;">🗑️ Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div style="font-size:46px; margin-bottom:6px;">🚿</div>
+        <div>No Car Washes Recorded</div>
+        <a href="{{ url_for('equipment.add_car_wash', id=equipment.id) }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Add First Car Wash</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# =================== ANALYTICS =================== #}
+  {% if washes %}
+  <div class="analytics">
+    <h3 style="margin:0;">Wash Type Distribution</h3>
+    <div>
+      {% for wash_type, data in type_stats.items() %}
+      <div class="type-stat">
+        <div class="stat-header">
+          <span>{{ wash_type }}</span>
+          <span>{{ data.count }} washes</span>
+        </div>
+        <div class="stat-bar">
+          <div class="bar-fill" style="width: {{ (data.count / washes|length * 100) }}%"></div>
+        </div>
+        <div class="stat-header" style="font-size:.85rem;">
+          <span>Total: ${{ "%.2f"|format(data.total) }}</span>
+          <span>Avg: ${{ "%.2f"|format(data.avg) }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h3 style="margin:0;">Monthly Spending Trend</h3>
+    <div class="monthly-trend">
+      {% for month, amount in monthly_spending.items() %}
+      <div class="month-bar" title="{{ month }} — ${{ '%.2f'|format(amount) }}">
+        <div class="bar" style="height: {{ (amount / max_monthly * 100) if max_monthly else 0 }}%">
+          <span class="amount">${{ "%.0f"|format(amount) }}</span>
+        </div>
+        <div class="month-label">{{ month }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# =================== PHOTO LIGHTBOX =================== #}
+  <div id="photoModal" class="modal" onclick="closePhoto()">
+    <img id="photoModalImg" class="modal-content" alt="">
+  </div>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="cw-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--cw-muted);">
+v1.0.0 — Dark UI; sticky header; live filters/search/sort; CSV export; print; dynamic KPIs; photo lightbox.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /cw-shell -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Utilities
+============================================================================ */
+function money(n){ return '$' + (isFinite(n) ? Number(n).toFixed(2) : '0.00'); }
+function daysBetween(d1, d2){ return Math.round((d2 - d1)/(1000*60*60*24)); }
+
+/* ============================================================================
+   Lightbox
+============================================================================ */
+function openPhoto(e, href){
+  e.preventDefault();
+  const m = document.getElementById('photoModal');
+  const img = document.getElementById('photoModalImg');
+  img.src = href; m.style.display = 'block';
+}
+function closePhoto(){ document.getElementById('photoModal').style.display = 'none'; }
+
+/* ============================================================================
+   Filtering / Sorting / Search + KPI recompute
+============================================================================ */
+const cards = Array.from(document.querySelectorAll('.wash-card'));
+const typeFilter = document.getElementById('typeFilter');
+const periodFilter = document.getElementById('periodFilter');
+const sortBy = document.getElementById('sortBy');
+const searchText = document.getElementById('searchText');
+const clearBtn = document.getElementById('clearFilters');
+
+const kTotal = document.getElementById('kpiTotal');
+const kSpent = document.getElementById('kpiSpent');
+const kAvg = document.getElementById('kpiAvg');
+const kSince = document.getElementById('kpiSince');
+
+function applyFilters(){
+  const tVal = typeFilter?.value || 'all';
+  const pVal = periodFilter?.value || 'all';
+  const sVal = (searchText?.value || '').trim().toLowerCase();
+  const now = new Date();
+
+  let visible = [];
+
+  cards.forEach(card => {
+    // type
+    const showType = (tVal === 'all') || (card.dataset.type === tVal);
+
+    // period
+    let showPeriod = true;
+    if (pVal !== 'all'){
+      const dt = new Date(card.dataset.date);
+      const diff = daysBetween(dt, now);
+      showPeriod = diff <= parseInt(pVal);
+    }
+
+    // search
+    const hay = (card.dataset.text || '').toLowerCase();
+    const showSearch = sVal.length === 0 || hay.includes(sVal);
+
+    const show = showType && showPeriod && showSearch;
+    card.style.display = show ? 'flex' : 'none';
+    if (show) visible.push(card);
+  });
+
+  // sort the visible ones in DOM
+  const cont = document.getElementById('timeline');
+  const sortKey = sortBy?.value || 'date_desc';
+  visible.sort((a,b) => {
+    const ad = new Date(a.dataset.date).getTime();
+    const bd = new Date(b.dataset.date).getTime();
+    const ac = parseFloat(a.dataset.cost) || 0;
+    const bc = parseFloat(b.dataset.cost) || 0;
+
+    switch(sortKey){
+      case 'date_asc': return ad - bd;
+      case 'date_desc': return bd - ad;
+      case 'cost_asc': return ac - bc;
+      case 'cost_desc': return bc - ac;
+      default: return bd - ad;
+    }
+  });
+  // Re-append in new order
+  visible.forEach(el => cont.appendChild(el));
+
+  // KPIs recompute based on visible
+  const total = visible.length;
+  const spent = visible.reduce((s, el) => s + (parseFloat(el.dataset.cost) || 0), 0);
+  const avg = total ? (spent / total) : 0;
+
+  // days since last among visible
+  let since = '—';
+  if (visible.length){
+    const mostRecent = visible.map(el => new Date(el.dataset.date)).sort((a,b) => b - a)[0];
+    since = daysBetween(mostRecent, now);
+  }
+
+  kTotal.textContent = total.toString();
+  kSpent.textContent = money(spent);
+  kAvg.textContent = money(avg);
+  kSince.textContent = since.toString();
+}
+
+[typeFilter, periodFilter, sortBy, searchText].forEach(el => el?.addEventListener('input', applyFilters));
+clearBtn?.addEventListener('click', () => {
+  typeFilter.value = 'all';
+  periodFilter.value = 'all';
+  sortBy.value = 'date_desc';
+  searchText.value = '';
+  applyFilters();
+});
+
+// First pass
+document.addEventListener('DOMContentLoaded', applyFilters);
+
+/* ============================================================================
+   CSV Export (visible cards only)
+============================================================================ */
+document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+  const visible = cards.filter(c => c.style.display !== 'none');
+  const rows = [['Date','Type','Location','Services','Notes','Cost']];
+
+  visible.forEach(c => {
+    const date = c.dataset.date;
+    const type = c.dataset.type;
+    const cost = c.dataset.cost;
+    // Pull text from DOM to avoid adding more data attributes
+    const loc = (c.querySelector('.detail-item:nth-child(1) span:last-child')?.textContent || '').trim();
+    // Optional blocks
+    const services = (c.querySelector('.detail-item.services span:last-child')?.textContent || '').trim();
+    const notes = (c.querySelector('.detail-item.notes span:last-child')?.textContent || '').trim();
+    rows.push([date, type, loc, services, notes, cost]);
+  });
+
+  const csv = rows.map(r => r.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `car_wash_history_{{ equipment.id }}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+</script>
+{% endblock %}

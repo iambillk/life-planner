@@ -1,0 +1,653 @@
+{# =============================================================================
+  FILE: maintenance_log.html
+  PURPOSE: Log a maintenance record (smart defaults, quick templates, photos)
+  TEMPLATE VERSION: v1.1.3
+  LAST UPDATED: 2025-01-06
+
+  v1.1.3
+  - FINAL FIX: Added unique identifier to photo names before submission
+  - IMPORTANT: Also requires backend fix to save_uploaded_photo() function
+  
+  v1.1.2
+  - FIXED: Multiple photo upload using FormData approach for reliable multi-file handling
+  - CHANGED: Form submission via JavaScript to properly handle multiple files
+  
+  v1.1.1
+  - FIXED: Multiple photo upload issue by properly handling FileList synchronization
+  
+  v1.1.0
+  - NEW: Multiple photo upload for Before/After/Receipts with inline captions
+  - NEW: Drag & drop supports many files; per-thumb delete; caption ordering kept
+  - NOTE: Backend should read request.files.getlist('<group>_photos')
+          and request.form.getlist('<group>_captions')
+
+  v1.0.0
+  - Dark UI, templates, helpers, previews, and guards
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Add Maintenance - {{ equipment.name }}{% endblock %}
+{% block header %}Log Maintenance for {{ equipment.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --ml-bg: var(--bg, #0b0f1a);
+    --ml-card: var(--card, #0f1625);
+    --ml-sub: #0c1322;
+    --ml-line: var(--line, #1f2a3d);
+    --ml-text: var(--text, #e6eaf2);
+    --ml-muted: var(--text-muted, #9fb0c8);
+    --ml-primary: var(--primary, #6ea8ff);
+    --ml-success: var(--success, #22c55e);
+    --ml-warn: #f59e0b;
+    --ml-danger: #ef4444;
+    --ml-radius: var(--radius, 14px);
+    --ml-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  .ml-shell{ max-width: 1000px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+
+  .ml-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--ml-line); border-radius: var(--ml-radius);
+    padding: 12px; box-shadow: var(--ml-shadow); backdrop-filter: blur(6px);
+  }
+  .ml-header-row{ display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .ml-title{ margin:0; font-size:1.2rem; }
+  .ml-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; color: var(--ml-muted); }
+  .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    background:#0b1120; color:var(--ml-muted); border:1px solid var(--ml-line); font-size:.85rem;
+  }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{ padding:8px 14px; border-radius:8px; text-decoration:none; border:1px solid transparent;
+    cursor:pointer; transition: all .2s; font-size:.9rem; font-weight:600;
+  }
+  .btn-primary{ background:var(--ml-primary); color:#fff; }
+  .btn-secondary{ background:rgba(255,255,255,.08); color:var(--ml-muted); }
+
+  .card{ background:var(--ml-card); border:1px solid var(--ml-line); border-radius:var(--ml-radius);
+    padding:20px; box-shadow: var(--ml-shadow);
+  }
+
+  .form-section{ margin-bottom:20px; padding-bottom:20px; border-bottom:1px dashed var(--ml-line); }
+  .form-section:last-child{ margin-bottom:0; border-bottom:none; }
+  h3{ margin:0 0 12px 0; font-size:1.1rem; color:var(--ml-text); }
+
+  .templates{ display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px; }
+  .tpl-btn{
+    background: linear-gradient(180deg, rgba(255,255,255,.04), transparent);
+    border:1px solid var(--ml-line); border-radius:10px; padding:10px;
+    text-align:left; cursor:pointer; transition: all .15s; color:var(--ml-text); position:relative;
+  }
+  .tpl-btn:hover{ transform:translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+  .tpl-btn .hint{ display:block; font-size:.8rem; color:var(--ml-muted); margin-top:2px; }
+  .tpl-btn.active{ background:rgba(110,168,255,.15); border-color:var(--ml-primary); }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+  .form-group{ display:flex; flex-direction:column; }
+  label{ margin-bottom:6px; color:var(--ml-text); font-weight:600; font-size:.9rem; }
+  .input, select, textarea{
+    background:var(--ml-sub); border:1px solid var(--ml-line); border-radius:8px;
+    padding:10px; color:var(--ml-text); font-size:.9rem;
+  }
+  textarea{ resize:vertical; font-family:inherit; }
+  .helper{ font-size:.8rem; color:var(--ml-muted); margin-top:4px; }
+  .preview-date{ color:var(--ml-primary); font-weight:600; }
+
+  /* Photos */
+  .dz{
+    border:2px dashed var(--ml-line); border-radius:12px; padding:24px;
+    text-align:center; color:var(--ml-muted); cursor:pointer; transition:all .2s;
+    background: radial-gradient(circle at center, rgba(255,255,255,.02), transparent);
+  }
+  .dz:hover, .dz.drag{ border-color:var(--ml-primary); background:rgba(110,168,255,.05); }
+  .thumbs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px; margin-top:10px; }
+  .thumb-wrap{ display:flex; flex-direction:column; gap:6px; }
+  .thumb{
+    position:relative; width:100%; padding-top:100%; border-radius:8px;
+    background:#0b1120; overflow:hidden; border:1px solid var(--ml-line);
+  }
+  .thumb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .thumb .x{
+    position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%;
+    background:rgba(239,68,68,.9); color:#fff; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1;
+  }
+  .cap-input{
+    background:var(--ml-sub); border:1px solid var(--ml-line); border-radius:6px;
+    padding:6px; color:var(--ml-text); font-size:.85rem;
+  }
+
+  .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+  }
+  .loading-overlay.active { display: flex; }
+  .loading-content {
+    text-align: center;
+    color: var(--ml-text);
+  }
+  .spinner {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--ml-primary);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 768px){
+    .ml-header-row{ grid-template-columns:1fr; }
+    .header-actions{ justify-content:stretch; }
+    .btn{ flex:1; text-align:center; }
+    .templates{ grid-template-columns:1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ml-shell">
+
+  <div class="ml-header">
+    <div class="ml-header-row">
+      <div>
+        <h1 class="ml-title">📝 Log Maintenance for {{ equipment.name }}</h1>
+        <div class="ml-meta">
+          <span class="chip"><strong>Category:</strong> {{ equipment.category }}</span>
+          {% if equipment.category == 'Auto' and equipment.mileage %}
+            <span class="chip"><strong>Odometer:</strong> {{ "{:,}".format(equipment.mileage) }} mi</span>
+          {% elif equipment.hours %}
+            <span class="chip"><strong>Hours:</strong> {{ equipment.hours }}</span>
+          {% endif %}
+          {% if equipment.location %}<span class="chip"><strong>Location:</strong> {{ equipment.location }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">← Back</a>
+        <button type="button" id="saveDraft" class="btn">💾 Save Draft</button>
+        <button type="button" id="clearDraft" class="btn">🧹 Clear Draft</button>
+        <button type="button" id="submitBtn" class="btn btn-primary">✅ Save</button>
+      </div>
+    </div>
+  </div>
+
+  <form id="maintenanceForm" method="POST" action="{{ url_for('equipment.add_maintenance', id=equipment.id) }}" enctype="multipart/form-data" class="card" novalidate>
+    
+    <div class="form-section">
+      <h3>Quick Templates</h3>
+      <div class="templates">
+        <button type="button" class="tpl-btn" data-template="Oil Change">🛢️ Oil Change <span class="hint">+5k mi / 6 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Tire Rotation">🛞 Tire Rotation <span class="hint">+5k mi / 6 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Brake Service">🛑 Brake Service <span class="hint">inspect/replace</span></button>
+        <button type="button" class="tpl-btn" data-template="Air Filter">🌬️ Air Filter <span class="hint">+12k mi / 12 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="Battery Replacement">🔋 Battery Replacement <span class="hint">36–60 mo</span></button>
+        <button type="button" class="tpl-btn" data-template="General Service">🔧 General Service <span class="hint">custom</span></button>
+      </div>
+      <div class="helper">Templates will set Service Type and pre-fill parts/next service hints.</div>
+    </div>
+
+    <div class="form-section">
+      <h3>Service Details</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="service_type">Service Type *</label>
+          <select id="service_type" name="service_type" required>
+            <option value="">Select service type...</option>
+            {% for service in service_types %}
+              <option value="{{ service }}">{{ service }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="service_date">Service Date *</label>
+          <input type="date" id="service_date" name="service_date" class="input" required>
+        </div>
+        <div class="form-group">
+          <label for="performed_by">Performed By</label>
+          <input type="text" id="performed_by" name="performed_by" class="input" placeholder="Self, shop name, etc." value="Self">
+        </div>
+      </div>
+
+      <div class="form-row">
+        {% if equipment.category == 'Auto' %}
+        <div class="form-group">
+          <label for="mileage_at_service">Mileage at Service</label>
+          <input type="number" id="mileage_at_service" name="mileage_at_service" class="input"
+                 placeholder="{{ equipment.mileage or '0' }}" min="0" step="1">
+          <div class="helper">Updates equipment odometer if provided.</div>
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label for="hours_at_service">Hours at Service</label>
+          <input type="number" id="hours_at_service" name="hours_at_service" class="input"
+                 placeholder="{{ equipment.hours or '0' }}" min="0" step="0.1">
+          <div class="helper">Updates equipment hours if provided.</div>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label for="cost">Cost ($)</label>
+          <input type="number" id="cost" name="cost" class="input" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Notes & Parts</h3>
+      <div class="form-group">
+        <label for="parts_used">Parts Used</label>
+        <textarea id="parts_used" name="parts_used" rows="2" placeholder="List parts (e.g., oil filter, brake pads)"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="notes">Service Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Any notes about the service"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Next Service</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="next_service_months">Next Service In (Months)</label>
+          <input type="number" id="next_service_months" name="next_service_months" class="input" placeholder="e.g., 6" min="0" step="1">
+          <div class="helper">Will be around <span id="nextDatePreview" class="preview-date">—</span></div>
+        </div>
+        {% if equipment.category == 'Auto' %}
+        <div class="form-group">
+          <label for="next_service_mileage">Or At Mileage</label>
+          <input type="number" id="next_service_mileage" name="next_service_mileage" class="input" placeholder="e.g., 85000" min="0" step="1">
+          <div class="helper">Auto-set when a template provides an interval and mileage is known.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# =================== PHOTOS (MULTI + CAPTIONS) =================== #}
+    <div class="form-section">
+      <h3>Photos</h3>
+      <div class="form-row">
+
+        <!-- BEFORE -->
+        <div class="form-group">
+          <label for="before_photos">Before Photos</label>
+          <div class="dz" data-input="before_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="before_photos" name="before_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_before_photos"></div>
+          <div class="helper">You can add multiple images. Max ~10MB each.</div>
+        </div>
+
+        <!-- AFTER -->
+        <div class="form-group">
+          <label for="after_photos">After Photos</label>
+          <div class="dz" data-input="after_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="after_photos" name="after_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_after_photos"></div>
+          <div class="helper">Add as many as needed.</div>
+        </div>
+
+        <!-- RECEIPTS -->
+        <div class="form-group">
+          <label for="receipt_photos">Receipt Photos</label>
+          <div class="dz" data-input="receipt_photos">Drop images here or click to choose (multiple)</div>
+          <input type="file" id="receipt_photos" name="receipt_photos" accept="image/*" multiple style="display:none">
+          <div class="thumbs" id="thumb_receipt_photos"></div>
+          <div class="helper">Use captions for vendor/amount/notes if you'd like.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Maintenance Record</button>
+    </div>
+  </form>
+
+  <div class="ml-header" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--ml-muted);">
+v1.1.3 — Final fix: Added unique naming to files before submission
+         BACKEND FIX REQUIRED: Update save_uploaded_photo() in utils.py to add microseconds or counter
+v1.1.2 — Fixed multi-photo uploads using FormData approach for reliable submission.
+v1.1.1 — Fixed multi-photo uploads with proper FileList handling.
+v1.1.0 — Multi-photo uploads with inline captions.
+v1.0.0 — Dark UI, quick templates, live next-service preview, photo dropzones, draft save, and guards.
+
+IMPORTANT BACKEND FIX NEEDED:
+In modules/equipment/utils.py, update save_uploaded_photo() function:
+
+Change this line:
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+To this (adds microseconds for uniqueness):
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')[:-3]  # Adds milliseconds
+    
+Or this (adds a random component):
+    import random
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(random.randint(100, 999))
+      </code>
+    </details>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-content">
+    <div class="spinner"></div>
+    <p>Uploading photos...</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const form = document.getElementById('maintenanceForm');
+  if(!form) return;
+
+  const serviceType = document.getElementById('service_type');
+  const serviceDate = document.getElementById('service_date');
+  const performedBy = document.getElementById('performed_by');
+  const mileage = document.getElementById('mileage_at_service');
+  const hours = document.getElementById('hours_at_service');
+  const cost = document.getElementById('cost');
+  const parts = document.getElementById('parts_used');
+  const notes = document.getElementById('notes');
+  const nextMonths = document.getElementById('next_service_months');
+  const nextMiles = document.getElementById('next_service_mileage');
+  const nextPreview = document.getElementById('nextDatePreview');
+  const submitBtn = document.getElementById('submitBtn');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const isAuto = {{ 'true' if equipment.category == 'Auto' else 'false' }};
+
+  /* =================== Templates =================== */
+  const TPLS = {
+    'Oil Change': {
+      type: 'Oil Change',
+      monthsInterval: 6,
+      milesInterval: 5000,
+      parts: 'Oil filter, 5 quarts synthetic oil'
+    },
+    'Tire Rotation': {
+      type: 'Tire Rotation',
+      monthsInterval: 6,
+      milesInterval: 5000,
+      parts: ''
+    },
+    'Brake Service': {
+      type: 'Brake Service',
+      monthsInterval: 24,
+      milesInterval: 30000,
+      parts: 'Brake pads, brake fluid'
+    },
+    'Air Filter': {
+      type: 'Air Filter',
+      monthsInterval: 12,
+      milesInterval: 12000,
+      parts: 'Engine air filter, cabin air filter'
+    },
+    'Battery Replacement': {
+      type: 'Battery Replacement',
+      monthsInterval: 48,
+      milesInterval: null,
+      parts: '12V battery'
+    },
+    'General Service': {
+      type: 'General Service',
+      monthsInterval: 6,
+      milesInterval: null,
+      parts: ''
+    }
+  };
+
+  document.querySelectorAll('.tpl-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      const tplName = btn.dataset.template;
+      const tpl = TPLS[tplName];
+      if(!tpl) return;
+
+      document.querySelectorAll('.tpl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      serviceType.value = tpl.type;
+      if(tpl.parts && !parts.value.trim()) parts.value = tpl.parts;
+      if(tpl.monthsInterval && !nextMonths.value) nextMonths.value = tpl.monthsInterval;
+      if(isAuto && tpl.milesInterval && mileage && mileage.value){
+        const cur = parseInt(mileage.value, 10);
+        if(!isNaN(cur) && nextMiles) nextMiles.value = cur + tpl.milesInterval;
+      }
+      updateNextDatePreview();
+    });
+  });
+
+  /* =================== Date defaults & preview =================== */
+  if(serviceDate && !serviceDate.value){
+    const today = new Date().toISOString().split('T')[0];
+    serviceDate.value = today;
+  }
+
+  function addMonthsSafe(date, months){
+    const result = new Date(date);
+    const day = result.getDate();
+    result.setMonth(result.getMonth() + months);
+    if(result.getDate() < day) result.setDate(0);
+    return result;
+  }
+
+  function updateNextDatePreview(){
+    if(!nextPreview || !nextMonths) return;
+    const months = parseInt(nextMonths.value || '0', 10);
+    const base = serviceDate?.value ? new Date(serviceDate.value + 'T12:00:00') : new Date();
+    if (!isNaN(months) && months > 0){
+      const dt = addMonthsSafe(base, months);
+      nextPreview.textContent = dt.toLocaleDateString(undefined, {year:'numeric', month:'long', day:'2-digit'});
+    } else { nextPreview.textContent = '—'; }
+  }
+  nextMonths?.addEventListener('input', updateNextDatePreview);
+  serviceDate?.addEventListener('input', updateNextDatePreview);
+  updateNextDatePreview();
+
+  mileage?.addEventListener('input', ()=>{
+    const t = TPLS[serviceType.value];
+    if(isAuto && t?.milesInterval != null){
+      const cur = parseInt(mileage.value || '0', 10);
+      if(!isNaN(cur) && nextMiles) nextMiles.value = cur + t.milesInterval;
+    }
+  });
+
+  cost?.addEventListener('blur', ()=>{
+    if(cost.value){
+      let v = parseFloat(cost.value);
+      if(isNaN(v) || v < 0){ cost.value=''; return; }
+      cost.value = v.toFixed(2);
+    }
+  });
+
+  /* =================== PHOTOS: multiple + inline captions (WITH UNIQUE NAMING) =================== */
+  (function(){
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    let fileCounter = 0; // Counter to ensure unique file names
+
+    function setupPhotoGroup(groupId, captionsName){
+      const dz = document.querySelector(`.dz[data-input="${groupId}"]`);
+      const input = document.getElementById(groupId);
+      const grid = document.getElementById('thumb_' + groupId);
+      if(!dz || !input || !grid) return;
+
+      /** state: [{file: File, caption: string, uniqueId: string}] */
+      let items = [];
+
+      function syncFileInput(){
+        // Create a new DataTransfer and add renamed files
+        const dt = new DataTransfer();
+        items.forEach((it, idx) => {
+          // Create a new file with a unique name to prevent overwriting
+          const uniqueName = `${idx}_${Date.now()}_${fileCounter++}_${it.file.name}`;
+          const renamedFile = new File([it.file], uniqueName, { type: it.file.type });
+          dt.items.add(renamedFile);
+        });
+        input.files = dt.files;
+      }
+
+      function render(){
+        grid.innerHTML = '';
+        items.forEach((it, idx) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'thumb-wrap';
+
+          // Thumb
+          const thumb = document.createElement('div');
+          thumb.className = 'thumb';
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(it.file);
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.className = 'x';
+          x.title = 'Remove';
+          x.textContent = '✕';
+          x.addEventListener('click', () => {
+            items.splice(idx, 1);
+            syncFileInput();
+            render();
+          });
+          thumb.appendChild(img);
+          thumb.appendChild(x);
+
+          // Caption input (posted with the form)
+          const cap = document.createElement('input');
+          cap.type = 'text';
+          cap.className = 'cap-input';
+          cap.name = captionsName;           // e.g., "before_captions"
+          cap.placeholder = 'Caption';
+          cap.value = it.caption || '';
+          cap.addEventListener('input', (e)=> { it.caption = e.target.value; });
+
+          wrap.appendChild(thumb);
+          wrap.appendChild(cap);
+          grid.appendChild(wrap);
+        });
+      }
+
+      function addFiles(fileList){
+        const toAdd = Array.from(fileList || []);
+        for(const f of toAdd){
+          if(!f.type.startsWith('image/')) continue;
+          if(f.size > MAX_SIZE){ alert(`${f.name} is larger than 10MB and was skipped.`); continue; }
+          items.push({file: f, caption: '', uniqueId: `${Date.now()}_${fileCounter++}`});
+        }
+        syncFileInput();
+        render();
+      }
+
+      dz.addEventListener('click', () => input.click());
+      input.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          addFiles(e.target.files);
+        }
+      });
+
+      ['dragenter','dragover'].forEach(evt =>
+        dz.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('drag'); })
+      );
+      ['dragleave','drop'].forEach(evt =>
+        dz.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('drag'); })
+      );
+      dz.addEventListener('drop', (e)=> {
+        if (e.dataTransfer && e.dataTransfer.files) {
+          addFiles(e.dataTransfer.files);
+        }
+      });
+    }
+
+    setupPhotoGroup('before_photos',  'before_captions');
+    setupPhotoGroup('after_photos',   'after_captions');
+    setupPhotoGroup('receipt_photos', 'receipt_captions');
+  })();
+
+  /* =================== Form submission (standard, with loading indicator) =================== */
+  form.addEventListener('submit', function(e) {
+    // Show loading overlay
+    if (loadingOverlay) {
+      loadingOverlay.classList.add('active');
+    }
+    
+    // Let the form submit normally
+    // The unique file names will prevent overwriting
+  });
+
+  /* =================== Drafts / guards / submit =================== */
+  const DRAFT_KEY = 'maint_draft_{{ equipment.id }}';
+  function serialize(){
+    const data = {
+      service_type: serviceType.value,
+      service_date: serviceDate.value,
+      performed_by: performedBy.value,
+      mileage_at_service: mileage?.value || '',
+      hours_at_service: hours?.value || '',
+      cost: cost.value,
+      parts_used: parts.value,
+      notes: notes.value,
+      next_service_months: nextMonths?.value || '',
+      next_service_mileage: nextMiles?.value || '',
+    };
+    return data;
+  }
+  function hydrate(data){
+    if(!data) return;
+    serviceType.value = data.service_type || serviceType.value;
+    serviceDate.value = data.service_date || serviceDate.value;
+    performedBy.value = data.performed_by || performedBy.value;
+    if(mileage) mileage.value = data.mileage_at_service || mileage.value;
+    if(hours) hours.value = data.hours_at_service || hours.value;
+    cost.value = data.cost || cost.value;
+    parts.value = data.parts_used || parts.value;
+    notes.value = data.notes || notes.value;
+    if(nextMonths) nextMonths.value = data.next_service_months || nextMonths.value;
+    if(nextMiles) nextMiles.value = data.next_service_mileage || nextMiles.value;
+    (function(){ const ev = new Event('input'); nextMonths?.dispatchEvent(ev); serviceDate?.dispatchEvent(ev); })();
+  }
+  try{ const cached = localStorage.getItem(DRAFT_KEY); if(cached){ hydrate(JSON.parse(cached)); } }catch(_){}
+  document.getElementById('saveDraft')?.addEventListener('click', ()=>{
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(serialize()));
+    alert('Draft saved locally.');
+  });
+  document.getElementById('clearDraft')?.addEventListener('click', ()=>{
+    localStorage.removeItem(DRAFT_KEY);
+    alert('Draft cleared.');
+  });
+
+  let dirty = false;
+  form.addEventListener('input', ()=>{ dirty = true; });
+  window.addEventListener('beforeunload', (e)=>{
+    if(dirty){ e.preventDefault(); e.returnValue = ''; }
+  });
+  form.addEventListener('submit', ()=>{ dirty = false; localStorage.removeItem(DRAFT_KEY); });
+
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  submitBtn?.addEventListener('click', ()=> form.requestSubmit());
+})();
+</script>
+{% endblock %}

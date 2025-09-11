@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Goals{% endblock %}
+{% block header %}Goal Tracking{% endblock %}
+
+{% block content %}
+<div class="goals-container">
+    <div class="add-goal-form">
+        <h3>Set New Goal</h3>
+        <form method="POST" action="{{ url_for('goals.add') }}">
+            <input type="text" name="title" placeholder="Goal Title" required>
+            <textarea name="description" placeholder="Goal Description"></textarea>
+            <select name="category">
+                <option value="career">Career</option>
+                <option value="health">Health</option>
+                <option value="financial">Financial</option>
+                <option value="personal">Personal</option>
+                <option value="education">Education</option>
+            </select>
+            <input type="date" name="target_date">
+            <button type="submit">Add Goal</button>
+        </form>
+    </div>
+
+    <div class="goals-list">
+        {% if goals %}
+            {% for goal in goals %}
+            <div class="goal-card">
+                <h3>{{ goal.title }}</h3>
+                <p>{{ goal.description or 'No description' }}</p>
+                <div class="goal-meta">
+                    <span class="category">{{ goal.category }}</span>
+                    {% if goal.target_date %}
+                    <span class="target-date">Target: {{ goal.target_date.strftime('%b %d, %Y') }}</span>
+                    {% endif %}
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ goal.progress }}%"></div>
+                    </div>
+                    <form method="POST" action="{{ url_for('goals.update_progress', id=goal.id) }}" class="progress-form">
+                        <select name="progress" onchange="this.form.submit()">
+                            <option value="0" {% if goal.progress == 0 %}selected{% endif %}>0%</option>
+                            <option value="25" {% if goal.progress == 25 %}selected{% endif %}>25%</option>
+                            <option value="50" {% if goal.progress == 50 %}selected{% endif %}>50%</option>
+                            <option value="75" {% if goal.progress == 75 %}selected{% endif %}>75%</option>
+                            <option value="100" {% if goal.progress == 100 %}selected{% endif %}>100%</option>
+                        </select>
+                    </form>
+                </div>
+                <form method="POST" action="{{ url_for('goals.delete', id=goal.id) }}" style="margin-top: 10px;" onsubmit="return confirm('Delete this goal?');">
+                    <button type="submit" class="btn-delete">Delete Goal</button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="text-align: center; color: #7f8c8d; grid-column: 1/-1;">No goals set yet. Create your first goal above!</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.goals-container {
+    padding: 20px;
+}
+
+.add-goal-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-goal-form form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.add-goal-form input[type="text"],
+.add-goal-form input[type="date"],
+.add-goal-form select,
+.add-goal-form textarea {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-goal-form textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+.add-goal-form button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.goals-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.goal-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.goal-card h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.goal-meta {
+    margin: 15px 0;
+}
+
+.category {
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 10px;
+}
+
+.target-date {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.progress-container {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    background: #ecf0f1;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    background: #3498db;
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.progress-form select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,681 @@
+<!-- templates/realestate/dashboard.html - FIXED VERSION -->
+{% extends "base.html" %}
+{% block title %}Property Portfolio{% endblock %}
+{% set active = 'realestate' %}
+{% block header %}Property Portfolio{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ========= Page-scoped CSS (dark theme) ======================================= */
+  :root{
+    --re-bg: var(--bg, #0b0f1a);
+    --re-panel: var(--panel, #121a2a);
+    --re-card: var(--card, #0f1625);
+    --re-sub: #0c1322;
+    --re-line: var(--line, #1f2a3d);
+    --re-text: var(--text, #e6eaf2);
+    --re-muted: var(--text-muted, #9fb0c8);
+    --re-primary: var(--primary, #6ea8ff);
+    --re-primary-700: var(--primary-700, #3f7fe6);
+    --re-success: var(--success, #22c55e);
+    --re-warn: var(--warning, #f59e0b);
+    --re-danger: var(--danger, #ef4444);
+    --re-info: #38bdf8;
+
+    --re-radius: var(--radius, 14px);
+    --re-radius-sm: var(--radius-sm, 10px);
+    --re-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .property-dashboard{ display:grid; gap:16px; padding:16px; max-width:1400px; margin:0 auto; }
+
+  /* ======= Page Header ======= */
+  .page-header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--re-line); border-radius: var(--re-radius);
+    box-shadow: var(--re-shadow);
+  }
+  .page-header h1{ 
+    margin:0; font-size:1.15rem; letter-spacing:.2px; font-weight:650;
+    display:flex; align-items:center; gap:8px;
+  }
+  .page-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--re-line);
+    background:var(--re-card); color:var(--re-text); text-decoration:none;
+    transition:transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--re-primary); transform:translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-primary:hover{ background: rgba(110,168,255,.25); }
+  .btn-success{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.45); }
+  .btn-danger{ background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.45); }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ======= Stats Summary Bar ======= */
+  .stats-bar{
+    display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
+    padding:14px; background:var(--re-card); border:1px solid var(--re-line);
+    border-radius:var(--re-radius-sm);
+  }
+  .stat-item{
+    display:flex; align-items:center; gap:8px;
+    color:var(--re-muted);
+  }
+  .stat-item .icon{ font-size:1.2rem; }
+  .stat-item .number{
+    font-size:1.2rem; font-weight:700; color:var(--re-text);
+  }
+  .stat-item.primary .number{ color:var(--re-primary); }
+  .stat-item.success .number{ color:var(--re-success); }
+  .stat-item.warn .number{ color:var(--re-warn); }
+
+  /* ======= Portfolio Overview ======= */
+  .overview-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px;
+  }
+  .overview-card{
+    background:var(--re-card); border:1px solid var(--re-line);
+    border-radius:var(--re-radius); padding:16px;
+    box-shadow:var(--re-shadow);
+  }
+  .overview-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:12px; padding-bottom:8px; border-bottom:1px dashed var(--re-line);
+  }
+  .overview-title{
+    font-size:.95rem; font-weight:700; color:var(--re-text);
+    display:flex; align-items:center; gap:6px;
+  }
+  .overview-value{
+    font-size:1.8rem; font-weight:800; color:var(--re-primary);
+    margin:8px 0;
+  }
+  .overview-detail{
+    font-size:.85rem; color:var(--re-muted);
+  }
+
+  /* ======= Controls Row ======= */
+  .controls{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    padding:12px; background:var(--re-card); border:1px solid var(--re-line);
+    border-radius:var(--re-radius-sm);
+  }
+  .search-input{
+    flex:1; padding:10px 14px; border:1px solid var(--re-line);
+    background:var(--re-panel); border-radius:10px; color:var(--re-text);
+    min-width:200px; font-size:.95rem;
+  }
+  .search-input:focus{ outline:none; border-color:var(--re-primary); }
+  .search-input::placeholder{ color:var(--re-muted); }
+  
+  .select{
+    padding:10px 14px; border:1px solid var(--re-line);
+    background:var(--re-panel); border-radius:10px; color:var(--re-text);
+    font-size:.95rem; cursor:pointer;
+  }
+  .select:focus{ outline:none; border-color:var(--re-primary); }
+
+  /* ======= Type Filter Chips ======= */
+  .type-chips{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding:12px; background:var(--re-card); border:1px solid var(--re-line);
+    border-radius:var(--re-radius-sm);
+  }
+  .chip{
+    padding:6px 12px; border-radius:999px; font-size:.85rem;
+    background:var(--re-panel); color:var(--re-muted); cursor:pointer;
+    border:1px solid transparent; transition:all .2s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .chip:hover{ border-color:var(--re-primary); color:var(--re-text); }
+  .chip.active{ 
+    background:rgba(110,168,255,.18); color:var(--re-primary); 
+    border-color:rgba(110,168,255,.45); 
+  }
+  .chip .count{
+    padding:1px 6px; background:rgba(255,255,255,.1); border-radius:999px;
+    font-size:.75rem; font-weight:700;
+  }
+
+  /* ======= Properties Grid ======= */
+  .properties-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
+    gap:16px;
+  }
+  .property-card{
+    background:var(--re-card); border:1px solid var(--re-line);
+    border-radius:var(--re-radius); overflow:hidden;
+    box-shadow:var(--re-shadow); transition:transform .15s ease, border-color .2s;
+    display:flex; flex-direction:column;
+  }
+  .property-card:hover{ transform:translateY(-2px); border-color:var(--re-primary); }
+  
+  .property-img{
+    width:100%; height:200px; object-fit:cover;
+    border-bottom:1px solid var(--re-line); position:relative;
+  }
+  .property-no-img{
+    width:100%; height:200px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg, var(--re-sub), var(--re-panel));
+    border-bottom:1px solid var(--re-line);
+    font-size:64px; opacity:.3;
+  }
+  
+  /* Property Type Badge on Image */
+  .property-type-badge{
+    position:absolute; top:10px; right:10px;
+    padding:4px 10px; border-radius:8px; font-size:.7rem;
+    font-weight:800; text-transform:uppercase;
+    background:rgba(0,0,0,.7); color:#fff;
+    backdrop-filter:blur(4px);
+  }
+  
+  .property-body{
+    padding:14px; flex:1; display:flex; flex-direction:column; gap:10px;
+  }
+  .property-name{
+    font-size:1.05rem; font-weight:700; color:var(--re-text);
+    margin:0 0 4px 0; display:flex; align-items:center; gap:8px;
+  }
+  .property-address{
+    color:var(--re-muted); font-size:.9rem;
+    display:flex; align-items:center; gap:6px;
+  }
+  
+  .property-details{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;
+    padding:8px 0; border-top:1px dashed var(--re-line);
+  }
+  .detail-item{
+    display:flex; align-items:center; gap:6px;
+    font-size:.85rem; color:var(--re-muted);
+  }
+  .detail-item .icon{ opacity:.7; }
+  .detail-item strong{ color:var(--re-text); }
+  
+  .property-stats{
+    display:flex; gap:12px; flex-wrap:wrap;
+    padding-top:8px; margin-top:auto; border-top:1px dashed var(--re-line);
+    font-size:.85rem; color:var(--re-muted);
+  }
+  .property-stats span{ display:inline-flex; align-items:center; gap:4px; }
+  
+  .property-actions{
+    padding:12px; border-top:1px solid var(--re-line);
+    display:flex; gap:8px; background:var(--re-sub);
+  }
+
+  /* Empty State */
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--re-muted);
+    background:var(--re-card); border:1px dashed var(--re-line);
+    border-radius:var(--re-radius); grid-column:1/-1;
+  }
+  .empty-state .icon{ font-size:64px; margin-bottom:16px; opacity:.5; }
+  .empty-state h3{ margin:6px 0 12px; color:var(--re-text); font-size:1.2rem; }
+
+  /* View Mode Toggle */
+  .view-mode{ display:flex; gap:4px; }
+  .view-btn{
+    padding:6px 10px; border:1px solid var(--re-line);
+    background:var(--re-panel); color:var(--re-muted);
+    cursor:pointer; transition:all .2s;
+  }
+  .view-btn:first-child{ border-radius:8px 0 0 8px; }
+  .view-btn:last-child{ border-radius:0 8px 8px 0; }
+  .view-btn.active{
+    background:rgba(110,168,255,.18); color:var(--re-primary);
+    border-color:rgba(110,168,255,.45);
+  }
+
+  /* List View */
+  .list-view .properties-grid{ grid-template-columns:1fr; }
+  .list-view .property-card{ flex-direction:row; }
+  .list-view .property-img,
+  .list-view .property-no-img{ width:200px; height:150px; }
+
+  /* Responsive */
+  @media (max-width: 768px){
+    .overview-grid{ grid-template-columns: 1fr; }
+    .properties-grid{ grid-template-columns: 1fr; }
+    .controls{ flex-direction:column; }
+    .search-input{ width:100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="property-dashboard">
+  
+  <!-- ====================== HEADER ======================= -->
+  <div class="page-header">
+  <h1>
+    <span aria-hidden="true">🏡</span> Property Portfolio
+  </h1>
+  <div class="page-actions">
+    <a href="{{ url_for('realestate.portfolio_costs') }}" class="btn">
+      <span aria-hidden="true">📊</span> Portfolio Costs
+    </a>
+    <a href="{{ url_for('realestate.add_property') }}" class="btn btn-primary">
+      <span aria-hidden="true">➕</span> Add Property
+    </a>
+    <div class="view-mode">
+      <button class="view-btn active" onclick="setViewMode('grid')">⚡</button>
+      <button class="view-btn" onclick="setViewMode('list')">📋</button>
+    </div>
+  </div>
+</div>
+
+  <!-- =================== STATS SUMMARY =================== -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="icon">🏘️</span>
+      <span class="number">{{ properties|length }}</span>
+      <span>Total Properties</span>
+    </div>
+    {% set total_sqft = properties|selectattr('square_footage')|sum(attribute='square_footage') %}
+    {% if total_sqft > 0 %}
+    <div class="stat-item primary">
+      <span class="icon">📐</span>
+      <span class="number">{{ "{:,}".format(total_sqft) }}</span>
+      <span>Total Sq Ft</span>
+    </div>
+    {% endif %}
+    {% set total_acres = properties|selectattr('lot_size_acres')|sum(attribute='lot_size_acres') %}
+    {% if total_acres > 0 %}
+    <div class="stat-item success">
+      <span class="icon">🌳</span>
+      <span class="number">{{ "{:,.1f}".format(total_acres) }}</span>
+      <span>Total Acres</span>
+    </div>
+    {% endif %}
+    {% set total_value = properties|selectattr('purchase_price')|sum(attribute='purchase_price') %}
+    {% if total_value > 0 %}
+    <div class="stat-item warn">
+      <span class="icon">💰</span>
+      <span class="number">${{ "{:,.0f}".format(total_value) }}</span>
+      <span>Total Investment</span>
+    </div>
+    {% endif %}
+    {% set property_types = properties|map(attribute='property_type')|select|unique|list %}
+    <div class="stat-item">
+      <span class="icon">🏷️</span>
+      <span class="number">{{ property_types|length }}</span>
+      <span>Property Types</span>
+    </div>
+  </div>
+
+  <!-- =================== PORTFOLIO OVERVIEW =================== -->
+  {% if properties %}
+  <div class="overview-grid">
+    <!-- By Type -->
+    <div class="overview-card">
+      <div class="overview-header">
+        <div class="overview-title">
+          <span aria-hidden="true">🏠</span> By Type
+        </div>
+      </div>
+      {% set type_counts = {} %}
+      {% for p in properties %}
+        {% set ptype = p.property_type or 'Uncategorized' %}
+        {% if ptype in type_counts %}
+          {% set _ = type_counts.update({ptype: type_counts[ptype] + 1}) %}
+        {% else %}
+          {% set _ = type_counts.update({ptype: 1}) %}
+        {% endif %}
+      {% endfor %}
+      {% set sorted_types = type_counts.items()|list|sort(attribute=1, reverse=true) %}
+      {% for ptype, count in sorted_types %}
+        {% if loop.index <= 3 %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+          <span style="color:var(--re-muted); font-size:.9rem;">{{ ptype }}</span>
+          <span style="color:var(--re-text); font-weight:700;">{{ count }}</span>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- By Location -->
+    <div class="overview-card">
+      <div class="overview-header">
+        <div class="overview-title">
+          <span aria-hidden="true">📍</span> By Location
+        </div>
+      </div>
+      {% set city_counts = {} %}
+      {% for p in properties %}
+        {% if p.city %}
+          {% if p.city in city_counts %}
+            {% set _ = city_counts.update({p.city: city_counts[p.city] + 1}) %}
+          {% else %}
+            {% set _ = city_counts.update({p.city: 1}) %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% set sorted_cities = city_counts.items()|list|sort(attribute=1, reverse=true) %}
+      {% for city, count in sorted_cities %}
+        {% if loop.index <= 3 %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+          <span style="color:var(--re-muted); font-size:.9rem;">{{ city }}</span>
+          <span style="color:var(--re-text); font-weight:700;">{{ count }}</span>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Recent Additions -->
+    <div class="overview-card">
+      <div class="overview-header">
+        <div class="overview-title">
+          <span aria-hidden="true">✨</span> Recent Additions
+        </div>
+      </div>
+      {% set recent_properties = properties|list|sort(attribute='created_at', reverse=true) if properties else [] %}
+      {% for p in recent_properties %}
+        {% if loop.index <= 2 %}
+        <div style="padding:4px 0;">
+          <div style="color:var(--re-text); font-size:.9rem; font-weight:600;">{{ p.name }}</div>
+          <div style="color:var(--re-muted); font-size:.8rem;">
+            Added {{ p.created_at.strftime('%b %d, %Y') if p.created_at else 'Recently' }}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Portfolio Costs -->
+    <a href="{{ url_for('realestate.portfolio_costs') }}" style="text-decoration: none; color: inherit;">
+      <div class="overview-card" style="cursor: pointer; transition: all 0.3s ease;">
+        <div class="overview-header">
+          <div class="overview-title">
+            <span aria-hidden="true">💰</span> Portfolio Costs
+          </div>
+        </div>
+    
+        <div class="overview-value" style="font-size:1.8rem;">
+          ${{ "{:,.0f}".format(total_ytd) }}
+        </div>
+    
+        <div class="overview-detail">
+          {{ current_year }} YTD Maintenance
+          {% if total_last_year > 0 %}
+          {% set change = ((total_ytd - total_last_year) / total_last_year * 100) %}
+          <span
+            style="display: inline-block; margin-left: 8px; font-weight: bold; color: {{ 'var(--re-danger)' if change > 0 else 'var(--re-success)' }};">
+            {{ "↑" if change > 0 else "↓" }} {{ "{:.0f}".format(abs(change)) }}%
+          </span>
+          {% endif %}
+        </div>
+    
+        <div style="margin-top: 8px; font-size: 0.85rem; color: var(--re-muted);">
+          Click for detailed breakdown →
+        </div>
+      </div>
+    </a>
+      </div>
+      {% endif %}
+
+  <!-- =================== CONTROLS =================== -->
+  <div class="controls">
+    <form method="get" action="{{ url_for('realestate.dashboard') }}" style="display:flex; gap:10px; flex:1; flex-wrap:wrap;">
+      <input id="searchInput" class="search-input" type="search" name="q" value="{{ q or '' }}"
+             placeholder="🔍 Search properties, addresses, cities..." autocomplete="off">
+      <select id="sortSelect" class="select">
+        <option value="name_asc">🔤 Name (A-Z)</option>
+        <option value="name_desc">🔤 Name (Z-A)</option>
+        <option value="city_asc">📍 City (A-Z)</option>
+        <option value="updated_desc">📅 Recently Updated</option>
+        <option value="value_desc">💰 Highest Value</option>
+        <option value="size_desc">📐 Largest Size</option>
+      </select>
+      <button class="btn btn-primary" type="submit">Search</button>
+      {% if q %}
+      <a class="btn" href="{{ url_for('realestate.dashboard') }}">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- =================== TYPE FILTER =================== -->
+  <div class="type-chips">
+    <span class="chip active" data-type="all" onclick="filterType('all')">
+      All Properties
+      <span class="count">{{ properties|length }}</span>
+    </span>
+    {% set property_types = {} %}
+    {% for p in properties %}
+      {% set ptype = p.property_type or 'Uncategorized' %}
+      {% if ptype in property_types %}
+        {% set _ = property_types.update({ptype: property_types[ptype] + 1}) %}
+      {% else %}
+        {% set _ = property_types.update({ptype: 1}) %}
+      {% endif %}
+    {% endfor %}
+    {% for ptype, count in property_types.items()|list|sort %}
+    <span class="chip" data-type="{{ ptype|lower }}" onclick="filterType('{{ ptype|lower }}')">
+      {% if 'house' in ptype|lower %}🏠
+      {% elif 'condo' in ptype|lower %}🏢
+      {% elif 'land' in ptype|lower %}🌳
+      {% elif 'commercial' in ptype|lower %}🏪
+      {% elif 'apartment' in ptype|lower %}🏛️
+      {% else %}🏘️
+      {% endif %}
+      {{ ptype }}
+      <span class="count">{{ count }}</span>
+    </span>
+    {% endfor %}
+  </div>
+
+  <!-- =================== PROPERTIES GRID =================== -->
+  <div class="properties-grid" id="propertiesGrid">
+    {% if properties %}
+    {% for p in properties %}
+    <div class="property-card" 
+         data-name="{{ (p.name ~ ' ' ~ (p.address or '') ~ ' ' ~ (p.city or '') ~ ' ' ~ (p.state or ''))|lower }}"
+         data-type="{{ (p.property_type or 'uncategorized')|lower }}"
+         data-city="{{ (p.city or '')|lower }}"
+         data-value="{{ p.purchase_price or 0 }}"
+         data-size="{{ p.square_footage or 0 }}"
+         data-updated="{{ p.updated_at.isoformat() if p.updated_at else '1970-01-01' }}">
+      
+      <div style="position:relative;">
+        {% if p.profile_photo %}
+        <img class="property-img" 
+             src="{{ url_for('static', filename='equipment_photos/property_profiles/' ~ p.profile_photo) }}"
+             alt="{{ p.name }}">
+        {% else %}
+        <div class="property-no-img">
+          {% if 'house' in (p.property_type or '')|lower %}🏠
+          {% elif 'condo' in (p.property_type or '')|lower %}🏢
+          {% elif 'land' in (p.property_type or '')|lower %}🌳
+          {% elif 'commercial' in (p.property_type or '')|lower %}🏪
+          {% else %}🏡
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if p.property_type %}
+        <div class="property-type-badge">{{ p.property_type }}</div>
+        {% endif %}
+      </div>
+      
+      <div class="property-body">
+        <h3 class="property-name">
+          {{ p.name }}
+          {% if p.status %}
+          <span style="padding:2px 6px; border-radius:6px; font-size:.65rem; font-weight:800; background:var(--re-success); color:#0a0f1a;">
+            {{ p.status|upper }}
+          </span>
+          {% endif %}
+        </h3>
+        
+        {% if p.address or p.city %}
+        <div class="property-address">
+          <span aria-hidden="true">📍</span>
+          <span>
+            {% if p.address %}{{ p.address }}{% if p.city %}, {% endif %}{% endif %}
+            {% if p.city %}{{ p.city }}{% if p.state %}, {{ p.state }}{% endif %}{% endif %}
+            {% if p.zip_code %} {{ p.zip_code }}{% endif %}
+          </span>
+        </div>
+        {% endif %}
+        
+        <div class="property-details">
+          {% if p.year_built %}
+          <div class="detail-item">
+            <span class="icon">📅</span>
+            <span>Built: <strong>{{ p.year_built }}</strong></span>
+          </div>
+          {% endif %}
+          {% if p.square_footage %}
+          <div class="detail-item">
+            <span class="icon">📐</span>
+            <span><strong>{{ "{:,}".format(p.square_footage) }}</strong> sq ft</span>
+          </div>
+          {% endif %}
+          {% if p.lot_size_acres %}
+          <div class="detail-item">
+            <span class="icon">🌳</span>
+            <span><strong>{{ "{:,.2f}".format(p.lot_size_acres) }}</strong> acres</span>
+          </div>
+          {% endif %}
+          {% if p.purchase_price %}
+          <div class="detail-item">
+            <span class="icon">💰</span>
+            <span><strong>${{ "{:,.0f}".format(p.purchase_price) }}</strong></span>
+          </div>
+          {% endif %}
+        </div>
+        
+        <div class="property-stats">
+          {% if p.purchase_date %}
+          <span>📆 Purchased {{ p.purchase_date.strftime('%b %Y') }}</span>
+          {% endif %}
+          {% if p.county %}
+          <span>🏛️ {{ p.county }} County</span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="property-actions">
+        <a href="{{ url_for('realestate.property_detail', id=p.id) }}" class="btn btn-sm btn-primary">
+          <span aria-hidden="true">👁️</span> View
+        </a>
+        <a href="{{ url_for('realestate.edit_property', id=p.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">✏️</span> Edit
+        </a>
+        <a href="{{ url_for('realestate.add_maintenance', property_id=p.id) }}" class="btn btn-sm">
+          <span aria-hidden="true">🔧</span> Maintenance
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🏡</div>
+      <h3>No properties in your portfolio</h3>
+      <p>Start building your real estate portfolio!</p>
+      <a href="{{ url_for('realestate.add_property') }}" class="btn btn-primary">
+        <span aria-hidden="true">➕</span> Add Your First Property
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- JavaScript for search, sort, filter, and view modes -->
+<script>
+// Type filter
+let activeType = 'all';
+
+function filterType(type) {
+  activeType = type;
+  
+  // Update chip styles
+  document.querySelectorAll('.type-chips .chip').forEach(chip => {
+    if (chip.dataset.type === type) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+  
+  // Filter cards
+  applyFilters();
+}
+
+// Apply filters and sort
+function applyFilters() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const sortBy = document.getElementById('sortSelect').value;
+  const grid = document.getElementById('propertiesGrid');
+  const cards = Array.from(grid.querySelectorAll('.property-card'));
+  
+  // Filter by search and type
+  cards.forEach(card => {
+    const matchesSearch = !searchTerm || card.dataset.name.includes(searchTerm);
+    const matchesType = activeType === 'all' || card.dataset.type === activeType;
+    card.style.display = (matchesSearch && matchesType) ? '' : 'none';
+  });
+  
+  // Get visible cards
+  const visibleCards = cards.filter(c => c.style.display !== 'none');
+  
+  // Sort
+  visibleCards.sort((a, b) => {
+    switch(sortBy) {
+      case 'name_asc':
+        return a.dataset.name.localeCompare(b.dataset.name);
+      case 'name_desc':
+        return b.dataset.name.localeCompare(a.dataset.name);
+      case 'city_asc':
+        return a.dataset.city.localeCompare(b.dataset.city);
+      case 'updated_desc':
+        return b.dataset.updated.localeCompare(a.dataset.updated);
+      case 'value_desc':
+        return parseFloat(b.dataset.value) - parseFloat(a.dataset.value);
+      case 'size_desc':
+        return parseInt(b.dataset.size) - parseInt(a.dataset.size);
+      default:
+        return 0;
+    }
+  });
+  
+  // Re-append in new order
+  visibleCards.forEach(card => grid.appendChild(card));
+}
+
+// View mode toggle
+function setViewMode(mode) {
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  const dashboard = document.querySelector('.property-dashboard');
+  if (mode === 'list') {
+    dashboard.classList.add('list-view');
+  } else {
+    dashboard.classList.remove('list-view');
+  }
+}
+
+// Client-side search (works with server search)
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  if (!e.target.form.querySelector('[type="submit"]').clicked) {
+    applyFilters();
+  }
+});
+
+// Sort change
+document.getElementById('sortSelect').addEventListener('change', applyFilters);
+
+// Initialize
+applyFilters();
+</script>
+{% endblock %}

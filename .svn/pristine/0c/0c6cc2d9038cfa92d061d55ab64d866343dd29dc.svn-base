@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+{% block title %}Spending Tracker{% endblock %}
+{% block header %}Spending Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========= Page-scoped CSS (dark theme) ======================================= */
+    :root {
+        --fin-bg: var(--bg, #0b0f1a);
+        --fin-panel: var(--panel, #121a2a);
+        --fin-card: var(--card, #0f1625);
+        --fin-sub: #0c1322;
+        --fin-line: var(--line, #1f2a3d);
+        --fin-text: var(--text, #e6eaf2);
+        --fin-muted: var(--text-muted, #9fb0c8);
+        --fin-primary: var(--primary, #6ea8ff);
+        --fin-primary-700: var(--primary-700, #3f7fe6);
+        --fin-success: var(--success, #22c55e);
+        --fin-warn: var(--warning, #f59e0b);
+        --fin-danger: var(--danger, #ef4444);
+        --fin-info: #38bdf8;
+
+        --fin-radius: var(--radius, 14px);
+        --fin-radius-sm: var(--radius-sm, 10px);
+        --fin-shadow: 0 6px 18px rgba(0,0,0,.35);
+    }
+
+    .financial-dashboard { 
+        display: grid; 
+        gap: 16px; 
+        padding: 16px; 
+        max-width: 1400px; 
+        margin: 0 auto; 
+    }
+
+    /* ======= Page Header ======= */
+    .page-header {
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        gap: 12px;
+        padding: 14px 16px;
+        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border: 1px solid var(--fin-line); 
+        border-radius: var(--fin-radius);
+        box-shadow: var(--fin-shadow);
+    }
+    
+    .page-header h1 { 
+        margin: 0; 
+        font-size: 1.15rem; 
+        letter-spacing: .2px; 
+        font-weight: 650;
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+    }
+    
+    .page-actions { 
+        display: flex; 
+        gap: 10px; 
+        align-items: center; 
+        flex-wrap: wrap; 
+    }
+    
+    .btn {
+        display: inline-flex; 
+        align-items: center; 
+        gap: 8px;
+        padding: 8px 12px; 
+        border-radius: 12px; 
+        border: 1px solid var(--fin-line);
+        background: var(--fin-card); 
+        color: var(--fin-text); 
+        text-decoration: none;
+        transition: transform .1s ease, border-color .2s ease, background .2s ease;
+        font-size: .95rem; 
+        cursor: pointer;
+    }
+    
+    .btn:hover { 
+        border-color: var(--fin-primary); 
+        transform: translateY(-1px); 
+    }
+    
+    .btn-primary { 
+        background: rgba(110,168,255,.18); 
+        border-color: rgba(110,168,255,.45); 
+    }
+    
+    .btn-primary:hover { 
+        background: rgba(110,168,255,.25); 
+    }
+    
+    .btn-success { 
+        background: rgba(34,197,94,.18); 
+        border-color: rgba(34,197,94,.45); 
+    }
+    
+    .btn-warn { 
+        background: rgba(245,158,11,.18); 
+        border-color: rgba(245,158,11,.45); 
+    }
+    
+    .btn-sm { 
+        padding: 6px 10px; 
+        border-radius: 10px; 
+        font-size: .85rem; 
+    }
+
+    /* ======= Stats Summary Bar ======= */
+    .stats-bar {
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+        gap: 12px;
+    }
+    
+    .stat-card {
+        background: var(--fin-card); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius); 
+        padding: 12px 14px;
+        box-shadow: var(--fin-shadow);
+        display: flex; 
+        align-items: center; 
+        gap: 12px;
+    }
+    
+    .stat-icon {
+        width: 40px; 
+        height: 40px; 
+        border-radius: 10px;
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        font-size: 20px;
+    }
+    
+    .stat-icon.primary { background: rgba(110,168,255,.18); }
+    .stat-icon.success { background: rgba(34,197,94,.18); }
+    .stat-icon.warn { background: rgba(245,158,11,.18); }
+    .stat-icon.info { background: rgba(56,189,248,.18); }
+    
+    .stat-content { flex: 1; }
+    
+    .stat-label {
+        font-size: .75rem; 
+        color: var(--fin-muted); 
+        text-transform: uppercase;
+        letter-spacing: .5px; 
+        margin-bottom: 2px;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem; 
+        font-weight: 700; 
+        color: var(--fin-text);
+        display: flex; 
+        align-items: baseline; 
+        gap: 6px;
+    }
+    
+    .stat-change {
+        font-size: .75rem; 
+        color: var(--fin-muted);
+        font-weight: 400;
+    }
+
+    /* ======= Search/Filter Bar ======= */
+    .search-bar {
+        background: var(--fin-card); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius); 
+        padding: 14px 16px;
+        box-shadow: var(--fin-shadow);
+    }
+    
+    .search-form {
+        display: flex; 
+        gap: 10px; 
+        align-items: center; 
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        flex: 1; 
+        min-width: 200px;
+        padding: 8px 12px; 
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line); 
+        border-radius: 10px;
+        color: var(--fin-text); 
+        font-size: .95rem;
+    }
+    
+    .search-input:focus {
+        outline: none; 
+        border-color: var(--fin-primary);
+        box-shadow: 0 0 0 3px rgba(110,168,255,.1);
+    }
+
+    /* ======= Category Chips ======= */
+    .category-chips {
+        display: flex; 
+        gap: 8px; 
+        flex-wrap: wrap;
+        padding: 12px; 
+        background: var(--fin-card);
+        border: 1px solid var(--fin-line); 
+        border-radius: var(--fin-radius);
+        box-shadow: var(--fin-shadow);
+    }
+    
+    .chip {
+        padding: 6px 12px; 
+        border-radius: 999px; 
+        font-size: .85rem;
+        background: var(--fin-panel); 
+        color: var(--fin-muted); 
+        cursor: pointer;
+        border: 1px solid transparent; 
+        transition: all .2s;
+        display: inline-flex; 
+        align-items: center; 
+        gap: 6px;
+    }
+    
+    .chip:hover { 
+        border-color: var(--fin-primary); 
+        color: var(--fin-text); 
+    }
+    
+    .chip.active {
+        background: rgba(110,168,255,.18); 
+        color: var(--fin-primary);
+        border-color: rgba(110,168,255,.45);
+    }
+    
+    .chip .amount {
+        padding: 1px 6px; 
+        background: rgba(255,255,255,.1); 
+        border-radius: 999px;
+        font-size: .75rem; 
+        font-weight: 700;
+    }
+
+    /* ======= Transactions Grid ======= */
+    .transactions-section {
+        background: var(--fin-card); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius); 
+        padding: 16px;
+        box-shadow: var(--fin-shadow);
+    }
+    
+    .section-header {
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between;
+        margin-bottom: 14px; 
+        padding-bottom: 10px; 
+        border-bottom: 1px dashed var(--fin-line);
+    }
+    
+    .section-title {
+        font-size: 1.05rem; 
+        font-weight: 700; 
+        color: var(--fin-text);
+        margin: 0; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+    }
+    
+    .section-actions {
+        display: flex; 
+        gap: 8px;
+    }
+
+    .transactions-list {
+        display: grid; 
+        gap: 10px;
+    }
+    
+    .transaction-item {
+        display: grid; 
+        grid-template-columns: 90px 1fr auto auto auto 100px;
+        align-items: center; 
+        gap: 12px; 
+        padding: 12px;
+        background: var(--fin-panel); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm); 
+        transition: all .2s ease;
+    }
+    
+    .transaction-item:hover {
+        background: #1f2a3d; 
+        border-color: var(--fin-primary);
+        transform: translateX(4px);
+    }
+    
+    .transaction-date {
+        color: var(--fin-muted); 
+        font-size: .85rem;
+        font-weight: 600;
+    }
+    
+    .transaction-merchant {
+        font-weight: 600; 
+        color: var(--fin-text); 
+        font-size: .95rem;
+    }
+    
+    .transaction-notes {
+        font-size: .8rem; 
+        color: var(--fin-muted); 
+        margin-top: 2px;
+    }
+    
+    .transaction-category {
+        display: inline-flex; 
+        align-items: center; 
+        gap: 5px;
+        padding: 3px 8px; 
+        background: var(--fin-sub);
+        border: 1px solid var(--fin-line); 
+        border-radius: 20px;
+        font-size: .8rem; 
+        color: var(--fin-muted);
+    }
+    
+    .transaction-card-badge {
+        padding: 3px 8px; 
+        background: var(--fin-panel);
+        border: 1px solid var(--fin-line); 
+        border-radius: 8px;
+        font-size: .75rem; 
+        color: var(--fin-muted);
+        font-weight: 600;
+    }
+    
+    .transaction-amount {
+        font-size: 1rem; 
+        font-weight: 700; 
+        color: var(--fin-text);
+        text-align: right;
+    }
+    
+    .transaction-actions {
+        display: flex; 
+        gap: 4px; 
+        opacity: 0;
+        transition: opacity .2s ease;
+    }
+    
+    .transaction-item:hover .transaction-actions { 
+        opacity: 1; 
+    }
+    
+    .action-btn {
+        padding: 4px 6px; 
+        background: var(--fin-sub);
+        border: 1px solid var(--fin-line); 
+        border-radius: 6px;
+        color: var(--fin-muted); 
+        font-size: .875rem; 
+        cursor: pointer;
+        transition: all .2s ease; 
+        text-decoration: none;
+    }
+    
+    .action-btn:hover {
+        color: var(--fin-primary); 
+        border-color: var(--fin-primary);
+    }
+    
+    .action-btn.delete:hover {
+        color: var(--fin-danger); 
+        border-color: var(--fin-danger);
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center; 
+        padding: 60px 20px; 
+        color: var(--fin-muted);
+    }
+    
+    .empty-icon {
+        font-size: 48px; 
+        opacity: .3; 
+        margin-bottom: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stats-bar { 
+            grid-template-columns: 1fr; 
+        }
+        
+        .transaction-item {
+            grid-template-columns: 1fr; 
+            gap: 6px;
+        }
+        
+        .transaction-date,
+        .transaction-category,
+        .transaction-card-badge { 
+            font-size: .75rem; 
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="financial-dashboard">
+
+    <!-- ======= Page Header ======= -->
+    <div class="page-header">
+        <h1>
+            <span>💳</span> Spending Tracker
+        </h1>
+        <div class="page-actions">
+            <a href="{{ url_for('financial.add_transaction') }}" class="btn btn-primary">
+                <span>➕</span> Add Transaction
+            </a>
+            <a href="{{ url_for('financial.analytics') }}" class="btn">
+                <span>📊</span> Analytics
+            </a>
+            <a href="{{ url_for('financial.search') }}" class="btn">
+                <span>🔍</span> Search
+            </a>
+        </div>
+    </div>
+
+    <!-- ======= Stats Summary Bar ======= -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon primary">📅</div>
+            <div class="stat-content">
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">
+                    ${{ "%.2f"|format(monthly_total) }}
+                    <span class="stat-change">{{ current_month }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon success">📊</div>
+            <div class="stat-content">
+                <div class="stat-label">Daily Average</div>
+                <div class="stat-value">
+                    ${{ "%.2f"|format(daily_average) }}
+                    <span class="stat-change">per day</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon warn">🧾</div>
+            <div class="stat-content">
+                <div class="stat-label">Transactions</div>
+                <div class="stat-value">
+                    {{ month_transactions|length }}
+                    <span class="stat-change">this month</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon info">💰</div>
+            <div class="stat-content">
+                <div class="stat-label">Top Category</div>
+                <div class="stat-value">
+                    {% if category_spending %}
+                        {{ category_spending[0].icon }} {{ category_spending[0].name[:12] }}
+                    {% else %}
+                        None
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======= Quick Search Bar ======= -->
+    <div class="search-bar">
+        <form method="GET" action="{{ url_for('financial.search') }}" class="search-form">
+            <input type="text" 
+                   name="q" 
+                   placeholder="Quick search transactions..." 
+                   class="search-input">
+            <button type="submit" class="btn btn-sm">Search</button>
+        </form>
+    </div>
+
+    <!-- ======= Category Chips (if spending this month) ======= -->
+    {% if category_spending %}
+    <div class="category-chips">
+        <span class="chip active">
+            All Categories
+        </span>
+        {% for cat in category_spending[:8] %}
+        <a href="{{ url_for('financial.search', category=cat.name) }}" class="chip">
+            <span>{{ cat.icon }} {{ cat.name }}</span>
+            <span class="amount">${{ "%.0f"|format(cat.total) }}</span>
+        </a>
+        {% endfor %}
+        {% if category_spending|length > 8 %}
+        <a href="{{ url_for('financial.analytics') }}" class="chip">
+            More...
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ======= Recent Transactions ======= -->
+    <div class="transactions-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>📝</span> Recent Transactions
+            </h2>
+            <div class="section-actions">
+                <a href="{{ url_for('financial.search') }}" class="btn btn-sm">
+                    View All
+                </a>
+            </div>
+        </div>
+
+        <div class="transactions-list">
+            {% if recent_transactions %}
+                {% for transaction in recent_transactions[:15] %}
+                <div class="transaction-item">
+                    <div class="transaction-date">
+                        {{ transaction.date.strftime('%b %d') }}
+                    </div>
+                    <div>
+                        <div class="transaction-merchant">{{ transaction.merchant }}</div>
+                        {% if transaction.notes %}
+                        <div class="transaction-notes">{{ transaction.notes }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="transaction-category">
+                        {% if transaction.category %}
+                            <span>{{ transaction.category.icon }}</span>
+                            <span>{{ transaction.category.name }}</span>
+                        {% else %}
+                            <span>📌</span>
+                            <span>Uncategorized</span>
+                        {% endif %}
+                    </div>
+                    <div class="transaction-card-badge">
+                        {{ transaction.card }}
+                    </div>
+                    <div class="transaction-amount">
+                        ${{ "%.2f"|format(transaction.amount) }}
+                    </div>
+                    <div class="transaction-actions">
+                        <a href="{{ url_for('financial.edit_transaction', id=transaction.id) }}" 
+                           class="action-btn">✏️</a>
+                        <form method="POST" 
+                              action="{{ url_for('financial.delete_transaction', id=transaction.id) }}" 
+                              style="display: inline;"
+                              onsubmit="return confirm('Delete this transaction?');">
+                            <button type="submit" class="action-btn delete" 
+                                    style="border: none; background: transparent; padding: 4px 6px;">
+                                🗑️
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">💳</div>
+                    <h3>No transactions yet</h3>
+                    <p>Start tracking your spending by adding your first transaction!</p>
+                    <a href="{{ url_for('financial.add_transaction') }}" class="btn btn-primary" style="margin-top: 20px;">
+                        ➕ Add First Transaction
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

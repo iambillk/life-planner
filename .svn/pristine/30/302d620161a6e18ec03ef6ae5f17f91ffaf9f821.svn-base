@@ -1,0 +1,414 @@
+{# =============================================================================
+  FILE: car_wash_add.html
+  PURPOSE: Add a car wash entry for a piece of equipment
+  TEMPLATE VERSION: v1.0.0
+  LAST UPDATED: 2025-09-04
+
+  HIGHLIGHTS
+  - Dark, page-scoped theme (safe CSS var fallbacks to base.html)
+  - Sticky mini-header: equipment summary + quick actions
+  - Quick Wash presets (fills type, suggested cost, common services)
+  - Smart services panel: “Select All Exterior/Interior” chips
+  - Live helpers: cost +/- quick adjust, photo filename + preview
+  - Gentle validations + today default date
+  - Clear sectioning, accessible labels, keyboard-friendly focus states
+
+  CHANGELOG
+  v1.0.0
+  - NEW: Dark UI refactor, sticky header, presets, service chips, cost tools, photo preview
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block title %}Add Car Wash — {{ equipment.name }}{% endblock %}
+{% block header %}Add Car Wash{% endblock %}
+
+{# ========================= EXTRA CSS (page-scoped) ========================= #}
+{% block extra_css %}
+<style>
+  :root{
+    --cw-bg: var(--bg, #0b0f1a);
+    --cw-panel: var(--panel, #121a2a);
+    --cw-card: var(--card, #0f1625);
+    --cw-sub: #0c1322;
+    --cw-line: var(--line, #1f2a3d);
+    --cw-text: var(--text, #e6eaf2);
+    --cw-muted: var(--text-muted, #9fb0c8);
+    --cw-primary: var(--primary, #6ea8ff);
+    --cw-primary-700: var(--primary-700, #3f7fe6);
+    --cw-success: var(--success, #22c55e);
+    --cw-warn: var(--warning, #f59e0b);
+    --cw-danger: var(--danger, #ef4444);
+
+    --cw-radius: var(--radius, 14px);
+    --cw-radius-sm: var(--radius-sm, 10px);
+    --cw-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .car-wash-wrap{ max-width: 920px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+
+  /* ================= Sticky header ================= */
+  .cw-header{
+    position: sticky; top: 12px; z-index: 5;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--cw-line); border-radius: var(--cw-radius);
+    padding: 12px; box-shadow: var(--cw-shadow); backdrop-filter: blur(6px);
+  }
+  .cw-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .equip-sub{ color: var(--cw-muted); margin-top: 4px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:12px; border:1px solid var(--cw-line);
+    background: var(--cw-card); color: var(--cw-text); text-decoration:none;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    font-size:.95rem; cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--cw-primary); transform: translateY(-1px); }
+  .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
+  .btn-secondary{ background:#0c1322; }
+  .btn-outline{ background: transparent; }
+  .btn-sm{ padding:6px 10px; border-radius:10px; font-size:.85rem; }
+
+  /* ================= Form shell ================= */
+  .car-wash-card{
+    background: var(--cw-card); border:1px solid var(--cw-line);
+    border-radius: var(--cw-radius); padding: 14px; box-shadow: var(--cw-shadow);
+  }
+  .form-section{ margin-bottom: 14px; }
+  .sec-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--cw-line); padding-bottom:6px; margin-bottom:10px;
+  }
+  .sec-head h3{ margin:0; font-size:1.05rem; }
+
+  .form-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; }
+  .form-group{ display:grid; gap:6px; }
+  .form-group label{ font-size:.9rem; color: var(--cw-muted); }
+  input[type="text"], input[type="date"], input[type="number"], textarea, input[type="file"]{
+    width:100%; background:#0b1120; color: var(--cw-text);
+    border:1px solid var(--cw-line); border-radius:10px; padding:10px; font-size:.95rem; outline:none;
+  }
+  textarea{ min-height: 92px; resize: vertical; }
+  input:focus, textarea:focus{ border-color: var(--cw-primary); box-shadow: 0 0 0 2px rgba(110,168,255,.15); }
+
+  /* ================= Quick presets ================= */
+  .wash-type-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:10px;
+  }
+  .wash-btn{
+    padding:12px; background: var(--cw-sub); border:1px solid var(--cw-line); border-radius:12px;
+    display:flex; flex-direction:column; gap:6px; align-items:flex-start; cursor:pointer;
+    transition: transform .1s ease, border-color .2s ease, background .2s ease; text-align:left;
+  }
+  .wash-btn:hover{ transform: translateY(-1px); border-color: var(--cw-primary); }
+  .wash-btn.active{ background: rgba(110,168,255,.16); border-color: rgba(110,168,255,.45); }
+  .price-hint{ font-size:.8rem; color: var(--cw-muted); }
+
+  /* ================= Services ================= */
+  .services-toolbar{ display:flex; gap:8px; flex-wrap:wrap; }
+  .svc-chip{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    border:1px solid var(--cw-line); background:#0c1322; color: var(--cw-text); cursor:pointer;
+  }
+  .services-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:8px; margin-top:10px;
+  }
+  .service-item{
+    background:#0b1120; border:1px solid var(--cw-line); border-radius:10px; padding:10px;
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+  }
+  .service-item input{ accent-color: var(--cw-primary); }
+  .service-item input:checked + span{ font-weight:700; color: var(--cw-success); }
+
+  /* ================= Photo helper ================= */
+  .photo-row{ display:grid; grid-template-columns: 1fr 160px; gap:10px; align-items:start; }
+  .preview{
+    width:100%; height:100%; min-height:120px; border:1px dashed var(--cw-line); border-radius:12px;
+    background:#0b1120 center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:#94a3b8;
+  }
+
+  /* ================= Form actions ================= */
+  .form-actions{
+    display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed var(--cw-line); padding-top:10px; margin-top:4px;
+  }
+
+  .hint{ font-size:.8rem; color: var(--cw-muted); }
+
+  @media (max-width: 860px){
+    .cw-row{ grid-template-columns: 1fr; }
+    .photo-row{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{# ============================== CONTENT =================================== #}
+{% block content %}
+<div class="car-wash-wrap">
+
+  {# =================== STICKY MINI-HEADER =================== #}
+  <div class="cw-header" aria-label="Equipment summary and actions">
+    <div class="cw-row">
+      <div>
+        <h2 style="margin:0;">Add Car Wash</h2>
+        <div class="equip-sub">{{ equipment.year }} {{ equipment.make }} {{ equipment.model }} — <strong>{{ equipment.name }}</strong></div>
+      </div>
+      <div class="header-actions">
+        <a class="btn btn-secondary" href="{{ url_for('equipment.detail', id=equipment.id) }}">← Back to {{ equipment.name }}</a>
+      </div>
+    </div>
+  </div>
+
+  {# =================== FORM CARD =================== #}
+  <form method="POST"
+        action="{{ url_for('equipment.add_car_wash', id=equipment.id) }}"
+        enctype="multipart/form-data"
+        class="car-wash-card"
+        id="carWashForm">
+
+    <!-- Wash Type Presets -->
+    <div class="form-section" id="sec-presets">
+      <div class="sec-head">
+        <h3>Wash Type</h3>
+        <span class="hint">Click a preset to autofill type, cost & common services</span>
+      </div>
+      <div class="wash-type-grid">
+        <button type="button" class="wash-btn" data-type="Basic Wash" data-cost="10">🚿 Basic Wash <span class="price-hint">~$10</span></button>
+        <button type="button" class="wash-btn" data-type="Deluxe Wash" data-cost="15">✨ Deluxe Wash <span class="price-hint">~$15</span></button>
+        <button type="button" class="wash-btn" data-type="Premium Wash" data-cost="20">💎 Premium Wash <span class="price-hint">~$20</span></button>
+        <button type="button" class="wash-btn" data-type="Full Detail" data-cost="100">🎯 Full Detail <span class="price-hint">~$100+</span></button>
+        <button type="button" class="wash-btn" data-type="Interior Only" data-cost="30">🪑 Interior Only <span class="price-hint">~$30</span></button>
+        <button type="button" class="wash-btn" data-type="Self Service" data-cost="5">🪣 Self Service <span class="price-hint">~$5</span></button>
+      </div>
+    </div>
+
+    <!-- Wash Details -->
+    <div class="form-section" id="sec-details">
+      <div class="sec-head"><h3>Wash Details</h3></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="wash_type">Wash Type*</label>
+          <input type="text" id="wash_type" name="wash_type" required placeholder="e.g., Premium Wash, Full Detail" autocomplete="on" list="washTypeList">
+          <datalist id="washTypeList">
+            <option>Basic Wash</option><option>Deluxe Wash</option><option>Premium Wash</option>
+            <option>Full Detail</option><option>Interior Only</option><option>Self Service</option>
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label for="location">Location*</label>
+          <input type="text" id="location" name="location" required placeholder="e.g., Mike's Car Wash, Home" autocomplete="on">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="date">Date*</label>
+          <input type="date" id="date" name="date" required value="{{ today }}">
+        </div>
+        <div class="form-group">
+          <label for="cost">Cost ($)*</label>
+          <div style="display:grid; grid-template-columns: 1fr auto auto; gap:6px;">
+            <input type="number" step="0.01" id="cost" name="cost" required placeholder="0.00" inputmode="decimal" min="0">
+            <button type="button" class="btn btn-outline btn-sm" data-step="-5">−5</button>
+            <button type="button" class="btn btn-outline btn-sm" data-step="+5">+5</button>
+          </div>
+          <span class="hint">Quick adjust with the buttons or type exact amount.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Services Included -->
+    <div class="form-section" id="sec-services">
+      <div class="sec-head">
+        <h3>Services Included</h3>
+        <div class="services-toolbar" aria-label="Bulk select">
+          <button type="button" class="svc-chip" data-bulk="exterior">Select All Exterior</button>
+          <button type="button" class="svc-chip" data-bulk="interior">Select All Interior</button>
+          <button type="button" class="svc-chip" data-bulk="clear">Clear All</button>
+        </div>
+      </div>
+
+      <div class="services-grid">
+        {# Exterior #}
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Exterior Wash"><span>🚗 Exterior Wash</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Wheel Cleaning"><span>🛞 Wheel Cleaning</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Tire Shine"><span>✨ Tire Shine</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Window Cleaning"><span>🪟 Window Cleaning</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Wax"><span>🛡️ Wax</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Undercarriage"><span>🔧 Undercarriage</span>
+        </label>
+
+        {# Interior #}
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Interior Vacuum"><span>🔌 Interior Vacuum</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Dashboard Clean"><span>🧽 Dashboard Clean</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Floor Mats"><span>🦶 Floor Mats</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Air Freshener"><span>🌸 Air Freshener</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Rain-X"><span>💧 Rain-X</span>
+        </label>
+        <label class="service-item">
+          <input type="checkbox" name="services" value="Leather Treatment"><span>🪑 Leather Treatment</span>
+        </label>
+      </div>
+      <div class="hint">Tip: Click a preset above to auto-select common services.</div>
+    </div>
+
+    <!-- Additional Info -->
+    <div class="form-section" id="sec-notes">
+      <div class="sec-head"><h3>Additional Information</h3></div>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="e.g., Used coupon, unlimited plan, pre road trip"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="photo">Photo (optional)</label>
+        <div class="photo-row">
+          <div>
+            <input type="file" id="photo" name="photo" accept="image/*">
+            <span class="hint" id="fileNameHint">No file selected</span>
+          </div>
+          <div id="photoPreview" class="preview">Photo preview</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <a href="{{ url_for('equipment.detail', id=equipment.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Car Wash</button>
+    </div>
+  </form>
+
+  {# =================== PAGE INFO / CHANGELOG =================== #}
+  <div class="car-wash-card" style="position:static;">
+    <details>
+      <summary style="cursor:pointer; font-weight:800;">Page Info & Changelog</summary>
+      <code style="display:block; white-space:pre-wrap; margin-top:8px; color:var(--cw-muted);">
+v1.0.0 — Dark UI refactor, sticky header, presets, service chips, cost helpers, photo preview, comments & structure.
+      </code>
+    </details>
+  </div>
+
+</div><!-- /car-wash-wrap -->
+{% endblock %}
+
+{# ============================= EXTRA JS =================================== #}
+{% block extra_js %}
+<script>
+/* ============================================================================
+   Presets: fill type, cost, and suggest services
+============================================================================ */
+const serviceMap = {
+  'Basic Wash':    ['Exterior Wash'],
+  'Deluxe Wash':   ['Exterior Wash','Wheel Cleaning','Tire Shine'],
+  'Premium Wash':  ['Exterior Wash','Wheel Cleaning','Tire Shine','Interior Vacuum','Window Cleaning'],
+  'Full Detail':   ['Exterior Wash','Wheel Cleaning','Tire Shine','Interior Vacuum','Dashboard Clean','Window Cleaning','Floor Mats','Wax','Leather Treatment'],
+  'Interior Only': ['Interior Vacuum','Dashboard Clean','Window Cleaning','Floor Mats','Leather Treatment','Air Freshener'],
+  'Self Service':  ['Exterior Wash']
+};
+
+function setServices(services){
+  const boxes = Array.from(document.querySelectorAll('input[name="services"]'));
+  boxes.forEach(cb => cb.checked = false);
+  (services || []).forEach(name => {
+    const cb = document.querySelector(`input[name="services"][value="${name}"]`);
+    if (cb) cb.checked = true;
+  });
+}
+
+function activatePreset(btn){
+  document.querySelectorAll('.wash-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+document.querySelectorAll('.wash-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.type;
+    const cost = btn.dataset.cost;
+    document.getElementById('wash_type').value = type;
+    const costInput = document.getElementById('cost');
+    if (costInput && (costInput.value === '' || Number(costInput.value) === 0)) {
+      costInput.value = cost;
+    }
+    setServices(serviceMap[type]);
+    activatePreset(btn);
+  });
+});
+
+/* ============================================================================
+   Bulk service chips
+============================================================================ */
+const exterior = ['Exterior Wash','Wheel Cleaning','Tire Shine','Window Cleaning','Wax','Undercarriage','Rain-X'];
+const interior = ['Interior Vacuum','Dashboard Clean','Floor Mats','Air Freshener','Leather Treatment','Window Cleaning'];
+
+document.querySelectorAll('.svc-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const mode = chip.getAttribute('data-bulk');
+    if (mode === 'exterior') setServices(exterior);
+    else if (mode === 'interior') setServices(interior);
+    else if (mode === 'clear') setServices([]);
+  });
+});
+
+/* ============================================================================
+   Cost quick adjust
+============================================================================ */
+document.querySelectorAll('button[data-step]').forEach(b => {
+  b.addEventListener('click', () => {
+    const step = parseFloat(b.dataset.step.replace('+',''));
+    const input = document.getElementById('cost');
+    const val = parseFloat(input.value || '0') + step;
+    input.value = Math.max(0, val).toFixed(2);
+  });
+});
+
+/* ============================================================================
+   Photo filename + preview
+============================================================================ */
+const fileInput = document.getElementById('photo');
+const fileNameHint = document.getElementById('fileNameHint');
+const preview = document.getElementById('photoPreview');
+
+if (fileInput){
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    fileNameHint.textContent = file ? file.name : 'No file selected';
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => { preview.style.backgroundImage = `url('${ev.target.result}')`; preview.textContent = ''; };
+      reader.readAsDataURL(file);
+    } else {
+      preview.style.backgroundImage = 'none';
+      preview.textContent = 'Photo preview';
+    }
+  });
+}
+
+/* ============================================================================
+   Sensible defaults
+============================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  const dateEl = document.getElementById('date');
+  if (dateEl && !dateEl.value) dateEl.valueAsDate = new Date();
+});
+</script>
+{% endblock %}
