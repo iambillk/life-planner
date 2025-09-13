@@ -77,6 +77,9 @@ def register_blueprints(app):
     from modules.todo import todo_bp
     from modules.realestate import realestate_bp
     from modules.financial import financial_bp
+    from modules.rolodex import rolodex_bp
+    from modules.home import home_bp
+
         
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
@@ -87,7 +90,9 @@ def register_blueprints(app):
     app.register_blueprint(goals_bp, url_prefix='/goals')
     app.register_blueprint(todo_bp, url_prefix='/todo')
     app.register_blueprint(financial_bp, url_prefix='/financial')
-    
+    app.register_blueprint(rolodex_bp, url_prefix='/rolodex')
+    app.register_blueprint(home_bp, url_prefix='/home')
+
     # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)
 

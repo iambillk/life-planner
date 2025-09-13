@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% set active = 'home' %}
+
+{% block header %}Home — Beta{% endblock %}
+
+{% block content %}
+<style>
+  .home-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .hcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);padding:14px;min-height:140px}
+  .hcard h3{margin:0 0 8px 0;font-size:1rem}
+  .muted{color:var(--text-muted);font-size:.9rem}
+  .links-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .link-tile{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);text-decoration:none;color:var(--text)}
+  .link-tile:hover{border-color:rgba(110,168,255,.45)}
+  .row-span-2{grid-row:span 2}
+  .col-span-6{grid-column:span 6}
+  .col-span-4{grid-column:span 4}
+  .col-span-3{grid-column:span 3}
+  .img-fit{width:100%;height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:6px 10px;cursor:pointer}
+  .btn:hover{border-color:rgba(110,168,255,.45)}
+  .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.10),rgba(255,255,255,.05));background-size:200% 100%;animation:sk 1.2s infinite}
+  @keyframes sk{0%{background-position:0% 0}100%{background-position:-200% 0}}
+
+  /* NEWS — spice */
+  .chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .chip{font-size:.78rem;border:1px solid var(--line);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.03);cursor:pointer;user-select:none}
+  .chip.active{border-color:rgba(110,168,255,.5);background:rgba(110,168,255,.12)}
+  .news-wrap.cozy .news-item{padding:8px 0}
+  .news-wrap.compact .news-item{padding:4px 0}
+  .news-sep{height:1px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.02));margin:6px 0}
+  .news-hero{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.03);margin-bottom:8px;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start}
+  .fav{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);display:inline-block;background:rgba(255,255,255,.05)}
+  .title{font-size:1rem;line-height:1.35}
+  .title a{color:var(--text);text-decoration:none}
+  .title a:hover{text-decoration:underline}
+  .meta{display:flex;gap:8px;align-items:center;color:var(--text-muted);font-size:.82rem}
+  .fresh-dot{width:8px;height:8px;border-radius:999px;display:inline-block}
+  .fresh-1{background:#22c55e}       /* <1h */
+  .fresh-6{background:#f59e0b}       /* <6h */
+  .fresh-old{background:#475569}     /* stale */
+  .news-list .news-item{display:flex;gap:10px;align-items:flex-start}
+  .news-list .news-item .fav{margin-top:2px}
+  .news-controls{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .page-ind{min-width:120px;text-align:center}
+
+  /* density toggles */
+  .news-wrap.compact .title{font-size:.95rem}
+</style>
+
+<div class="home-grid">
+  <!-- Weather (multi-location; widened to fit 2×2) -->
+  <section class="hcard col-span-6">
+    <div class="toolbar">
+      <h3 style="flex:1">Weather</h3>
+      <button class="btn" id="weather-refresh">Refresh All</button>
+    </div>
+    <div id="weather-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px">
+      <!-- cards injected here -->
+    </div>
+  </section>
+
+  <!-- News — spicy version with hero + chips + pagination -->
+  <section class="hcard col-span-6">
+    <div class="toolbar">
+      <h3 style="flex:1">News</h3>
+
+      <div id="news-chips" class="chips" style="flex:1;min-width:140px"></div>
+
+      <div class="news-controls">
+        <span class="muted page-ind" id="news-page-indicator"></span>
+        <button class="btn" id="news-density">Density</button>
+        <button class="btn" id="news-sources">Sources</button>
+        <button class="btn" id="news-count">Page Size</button>
+        <button class="btn" id="news-prev">Prev</button>
+        <button class="btn" id="news-next">Next</button>
+        <button class="btn" id="news-refresh">Refresh</button>
+      </div>
+    </div>
+
+    <div id="news-wrap" class="news-wrap cozy">
+      <div id="news-hero" class="news-hero" style="display:none"></div>
+      <div id="news-list" class="news-list" style="margin:6px 0 0 0;"></div>
+    </div>
+  </section>
+
+  <!-- Quote -->
+  <section class="hcard col-span-3">
+    <div class="toolbar">
+      <h3 style="flex:1">Quote of the Day</h3>
+      <button class="btn" id="quote-next">Next</button>
+    </div>
+    <div id="quote-body" class="muted">Fetching wisdom…</div>
+  </section>
+
+  <!-- Quick Links -->
+  <section class="hcard col-span-6 row-span-2">
+    <div class="toolbar">
+      <h3 style="flex:1">Quick Links</h3>
+      <button class="btn" id="link-add">Add</button>
+      <button class="btn" id="link-reset">Reset</button>
+    </div>
+    <div id="links" class="links-grid" style="margin-top:8px"></div>
+  </section>
+
+  <!-- Photo of the Day (now using /static/images/ptod/) -->
+  <section class="hcard col-span-6">
+    <div class="toolbar">
+      <h3 style="flex:1">Photo of the Day</h3>
+      <button class="btn" id="photo-refresh">Shuffle</button>
+    </div>
+    <img id="potd" class="img-fit skeleton" alt="Photo of the day" />
+    <div class="muted" id="photo-caption" style="margin-top:6px">Loading photo…</div>
+  </section>
+</div>
+
+<script>
+// —— Tiny local “settings” (LS-based for beta) ————————————————
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+
+// Defaults
+const DEF_SOURCES = ["Hacker News","AP","Reuters"]; // unused for RT-only backend but kept for prompt UX
+const DEF_LINKS = [
+  {title:"TCH Portal", url:"https://www.totalchoicehosting.com/"},
+  {title:"Observium", url:"https://netmon.tchmachines.com/"},
+  {title:"GandZ", url:"https://gandz.us/"},
+  {title:"Unraid", url:"http://192.168.1.150"},
+];
+
+// === WEATHER (multi-location) ===============================================
+const WEATHER_API = "{{ url_for('home.api_weather') }}";                 // /home/api/weather
+const WEATHER_PRESETS_API = "{{ url_for('home.api_weather_presets') }}"; // /home/api/weather/presets
+
+function formatUpdated(ts){
+  try{
+    return new Date(ts*1000).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  }catch{ return ""; }
+}
+
+function cardSkeleton(name){
+  return `
+    <div class="kcard" style="padding:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <strong>${name}</strong>
+        <span class="muted" style="margin-left:auto">Loading…</span>
+      </div>
+      <div class="muted skeleton" style="height:56px;margin-top:8px;border-radius:8px"></div>
+    </div>
+  `;
+}
+
+function renderWeatherCard(container, preset, data){
+  const loc = data.location || preset.name;
+  const t   = data.now?.temp_f ?? "–";
+  const f   = data.now?.feels_f ?? "–";
+  const pop = data.now?.pop ?? "–";
+  const hi  = data.next12?.hi_f ?? "–";
+  const lo  = data.next12?.lo_f ?? "–";
+  const up  = formatUpdated(data.updated_ts);
+
+  container.innerHTML = `
+    <div class="kcard" style="padding:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <strong>${loc}</strong>
+        <span class="muted" style="margin-left:auto">Updated ${up}</span>
+      </div>
+      <div style="margin-top:6px">
+        <div>🌤️ ${t}°F • Feels ${f}° • ${pop}% rain</div>
+        <div class="muted" style="margin-top:4px">Next 12h: ↑${hi}° / ↓${lo}°</div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadPresets(){
+  const res = await fetch(WEATHER_PRESETS_API, {cache:"no-store"});
+  const list = await res.json();
+  return Array.isArray(list) ? list : [];
+}
+
+async function renderAllWeather(){
+  const grid = document.getElementById('weather-grid');
+  grid.innerHTML = ""; // clear
+
+  const presets = await loadPresets();
+  const mounts = {};
+  presets.forEach(p => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = cardSkeleton(p.name);
+    grid.appendChild(wrap);
+    mounts[p.id] = wrap;
+  });
+
+  await Promise.all(presets.map(async (p)=>{
+    try{
+      const url = new URL(WEATHER_API, window.location.origin);
+      url.searchParams.set("lat", String(p.lat));
+      url.searchParams.set("lon", String(p.lon));
+      url.searchParams.set("tz",  p.tz);
+      url.searchParams.set("label", p.name);
+      const res = await fetch(url.toString(), {cache:"no-store"});
+      const data = await res.json();
+      renderWeatherCard(mounts[p.id], p, data);
+    }catch(e){
+      mounts[p.id].innerHTML = `
+        <div class="kcard" style="padding:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <strong>${p.name}</strong>
+            <span class="muted" style="margin-left:auto">Error</span>
+          </div>
+          <div class="muted" style="margin-top:6px">Weather unavailable.</div>
+        </div>
+      `;
+    }
+  }));
+}
+
+document.getElementById('weather-refresh').addEventListener('click', renderAllWeather);
+
+// === NEWS (real feeds) — hero, chips, density, pagination ===================
+const NEWS_API = "{{ url_for('home.api_news') }}";                 // /home/api/news
+const NEWS_SOURCES_API = "{{ url_for('home.api_news_sources') }}"; // /home/api/news/sources
+
+const NEWS_STATE = {
+  itemsAll: [],
+  itemsFiltered: [],
+  page: 0,
+  pageSize: LS.get('home.news.page_size', 7),   // items per page (including hero)
+  perSource: LS.get('home.news.per_source', 20),// fetch bigger pool so Next can page
+  filter: "All",
+  density: LS.get('home.news.density', 'cozy')  // 'cozy' | 'compact'
+};
+
+function timeAgo(published){
+  if(!published) return "";
+  const dt = new Date(published);
+  if(isNaN(dt.getTime())) return "";
+  const diff = (Date.now() - dt.getTime())/1000;
+  if(diff < 90) return "just now";
+  const mins = Math.floor(diff/60);
+  if(mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs/24);
+  return `${days}d`;
+}
+
+function freshClass(published){
+  const dt = new Date(published);
+  if(isNaN(dt.getTime())) return "fresh-old";
+  const diffHrs = (Date.now() - dt.getTime())/3600000;
+  if(diffHrs < 1) return "fresh-1";
+  if(diffHrs < 6) return "fresh-6";
+  return "fresh-old";
+}
+
+function faviconFor(link){
+  try{
+    const host = new URL(link).hostname;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+  }catch{ return ""; }
+}
+
+async function getSelectedNewsSources(){
+  const lsList = LS.get('home.news.sources', null);
+  if (Array.isArray(lsList) && lsList.length) {
+    try {
+      const res = await fetch(NEWS_SOURCES_API, {cache:"no-store"});
+      const all = await res.json(); // [{id,name}]
+      const nameToId = new Map(all.map(x => [x.name.toLowerCase(), x.id]));
+      const mapped = lsList.map(n => nameToId.get(String(n).toLowerCase())).filter(Boolean);
+      if (mapped.length) return mapped;
+    } catch {}
+  }
+  return null; // server defaults
+}
+
+function buildChips(fromItems){
+  const chipsRoot = document.getElementById('news-chips');
+  chipsRoot.innerHTML = "";
+  const names = Array.from(new Set(fromItems.map(i=>i.source))).sort();
+  const make = (label) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (NEWS_STATE.filter===label ? ' active':'');
+    btn.textContent = label;
+    btn.addEventListener('click', ()=>{
+      NEWS_STATE.filter = label;
+      LS.set('home.news.filter', label);
+      applyFilterAndRender();
+    });
+    chipsRoot.appendChild(btn);
+  };
+  make("All");
+  names.forEach(n=>make(n));
+}
+
+function applyFilterAndRender(){
+  const wrap = document.getElementById('news-wrap');
+  wrap.classList.toggle('compact', NEWS_STATE.density==='compact');
+  wrap.classList.toggle('cozy', NEWS_STATE.density!=='compact');
+
+  if(NEWS_STATE.filter==="All"){
+    NEWS_STATE.itemsFiltered = NEWS_STATE.itemsAll.slice();
+  }else{
+    NEWS_STATE.itemsFiltered = NEWS_STATE.itemsAll.filter(i=>i.source===NEWS_STATE.filter);
+  }
+  NEWS_STATE.page = 0;
+  renderNewsPage();
+}
+
+function renderNewsPage(){
+  const listEl = document.getElementById('news-list');
+  const heroEl = document.getElementById('news-hero');
+  const ind = document.getElementById('news-page-indicator');
+  listEl.innerHTML = "";
+  heroEl.style.display = "none";
+  heroEl.innerHTML = "";
+
+  const items = NEWS_STATE.itemsFiltered;
+  const start = NEWS_STATE.page * NEWS_STATE.pageSize;
+  const slice = items.slice(start, start + NEWS_STATE.pageSize);
+
+  if (!slice.length){
+    listEl.innerHTML = "<div class='muted'>No headlines.</div>";
+  } else {
+    const h = slice[0];
+    if(h){
+      heroEl.style.display = "grid";
+      heroEl.innerHTML = `
+        <div><img class="fav" src="${faviconFor(h.link)}" alt=""></div>
+        <div>
+          <div class="title"><a href="${h.link}" target="_blank" rel="noopener">${h.title}</a></div>
+          <div class="meta">
+            <span class="chip">${h.source}</span>
+            <span class="fresh-dot ${freshClass(h.published)}" title="${h.published||''}"></span>
+            <span>${timeAgo(h.published)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const rest = slice.slice(1);
+    rest.forEach((it, idx)=>{
+      if(idx>0){ const sep=document.createElement('div'); sep.className='news-sep'; listEl.appendChild(sep); }
+      const row = document.createElement('div');
+      row.className = "news-item";
+      row.innerHTML = `
+        <img class="fav" src="${faviconFor(it.link)}" alt="">
+        <div class="title" style="flex:1">
+          <a href="${it.link}" target="_blank" rel="noopener">${it.title}</a>
+          <div class="meta" style="margin-top:2px">
+            <span class="chip">${it.source}</span>
+            <span class="fresh-dot ${freshClass(it.published)}" title="${it.published||''}"></span>
+            <span>${timeAgo(it.published)}</span>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  const totalPages = Math.max(1, Math.ceil(items.length / NEWS_STATE.pageSize));
+  ind.textContent = `Page ${Math.min(NEWS_STATE.page+1,totalPages)} / ${totalPages} (${items.length} items)`;
+  document.getElementById('news-prev').disabled = NEWS_STATE.page<=0;
+  document.getElementById('news-next').disabled = (NEWS_STATE.page+1)>=totalPages;
+}
+
+async function renderNews(){
+  const listEl = document.getElementById('news-list');
+  listEl.innerHTML = "<div class='muted'>Loading…</div>";
+
+  const ids = await getSelectedNewsSources();
+  const url = new URL(NEWS_API, window.location.origin);
+  if (ids && ids.length) url.searchParams.set("sources", ids.join(","));
+  url.searchParams.set("limit", String(NEWS_STATE.perSource));
+
+  try{
+    const res = await fetch(url.toString(), {cache:"no-store"});
+    const j = await res.json();
+    NEWS_STATE.itemsAll = j.items || [];
+    buildChips(NEWS_STATE.itemsAll);
+    applyFilterAndRender();
+  }catch(e){
+    listEl.innerHTML = "<div class='muted'>News unavailable.</div>";
+    NEWS_STATE.itemsAll = [];
+    buildChips([]);
+    applyFilterAndRender();
+  }
+}
+
+// Controls
+document.getElementById('news-refresh').addEventListener('click', renderNews);
+document.getElementById('news-prev').addEventListener('click', ()=>{
+  if (NEWS_STATE.page > 0){ NEWS_STATE.page--; renderNewsPage(); }
+});
+document.getElementById('news-next').addEventListener('click', ()=>{
+  const totalPages = Math.max(1, Math.ceil(NEWS_STATE.itemsFiltered.length / NEWS_STATE.pageSize));
+  if (NEWS_STATE.page + 1 < totalPages){ NEWS_STATE.page++; renderNewsPage(); }
+});
+document.getElementById('news-count').addEventListener('click', ()=>{
+  const cur = NEWS_STATE.pageSize;
+  const v = prompt("Items per page (1–20):", String(cur));
+  if (v != null){
+    const n = Math.max(1, Math.min(20, parseInt(v, 10) || cur));
+    NEWS_STATE.pageSize = n;
+    LS.set('home.news.page_size', n);
+    NEWS_STATE.page = 0;
+    renderNewsPage();
+  }
+});
+document.getElementById('news-density').addEventListener('click', ()=>{
+  NEWS_STATE.density = (NEWS_STATE.density==='compact') ? 'cozy' : 'compact';
+  LS.set('home.news.density', NEWS_STATE.density);
+  renderNewsPage();
+});
+document.getElementById('news-sources').addEventListener('click', async ()=>{
+  try{
+    const res = await fetch(NEWS_SOURCES_API, {cache:"no-store"});
+    const all = await res.json(); // [{id,name}]
+    const currentIdsMaybe = await getSelectedNewsSources();
+    const set = new Set(currentIdsMaybe || []);
+    const currentNames = all.filter(x=>set.has(x.id)).map(x=>x.name);
+    const v = prompt(
+      "Choose sources (comma-separated names). Available:\n" +
+      all.map(x=>x.name).join(", ") +
+      "\n\nCurrent: " + (currentNames.join(", ") || "Server default"),
+      currentNames.join(", ")
+    );
+    if(v!=null){
+      const chosenNames = v.split(",").map(s=>s.trim()).filter(Boolean);
+      if (chosenNames.length){
+        LS.set('home.news.sources', chosenNames);
+      }else{
+        localStorage.removeItem('home.news.sources'); // back to server default
+      }
+      renderNews();
+    }
+  }catch{
+    alert("Could not load source list.");
+  }
+});
+
+// === QUOTE ===================================================================
+const QUOTES = [
+  "You have power over your mind — not outside events. ~ Marcus Aurelius",
+  "Waste no more time arguing what a good man should be. Be one. ~ Marcus Aurelius",
+  "We suffer more often in imagination than in reality. ~ Seneca",
+  "Courage is fear holding on a minute longer. ~ George S. Patton",
+  "The impediment to action advances action. What stands in the way becomes the way. ~ Marcus Aurelius"
+];
+function renderQuote(){
+  const idx = Math.floor(Math.random()*QUOTES.length);
+  document.getElementById('quote-body').textContent = QUOTES[idx];
+}
+document.getElementById('quote-next').addEventListener('click', renderQuote);
+
+// === QUICK LINKS ============================================================
+function renderLinks(){
+  const links = LS.get('home.links', DEF_LINKS);
+  const root = document.getElementById('links'); root.innerHTML="";
+  links.forEach((ln, i)=>{
+    const a = document.createElement('a');
+    a.className = "link-tile";
+    a.href = ln.url; a.target = "_blank"; a.rel="noopener";
+    a.innerHTML = `<span>🔗</span><span>${ln.title}</span>`;
+    a.addEventListener('contextmenu', (e)=>{
+      e.preventDefault();
+      if(confirm(`Remove '${ln.title}'?`)){
+        const updated = LS.get('home.links', DEF_LINKS).filter((_,idx)=>idx!==i);
+        LS.set('home.links', updated); renderLinks();
+      }
+    });
+    root.appendChild(a);
+  });
+}
+document.getElementById('link-add').addEventListener('click', ()=>{
+  const title = prompt("Link title:"); if(!title) return;
+  const url = prompt("URL (include http/https):"); if(!url) return;
+  const links = LS.get('home.links', DEF_LINKS); links.push({title, url});
+  LS.set('home.links', links); renderLinks();
+});
+document.getElementById('link-reset').addEventListener('click', ()=>{
+  if(confirm("Reset links to defaults?")){
+    LS.set('home.links', DEF_LINKS); renderLinks();
+  }
+});
+
+// === PHOTO OF THE DAY (uses ptod_items from backend) ========================
+const POTD_ITEMS = {{ (ptod_items or [])|tojson|safe }};
+const POTD_FALLBACK = [
+  "https://picsum.photos/seed/ips/800/400",
+  "https://picsum.photos/seed/detroit/800/400",
+  "https://picsum.photos/seed/datacenter/800/400"
+];
+
+function humanizeName(n){
+  if(!n) return "";
+  try{
+    const base = n.replace(/\.[^.]+$/,''); // drop extension
+    return base.replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
+  }catch{ return n; }
+}
+
+function renderPhoto(){
+  const img = document.getElementById('potd');
+  const cap = document.getElementById('photo-caption');
+
+  const hasLocal = Array.isArray(POTD_ITEMS) && POTD_ITEMS.length>0;
+  const pick = () => {
+    if(hasLocal){
+      const i = Math.floor(Math.random()*POTD_ITEMS.length);
+      return POTD_ITEMS[i];
+    }
+    const i = Math.floor(Math.random()*POTD_FALLBACK.length);
+    return {url: POTD_FALLBACK[i], name: "Demo image"};
+  };
+
+  const choice = pick();
+  img.classList.add('skeleton');
+  img.onload = ()=> img.classList.remove('skeleton');
+  img.onerror = ()=> { img.classList.remove('skeleton'); cap.textContent = "Image failed to load."; };
+  img.src = choice.url;
+  cap.textContent = hasLocal ? (humanizeName(choice.name) || choice.name) : "Random demo image — add files to /static/images/ptod/";
+}
+document.getElementById('photo-refresh').addEventListener('click', renderPhoto);
+
+// === INIT ====================================================================
+renderAllWeather();
+renderNews();
+renderQuote();
+renderLinks();
+renderPhoto();
+</script>
+{% endblock %}

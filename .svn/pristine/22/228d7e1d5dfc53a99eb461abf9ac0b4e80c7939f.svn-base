@@ -1,0 +1,97 @@
+async function enableGrid(){
+  // --- tiny helpers ---
+  const LAYOUT_KEY = 'home.gs.v2';
+  const CELL_HEIGHT = 78;
+  const GAP = 8;
+  const root = document.getElementById('gs');
+  const origin = document.getElementById('cards-origin');
+
+  function mountInto(gsId){
+    const item = root.querySelector(`.grid-stack-item[gs-id="${gsId}"] .grid-stack-item-content`);
+    const section = document.getElementById(gsId);
+    if (item && section) { item.appendChild(section); return true; }
+    return false;
+  }
+  function contentMissing(){
+    // any grid item without real content?
+    return Array.from(root.querySelectorAll('.grid-stack-item'))
+      .some(it => !it.querySelector('.grid-stack-item-content > section'));
+  }
+
+  try{
+    // Load GridStack locally
+    if(!window.GridStack){
+      await new Promise((res, rej)=>{
+        const s=document.createElement('script');
+        s.src='/static/js/gridstack-all.js';
+        s.onload=res; s.onerror=rej; document.head.appendChild(s);
+      });
+    }
+
+    const grid = GridStack.init({
+      column: 12,
+      margin: GAP,
+      cellHeight: CELL_HEIGHT,
+      float: true,
+      handle: '.drag-handle',
+      resizable: { handles: 'e, se, s' },
+      draggable: { handle: '.drag-handle', scroll: true, appendTo: 'body' },
+      disableOneColumnMode: false,
+      oneColumnModeDomSort: true,
+      animate: true
+    }, root);
+
+    // default layout (12 cols)
+    const defaults = [
+      {id:'card-potd',    x:0,  y:0, w:4, h:3},
+      {id:'card-links',   x:4,  y:0, w:8, h:2},
+      {id:'card-news',    x:0,  y:3, w:8, h:4},
+      {id:'card-quote',   x:8,  y:3, w:4, h:2},
+      {id:'card-weather', x:8,  y:5, w:4, h:3},
+    ];
+
+    // Try to load saved layout (may be missing ids)
+    const saved = LS.get(LAYOUT_KEY, null);
+    if (Array.isArray(saved) && saved.length){
+      grid.load(saved.map(n => ({id:n.id, x:n.x, y:n.y, w:n.w, h:n.h})));
+      // Mount sections; if any fail, nuke layout and rebuild fresh
+      let ok = true;
+      saved.forEach(n => { ok = mountInto(n.id) && ok; });
+      if (!ok || contentMissing()){
+        console.warn('Saved layout corrupt/empty — rebuilding defaults');
+        LS.set(LAYOUT_KEY, null);
+        grid.removeAll();
+        defaults.forEach(({id,x,y,w,h})=>{
+          const item = grid.addWidget({x,y,w,h, id});
+          item.el.querySelector('.grid-stack-item-content').appendChild(document.getElementById(id));
+        });
+        LS.set(LAYOUT_KEY, grid.save(true));
+      }
+    } else {
+      // Fresh build
+      defaults.forEach(({id,x,y,w,h})=>{
+        const item = grid.addWidget({x,y,w,h, id});
+        item.el.querySelector('.grid-stack-item-content').appendChild(document.getElementById(id));
+      });
+      LS.set(LAYOUT_KEY, grid.save(true));
+    }
+
+    // Persist on change
+    const save = ()=> LS.set(LAYOUT_KEY, grid.save(true));
+    grid.on('change', save);
+    grid.on('resizestop', save);
+    grid.on('dragstop', save);
+
+    // Edit mode wiring
+    const toggleBtn = document.getElementById('toggle-edit');
+    const setEdit = (on)=>{
+      document.body.classList.toggle('edit', !!on);
+      grid.setStatic(!on);
+      toggleBtn.textContent = on ? 'Lock Layout' : 'Customize';
+    };
+    toggleBtn.addEventListener('click', ()=> setEdit(!document.body.classList.contains('edit')));
+    setEdit(false);
+
+    // Double-click a card to fit its height to content
+    root.addEventListener('dblclick', (e)=>{
+      const item = e.target.closest('.grid-stack-item'); if(!item) return

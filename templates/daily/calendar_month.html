@@ -125,6 +125,9 @@
   .event-chip.kids{background:#10b981}
   .event-chip.family{background:#f59e0b}
   .event-chip.deadline{background:#ef4444;font-weight:800}
+  /* make deadline chip anchors look like chips */
+  a.event-chip{color:#fff;text-decoration:none}
+
   .recurring-indicator{display:inline-block;font-size:.7rem;opacity:.9}
 
   .more-events{font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:6px;font-style:italic;user-select:none}
@@ -241,7 +244,7 @@
         {% set total_items = (day_info.events|length) + (day_info.deadlines|length) %}
         {% set density = 0 if total_items == 0 else 1 if total_items <= 2 else 2 if total_items <= 4 else 3 if total_items <= 6 else 4 %}
 
-        {# Combine deadlines + events to render first 3 and count remainder (fixes +X more) #}
+        {# Combine deadlines + events to render first 3 and count remainder #}
         {% set all_items = day_info.deadlines + day_info.events %}
 
         <div
@@ -259,16 +262,41 @@
             {% set week_offset = ((target_monday - todays_monday).days // 7) %}
             <a class="wk-link"
                href="{{ url_for('daily.calendar_view', view='week', week_offset=week_offset) }}"
+               onclick="event.stopPropagation()"
                title="Open in Week View">Week</a>
           </div>
 
-          {# First 3 items #}
+          {# First 3 items: make DEADLINES clickable using project ids #}
           {% for item in all_items[:3] %}
             {% if item.name is defined %}
-              <div class="event-chip deadline" title="DEADLINE: {{ item.name }}">
+              {# Try to determine id + type whether item is model or dict #}
+              {% set pid = (item.id if item.id is defined else (item.get('id') if item.get is defined else None)) %}
+              {% set ptype = (
+                   item.project_type if item.project_type is defined
+                   else (item.get('project_type') if item.get is defined else None)
+                   ) or (
+                   item.source if item.source is defined
+                   else (item.get('source') if item.get is defined else None)
+                   ) or (
+                   item.type if item.type is defined
+                   else (item.get('type') if item.get is defined else None)
+                   ) or (item.__class__.__name__ if item.__class__ is defined else '')
+              %}
+              {% if ptype in ['tch','TCH','tch_project','TCHProject'] %}
+                {% set href = url_for('projects.tch_detail', id=pid) %}
+              {% elif ptype in ['personal','Personal','PersonalProject'] %}
+                {% set href = url_for('persprojects.detail', id=pid) %}
+              {% else %}
+                {# default to TCH if unknown (you can flip to personal if you prefer) #}
+                {% set href = url_for('projects.tch_detail', id=pid) %}
+              {% endif %}
+              <a class="event-chip deadline"
+                 href="{{ href }}"
+                 onclick="event.stopPropagation()"
+                 title="DEADLINE: {{ item.name }}">
                 <span class="icon">⚠️</span>
                 <span class="label">{{ item.name|truncate(18, True, '…') }}</span>
-              </div>
+              </a>
             {% else %}
               <div class="event-chip {% if item.who == 'Wife' %}wife{% elif item.who in ['Ziggy','Gus'] %}kids{% elif item.who == 'Family' %}family{% endif %}"
                    title="{{ item.event_time or '' }} - {{ item.event_type }} ({{ item.who }})">
@@ -282,7 +310,9 @@
           {% set remaining = (all_items|length - 3) if (all_items|length > 3) else 0 %}
           {% if remaining > 0 %}
             <div class="more-events">
-              <a href="javascript:void(0)" onclick="showDayDetails('{{ day_info.date.strftime('%Y-%m-%d') }}')" tabindex="0">+{{ remaining }} more</a>
+              <a href="javascript:void(0)"
+                 onclick="event.stopPropagation(); showDayDetails('{{ day_info.date.strftime('%Y-%m-%d') }}')"
+                 tabindex="0">+{{ remaining }} more</a>
             </div>
           {% endif %}
         </div>
@@ -348,12 +378,24 @@
         } else {
           if (hasDeadlines){
             data.deadlines.forEach(d => {
+              // Try to resolve type/id from multiple possible keys
+              const pid = d.project_id || d.id;
+              const rawType = (d.project_type || d.source || d.type || '').toString().toLowerCase();
+              const isTch = ['tch','tch_project','tchproject'].includes(rawType);
+              const href = isTch
+                ? `{{ url_for('projects.tch_detail', id=0) }}`.replace('0', pid)
+                : `{{ url_for('persprojects.detail', id=0) }}`.replace('0', pid);
+
               const el = document.createElement('div');
               el.className = 'modal-event deadline';
               el.innerHTML = `
-                <div class="row"><span class="title" style="font-weight:700;color:#ef4444">⚠️ DEADLINE: ${d.name}</span></div>
+                <div class="row">
+                  <a href="${href}" class="title" style="font-weight:700;color:#ef4444;text-decoration:none">⚠️ ${d.name}</a>
+                </div>
                 <div style="font-size:14px;color:var(--text-muted)">Priority: ${d.priority || 'Medium'}</div>
               `;
+              // clicking the link should not close modal first
+              el.querySelector('a')?.addEventListener('click', (e)=>{ e.stopPropagation(); });
               content.appendChild(el);
             });
           }
@@ -434,12 +476,26 @@
     }
   });
 
+  // Prevent day-cell click from hijacking clicks on inner links (belts & suspenders)
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a');
+    if (!a) return;
+    // if anchor lives inside a day-cell, stop bubbling so the day modal doesn't open first
+    if (a.closest('.day-cell')) {
+      e.stopPropagation();
+    }
+  }, true);
+
   // Subtle highlight & center on today if present
   (function(){
     const todayCell = document.getElementById('todayCell');
     if (todayCell){
-      todayCell.animate([{boxShadow:'0 0 0 0px rgba(255,255,255,0)'},{boxShadow:'0 0 0 10px rgba(255,255,255,0.06)'}],{duration:600,iterations:1});
-      if (todayCell.getBoundingClientRect().top < 0 || todayCell.getBoundingClientRect().bottom > window.innerHeight){
+      todayCell.animate(
+        [{boxShadow:'0 0 0 0px rgba(255,255,255,0)'},{boxShadow:'0 0 0 10px rgba(255,255,255,0.06)'}],
+        {duration:600,iterations:1}
+      );
+      const rect = todayCell.getBoundingClientRect();
+      if (rect.top < 0 || rect.bottom > window.innerHeight){
         todayCell.scrollIntoView({block:'center', behavior:'smooth'});
       }
     }

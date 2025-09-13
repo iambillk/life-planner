@@ -1,0 +1,105 @@
+<!-- templates/persprojects/capture_personal.html -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Capture Personal from Email</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
+      .chips span { display:inline-block; background:#f2f2f2; padding:6px 10px; border-radius:12px; margin-right:8px; font-size:12px; }
+      .row { margin: 14px 0; }
+      label { display:block; font-weight:600; margin-bottom:6px; }
+      input[type=text], select, input[type=date], textarea { width: 100%; padding:8px; }
+      .actions { margin-top: 18px; display:flex; gap:8px; }
+      .warn { background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:12px; }
+    </style>
+  </head>
+<body>
+  {% if duplicate %}
+  <div class="warn">
+    This email seems already captured in project:
+    <strong><a href="{{ url_for('persprojects.detail', id=duplicate[1].id) }}">{{ duplicate[1].name }}</a></strong>.
+    You can <a href="{{ url_for('persprojects.detail', id=duplicate[1].id) }}">open it</a>,
+    or continue to create another item below.
+  </div>
+  {% endif %}
+
+    <div class="chips">
+      {% if msgid %}<span>MsgID: {{ msgid }}</span>{% endif %}
+      {% if from_addr %}<span>From: {{ from_addr }}</span>{% endif %}
+      {% if subject_raw %}<span>Subject: {{ subject_raw }}</span>{% endif %}
+    </div>
+
+    <form method="post">
+      <input type="hidden" name="msgid" value="{{ msgid or '' }}">
+      <input type="hidden" name="from_addr" value="{{ from_addr or '' }}">
+      <input type="hidden" name="subject_raw" value="{{ subject_raw or '' }}">
+      {% if duplicate %}<input type="hidden" name="dedupe_override" value="1">{% endif %}
+
+      {% if attachments %}
+      <div style="background:#f0f8ff; padding:10px; border-radius:8px; margin:12px 0;">
+        <strong>📎 Email has {{ attachments|length }} attachment(s):</strong>
+        <div style="margin:8px 0;">
+          {% for file in attachments %}
+          <label style="display:block; margin:4px 0;">
+            <input type="checkbox" name="keep_files" value="{{ file.name }}" checked>
+            {{ file.name }} ({{ file.size_mb }} MB)
+          </label>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="attach_path" value="{{ attach_path }}">
+      </div>
+      {% endif %}
+
+      <div class="row">
+        <label>Mode</label>
+        <label><input type="radio" name="mode" value="new" checked> New Project</label>
+        <label><input type="radio" name="mode" value="existing"> Add to Existing Project</label>
+      </div>
+
+      <div class="row" id="existingRow" style="display:none">
+        <label>Choose Project</label>
+        <select name="existing_id">
+          {% for p in projects %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Title</label>
+        <input type="text" name="title" value="{{ title_suggest }}">
+      </div>
+
+      <div class="row">
+        <label>Category</label>
+        <select name="category">
+          <option value="">-- none --</option>
+          {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Due Date (optional)</label>
+        <input type="date" name="due_date">
+      </div>
+
+      <div class="actions">
+        <button type="submit">Create</button>
+        <a href="{{ url_for('persprojects.index') }}">Cancel</a>
+      </div>
+    </form>
+
+    <script>
+      const modeNew = document.querySelector('input[name="mode"][value="new"]');
+      const modeExisting = document.querySelector('input[name="mode"][value="existing"]');
+      const existingRow = document.getElementById('existingRow');
+      function sync() { existingRow.style.display = modeExisting.checked ? 'block' : 'none'; }
+      modeNew.addEventListener('change', sync);
+      modeExisting.addEventListener('change', sync);
+      sync();
+    </script>
+  </body>
+</html>

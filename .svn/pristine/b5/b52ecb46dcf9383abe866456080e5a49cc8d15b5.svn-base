@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ 'New Company' if mode=='new' else 'Edit Company' }}</h1>
+{% if dedupe %}<div class="warn">Possible duplicate detected. Submit again to confirm.</div>{% endif %}
+<form method="post">
+  {% if dedupe %}<input type="hidden" name="dedupe_override" value="1">{% endif %}
+  <div class="row"><label>Company name</label>
+    <input type="text" name="name" value="{{ form.get('name', company.name if company else '') }}" required></div>
+  <div class="row"><label>Website</label>
+    <input type="text" name="website" value="{{ form.get('website', company.website if company else '') }}"></div>
+  <div class="row"><label>Phone</label>
+    <input type="text" name="phone" value="{{ form.get('phone', company.phone if company else '') }}"></div>
+  <div class="row"><label>Tags (comma-separated)</label>
+    <input type="text" name="tags" value="{{ form.get('tags', company.tags if company else '') }}"></div>
+  <div class="row"><label>Notes</label>
+    <textarea name="notes" rows="6">{{ form.get('notes', company.notes if company else '') }}</textarea></div>
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ url_for('rolodex.companies') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -107,6 +107,8 @@
     background: var(--panel);border-left:3px solid var(--primary);border-radius:8px;padding:10px;
     transition:transform .16s ease, box-shadow .16s ease;position:relative;min-width:0;
   }
+  /* allow links to look like cards */
+  .event-card, .modal-event { color:inherit; text-decoration:none; display:block; }
   .event-card:hover{transform:translateX(2px);box-shadow:0 6px 18px rgba(0,0,0,.18)}
   .event-card.wife{border-left-color:#ec4899;background:linear-gradient(to right, rgba(236,72,153,.1), var(--panel))}
   .event-card.kids{border-left-color:#10b981;background:linear-gradient(to right, rgba(16,185,129,.1), var(--panel))}
@@ -287,17 +289,21 @@
         <div class="events-container">
           <!-- Deadlines first -->
           {% for project in tch_deadlines if project.deadline == day_date %}
-          <div class="event-card deadline">
+          <a class="event-card deadline" 
+             href="{{ url_for('projects.tch_detail', id=project.id) }}" 
+             onclick="event.stopPropagation()" title="Open project">
             <div class="event-title" style="color:#ef4444;font-weight:800">⚠️ DEADLINE: {{ project.name|truncate(30) }}</div>
             <span class="event-who" style="background:#ef4444;color:#fff">TCH Project</span>
-          </div>
+          </a>
           {% endfor %}
 
           {% for project in personal_deadlines if project.deadline == day_date %}
-          <div class="event-card deadline">
+          <a class="event-card deadline" 
+             href="{{ url_for('persprojects.detail', id=project.id) }}" 
+             onclick="event.stopPropagation()" title="Open project">
             <div class="event-title" style="color:#ef4444;font-weight:800">⚠️ DEADLINE: {{ project.name|truncate(30) }}</div>
             <span class="event-who" style="background:#ef4444;color:#fff">Personal</span>
-          </div>
+          </a>
           {% endfor %}
 
           <!-- Regular events -->
@@ -347,6 +353,12 @@
 <script>
   let currentDayEvents = [];
 
+  // Route bases used in modal links (adjust the tch_detail endpoint name if different)
+  const ROUTE_BASE = {
+    tch: "{{ url_for('projects.tch_detail', id=0) }}".replace(/0$/, ''),
+    personal: "{{ url_for('persprojects.detail', id=0) }}".replace(/0$/, '')
+  };
+
   function toggleDropdown(e){
     e.stopPropagation();
     document.getElementById('moreMenu').classList.toggle('open');
@@ -379,13 +391,26 @@
         } else {
           if (hasDeadlines){
             data.deadlines.forEach(d => {
-              const el = document.createElement('div');
-              el.className = 'modal-event deadline';
-              el.innerHTML = `
-                <div class="row"><span class="title" style="font-weight:700;color:#ef4444">⚠️ DEADLINE: ${d.name}</span></div>
+              // Expecting d like { id, name, priority, kind: 'tch'|'personal' }
+              const href = (d && d.id && d.kind && ROUTE_BASE[d.kind]) ? (ROUTE_BASE[d.kind] + d.id) : null;
+
+              const wrapper = document.createElement(href ? 'a' : 'div');
+              wrapper.className = 'modal-event deadline';
+              if (href) {
+                wrapper.href = href;
+                wrapper.target = '_self';
+                wrapper.title = 'Open project';
+              }
+
+              wrapper.innerHTML = `
+                <div class="row">
+                  <span class="title" style="font-weight:700;color:#ef4444">
+                    ⚠️ DEADLINE: ${d.name}
+                  </span>
+                </div>
                 <div style="font-size:14px;color:var(--text-muted)">Priority: ${d.priority || 'Medium'}</div>
               `;
-              content.appendChild(el);
+              content.appendChild(wrapper);
             });
           }
           if (hasEvents){

@@ -1,4 +1,4 @@
-<!-- templates/persprojects/detail.html - Fixed version matching improved TCH layout -->
+<!-- templates/persprojects/detail.html -->
 {% extends "base.html" %}
 {% block title %}{{ project.name }}{% endblock %}
 {% block header %}{{ project.name }}{% endblock %}
@@ -48,6 +48,7 @@
     padding:8px 12px; border-radius:12px; border:1px solid var(--pd-line);
     background:var(--pd-card); color:var(--pd-text); text-decoration:none; font-size:.95rem;
     transition: transform .1s ease, border-color .2s ease, background .2s ease;
+    cursor:pointer;
   }
   .btn:hover{ border-color:var(--pd-primary); transform:translateY(-1px); }
   .btn-primary{ background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.45); }
@@ -55,10 +56,9 @@
   .btn-outline{ background:transparent; }
   .btn-secondary{ background:#0c1322; }
   .btn-success{ background:#16351f; border-color:#1f6f3a; }
-  .btn-danger{ background:#2a0f15; border-color:#7f1d1d; }
   .btn-sm{ padding:6px 10px; font-size:.85rem; border-radius:10px; }
 
-  /* Metadata chips */
+  /* Chips / metadata */
   .project-metadata{ display:flex; gap:8px; flex-wrap:wrap; }
   .chip{
     display:inline-flex; align-items:center; gap:8px;
@@ -71,6 +71,7 @@
   .chip-status.status-planning{ background:#64748b; }
   .chip-status.status-on_hold{ background:#f59e0b; }
   .chip-status.status-completed{ background:#22c55e; }
+
   .chip-priority.priority-low{ background:#4b5563; color:#0a0f1a; }
   .chip-priority.priority-medium{ background:#3b82f6; color:#0a0f1a; }
   .chip-priority.priority-high{ background:#f59e0b; color:#0a0f1a; }
@@ -79,13 +80,11 @@
   .project-description{ color:var(--pd-muted); margin-top:8px; }
 
   .header-progress{ margin-top:8px; display:flex; align-items:center; gap:10px; }
-  .progress-bar-compact{
-    flex:1; height:10px; border-radius:999px; overflow:hidden; background:#0c1322; border:1px solid var(--pd-line);
-  }
+  .progress-bar-compact{ flex:1; height:10px; border-radius:999px; overflow:hidden; background:#0c1322; border:1px solid var(--pd-line); }
   .progress-fill-compact{ height:100%; background:linear-gradient(90deg, var(--pd-primary), var(--pd-primary-700)); }
   .progress-label{ font-size:.85rem; color:var(--pd-muted); min-width:70px; text-align:right; }
 
-  /* Info cards (goal/motivation/strategy) */
+  /* Info cards */
   .info-cards-section{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:12px; }
   .info-card{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius-sm); padding:12px; box-shadow:var(--pd-shadow); }
   .info-card-header{ display:flex; align-items:center; gap:8px; color:var(--pd-text); font-weight:700; margin-bottom:8px; border-bottom:1px dashed var(--pd-line); padding-bottom:6px; }
@@ -103,39 +102,20 @@
 
   .overdue-label{ background:var(--pd-danger); color:#0a0f1a; font-weight:800; font-size:.72rem; padding:2px 8px; border-radius:8px; margin-left:6px; }
 
-  /* Main content grid - FIXED FOR COMPACT CARDS */
+  /* Main content grid */
   .content-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(320px,1fr));
-    gap:14px;
-    min-height: 0;
-    align-items:start;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:14px;
+    min-height: 0; align-items:start;
   }
-
-  /* Content sections with internal scrollers - FIXED HEIGHTS */
+  /* Compact cards with internal scrollers */
   .content-section{
-    display:flex;
-    flex-direction:column;
-    background:var(--pd-card);
-    border:1px solid var(--pd-line);
-    border-radius:var(--pd-radius);
-    padding:12px;
-    box-shadow:var(--pd-shadow);
-    height: 280px; /* Fixed height for all cards */
-    min-height: 280px;
-    max-height: 280px;
-    overflow: hidden; /* contain the inner scroller */
+    display:flex; flex-direction:column; background:var(--pd-card);
+    border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:12px; box-shadow:var(--pd-shadow);
+    height: 280px; min-height: 280px; max-height: 280px; overflow: hidden;
   }
-
   .section-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    border-bottom:1px dashed var(--pd-line);
-    padding-bottom:6px;
-    margin-bottom:10px;
-    flex-shrink: 0; /* Header doesn't shrink */
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px dashed var(--pd-line); padding-bottom:6px; margin-bottom:10px; flex-shrink:0;
   }
   .section-header h2{ margin:0; font-size:1.05rem; }
 
@@ -154,13 +134,7 @@
   .menu a:hover{ background:rgba(255,255,255,.05); }
 
   .add-panel{
-    display:none;
-    background:#0c1322;
-    border:1px solid var(--pd-line);
-    border-radius:10px;
-    padding:10px;
-    margin-bottom:10px;
-    flex-shrink: 0; /* Add panels don't shrink */
+    display:none; background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:10px; margin-bottom:10px; flex-shrink:0;
   }
   .add-panel.open{ display:block; }
 
@@ -170,100 +144,52 @@
     border:1px solid var(--pd-line); border-radius:8px; padding:8px; font-size:.95rem; margin-bottom:8px;
   }
 
-  /* *** The actual scroller - COMPACT HEIGHT *** */
+  /* Inner scroller */
   .section-scroll{
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right:4px;
-    overscroll-behavior: contain;
+    flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding-right:4px; overscroll-behavior:contain;
   }
+  .section-scroll::-webkit-scrollbar{ width:6px; }
+  .section-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,0.05); border-radius:3px; }
+  .section-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:3px; }
+  .section-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,0.3); }
 
-  /* Compact scrollbar */
-  .section-scroll::-webkit-scrollbar {
-    width: 6px;
-  }
-  .section-scroll::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-  .section-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-    border-radius: 3px;
-  }
-  .section-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.3);
-  }
-
-  /* Tasks - MORE COMPACT */
-  .task-item{
-    display:flex; gap:8px; align-items:flex-start; background:#0c1322;
-    border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px;
-  }
+  /* Tasks */
+  .task-item{ display:flex; gap:8px; align-items:flex-start; background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px; }
   .task-item.completed{ opacity:.6; }
-  .task-checkbox { flex-shrink: 0; margin-top: 2px; }
-  .task-content { flex: 1; min-width: 0; }
+  .task-checkbox { flex-shrink:0; margin-top:2px; }
+  .task-content { flex:1; min-width:0; }
   .task-title{ font-weight:700; margin-bottom:2px; font-size:.9rem; }
   .task-description{ color:var(--pd-muted); font-size:.85rem; margin-bottom:2px; }
   .task-meta{ display:flex; gap:8px; color:var(--pd-muted); font-size:.75rem; }
-  .task-actions{ display:flex; gap:4px; flex-shrink: 0; }
-  .priority-low,.priority-medium,.priority-high{
-    background:#334155; color:#e2e8f0; padding:1px 6px; border-radius:999px; font-weight:800; font-size:.7rem;
-  }
+  .task-actions{ display:flex; gap:4px; flex-shrink:0; }
+  .priority-low,.priority-medium,.priority-high{ background:#334155; color:#e2e8f0; padding:1px 6px; border-radius:999px; font-weight:800; font-size:.7rem; }
 
-  /* Ideas - MORE COMPACT */
-  .idea-item{
-    background:#0c1322;
-    border:1px solid var(--pd-line);
-    border-left:3px solid var(--pd-primary);
-    border-radius:10px;
-    padding:8px;
-    margin-bottom:6px;
-  }
+  /* Ideas */
+  .idea-item{ background:#0c1322; border:1px solid var(--pd-line); border-left:3px solid var(--pd-primary); border-radius:10px; padding:8px; margin-bottom:6px; }
   .idea-content{ color:var(--pd-text); margin-bottom:6px; font-size:.9rem; }
   .idea-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .idea-footer select{
-    background:#0b1120;
-    color:var(--pd-text);
-    border:1px solid var(--pd-line);
-    border-radius:8px;
-    padding:4px 6px;
-    font-size:.85rem;
-  }
+  .idea-footer select{ background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:8px; padding:4px 6px; font-size:.85rem; }
   .idea-date{ color:var(--pd-muted); font-size:.75rem; }
 
-  /* Milestones - MORE COMPACT */
-  .milestone-item{
-    background:#0c1322;
-    border:1px solid var(--pd-line);
-    border-radius:10px;
-    padding:8px;
-    margin-bottom:6px;
-  }
-  .milestone-item.completed{ border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.08); }
+  /* Milestones */
+  .milestone-item{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px; }
+  .milestone-item.completed{ border-color:rgba(34,197,94,.55); background:rgba(34,197,94,.08); }
   .milestone-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
   .milestone-header h4{ margin:0; font-size:.9rem; }
   .completed-badge{ background:var(--pd-success); color:#0a0f1a; padding:2px 6px; border-radius:999px; font-weight:800; font-size:.7rem; }
   .milestone-date{ color:var(--pd-muted); font-size:.8rem; }
-  .milestone-item p { margin: 4px 0; font-size:.85rem; color:var(--pd-muted); }
+  .milestone-item p{ margin:4px 0; font-size:.85rem; color:var(--pd-muted); }
 
-  /* Notes - MORE COMPACT */
-  .note-item{
-    background:#0c1322;
-    border:1px solid var(--pd-line);
-    border-radius:10px;
-    padding:8px;
-    margin-bottom:6px;
-  }
+  /* Notes */
+  .note-item{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px; }
   .note-header{ display:flex; justify-content:space-between; font-size:.75rem; color:var(--pd-muted); margin-bottom:4px; }
   .note-category{ background:var(--pd-primary); color:#0a0f1a; padding:1px 6px; border-radius:999px; font-weight:800; }
   .note-content{ color:var(--pd-text); font-size:.9rem; }
 
-  /* Files - MORE COMPACT */
+  /* Files */
   .files-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
   .files-section h2{ margin:0 0 10px 0; font-size:1.05rem; }
-  .files-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:10px; margin-top:10px; }
+  .files-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:10px; margin-top:10px; }
   .file-card{ background:#0c1322; border:1px solid var(--pd-line); border-radius:12px; padding:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
   .file-icon{ font-size:28px; }
   .file-name{ font-weight:700; color:var(--pd-text); font-size:.9rem; word-break:break-word; }
@@ -273,18 +199,12 @@
   .btn-icon:hover{ border-color:var(--pd-primary); }
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
 
-  /* Empty states - COMPACT */
-  .empty-state{
-    text-align:center;
-    color:var(--pd-muted);
-    padding:40px 20px;
-    font-size:.9rem;
-  }
-
+  /* Empty states */
+  .empty-state{ text-align:center; color:var(--pd-muted); padding:40px 20px; font-size:.9rem; }
   .empty-state-box{ text-align:center; padding:30px; }
   .empty-state-box p{ color:var(--pd-muted); margin-bottom:12px; font-size:1.1rem; }
 
-  /* Anchors + footer */
+  /* Anchors */
   .anchor-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   .anchor{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:.85rem; background:#0c1322; color:var(--pd-muted); border:1px solid var(--pd-line); text-decoration:none; }
   .anchor:hover{ border-color:var(--pd-primary); color:var(--pd-text); }
@@ -294,6 +214,58 @@
     .content-grid{ grid-template-columns: 1fr; }
     .content-section{ height: 240px; min-height: 240px; max-height: 240px; }
   }
+
+  /* ===== Overlay (pop-up) for Expand ===== */
+  .pd-overlay{
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .pd-overlay[hidden]{ display: none; }
+
+  .content-section.pd-fullscreen, .files-section.pd-fullscreen{
+    width: min(1100px, 94vw);
+    height: min(88vh, 920px);
+    max-height: min(88vh, 920px);
+    overflow: hidden; position: relative;
+    box-shadow: 0 12px 36px rgba(0,0,0,.6);
+  }
+  .pd-closebar{
+    position: sticky; top: -12px; z-index: 2;
+    display: flex; justify-content: flex-end;
+    padding: 4px; margin: -8px -8px 8px -8px;
+    background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0));
+  }
+
+  /* ===== Quick-pop (Status / Priority) ===== */
+  .quick-pop-wrap{ position:relative; display:inline-block; }
+  .quick-pop{
+    position:absolute; top: calc(100% + 6px); left:0;
+    background:#0c1322; border:1px solid var(--pd-line);
+    border-radius:12px; box-shadow:var(--pd-shadow);
+    padding:6px; min-width: 200px; z-index: 15; display:none;
+  }
+  .quick-pop.open{ display:block; }
+  .quick-pop h4{ margin:4px 8px 6px; font-size:.8rem; color:var(--pd-muted); }
+  .quick-pop .opt{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:8px 10px; border-radius:10px; cursor:pointer;
+    color:var(--pd-text); text-decoration:none; border:1px solid transparent;
+  }
+  .quick-pop .opt:hover{ background:rgba(255,255,255,.06); border-color:var(--pd-line); }
+  .opt .badge{ font-size:.72rem; padding:2px 8px; border-radius:999px; font-weight:800; }
+  .chip.is-clickable{ cursor:pointer; user-select:none; }
+
+  .opt.status-active   .badge{ background:#3b82f6; color:#0a0f1a; }
+  .opt.status-planning .badge{ background:#64748b; color:#0a0f1a; }
+  .opt.status-on_hold  .badge{ background:#f59e0b; color:#0a0f1a; }
+  .opt.status-completed .badge{ background:#22c55e; color:#0a0f1a; }
+
+  .opt.priority-low      .badge{ background:#4b5563; color:#0a0f1a; }
+  .opt.priority-medium   .badge{ background:#3b82f6; color:#0a0f1a; }
+  .opt.priority-high     .badge{ background:#f59e0b; color:#0a0f1a; }
+  .opt.priority-critical .badge{ background:#ef4444; color:#0a0f1a; }
 </style>
 {% endblock %}
 
@@ -310,10 +282,54 @@
       </div>
     </div>
 
+    <!-- Quick-change shadow form (posts to existing edit route) -->
+    <form id="pp-shadow-edit-form"
+          method="POST"
+          action="{{ url_for('persprojects.edit', id=project.id) }}"
+          style="display:none;">
+      <input type="hidden" name="name" value="{{ project.name }}">
+      <input type="hidden" name="description" value="{{ project.description or '' }}">
+      <input type="hidden" name="category" value="{{ project.category or '' }}">
+      <input type="hidden" name="status" value="{{ project.status }}">
+      <input type="hidden" name="priority" value="{{ project.priority }}">
+      <input type="hidden" name="goal" value="{{ project.goal or '' }}">
+      <input type="hidden" name="motivation" value="{{ project.motivation or '' }}">
+      <input type="hidden" name="strategy" value="{{ project.strategy or '' }}">
+      <input type="hidden" name="deadline" value="{{ project.deadline.strftime('%Y-%m-%d') if project.deadline else '' }}">
+    </form>
+
     <div class="project-metadata">
       <span class="chip"><strong>Category:</strong> {{ project.category or 'Uncategorized' }}</span>
-      <span class="chip chip-status status-{{ project.status }}">{{ project.status|replace('_',' ')|title }}</span>
-      <span class="chip chip-priority priority-{{ project.priority }}">{{ project.priority|title }} Priority</span>
+
+      <!-- Quick change: Status -->
+      <span class="quick-pop-wrap">
+        <span class="chip chip-status status-{{ project.status }} is-clickable"
+              data-pop="status">{{ project.status|replace('_',' ')|title }}</span>
+        <div class="quick-pop" data-pop-panel="status">
+          <h4>Set Status</h4>
+          {% for s in ['planning','active','on_hold','completed'] %}
+          <a href="#" class="opt status-{{ s }}" data-opt-type="status" data-opt-value="{{ s }}">
+            <span>{{ s|replace('_',' ')|title }}</span>
+            <span class="badge">{{ s|replace('_',' ')|title }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </span>
+
+      <!-- Quick change: Priority -->
+      <span class="quick-pop-wrap">
+        <span class="chip chip-priority priority-{{ project.priority }} is-clickable"
+              data-pop="priority">{{ project.priority|title }} Priority</span>
+        <div class="quick-pop" data-pop-panel="priority">
+          <h4>Set Priority</h4>
+          {% for p in ['low','medium','high','critical'] %}
+          <a href="#" class="opt priority-{{ p }}" data-opt-type="priority" data-opt-value="{{ p }}">
+            <span>{{ p|title }}</span>
+            <span class="badge">{{ p|title }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </span>
     </div>
 
     {% if project.description %}
@@ -394,16 +410,20 @@
   <div class="content-grid">
 
     <!-- ===== Tasks ===== -->
-    <section class="content-section" id="tasks" aria-labelledby="tasks-title">
+    <section class="content-section" id="tasks" aria-labelledby="tasks-title" data-expandable="tasks">
       <div class="section-header">
-        <h2 id="tasks-title">✅ Tasks</h2>
+        <h2 id="tasks-title" data-expand-trigger>✅ Tasks</h2>
 
-        <div class="split-actions" data-section="tasks">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" aria-label="More add options" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Task</a>
-            <a href="#" data-action="full">📝 Full Task Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="tasks" title="Open full tasks">🗖 Expand</button>
+
+          <div class="split-actions" data-section="tasks">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" aria-label="More add options" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Task</a>
+              <a href="#" data-action="full">📝 Full Task Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -432,24 +452,18 @@
         {% if project.tasks %}
           {% for task in project.tasks %}
           <div class="task-item {% if task.completed %}completed{% endif %}">
-            <input type="checkbox"
-                   class="task-checkbox"
-                   data-task-id="{{ task.id }}"
-                   data-endpoint="{{ url_for('persprojects.toggle_task', task_id=task.id) }}"
-                   {% if task.completed %}checked{% endif %}>
+            <form method="POST" action="{{ url_for('persprojects.toggle_task', task_id=task.id) }}">
+              <input type="checkbox" class="task-checkbox" {% if task.completed %}checked{% endif %} onchange="this.form.submit()">
+            </form>
             <div class="task-content">
               <div class="task-title">{{ task.content }}</div>
               <div class="task-meta">
-                {% if task.priority %}
-                <span class="priority-{{ task.priority }}">{{ task.priority|title }}</span>
-                {% endif %}
+                {% if task.priority %}<span class="priority-{{ task.priority }}">{{ task.priority|title }}</span>{% endif %}
                 {% if task.due_date %}<span>📅 {{ task.due_date.strftime('%b %d') }}</span>{% endif %}
               </div>
             </div>
             <div class="task-actions">
-              <a href="{{ url_for('persprojects.edit_task', task_id=task.id) }}" class="btn-icon" title="Edit task">
-                ✏️
-              </a>
+              <a href="{{ url_for('persprojects.edit_task', task_id=task.id) }}" class="btn-icon" title="Edit task">✏️</a>
               <form method="POST" action="{{ url_for('persprojects.delete_task', task_id=task.id) }}" style="display:inline;">
                 <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this task?')">🗑️</button>
               </form>
@@ -463,16 +477,20 @@
     </section>
 
     <!-- ===== Ideas ===== -->
-    <section class="content-section" id="ideas" aria-labelledby="ideas-title">
+    <section class="content-section" id="ideas" aria-labelledby="ideas-title" data-expandable="ideas">
       <div class="section-header">
-        <h2 id="ideas-title">💡 Ideas</h2>
+        <h2 id="ideas-title" data-expand-trigger>💡 Ideas</h2>
 
-        <div class="split-actions" data-section="ideas">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Idea</a>
-            <a href="#" data-action="full">📝 Full Idea Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="ideas" title="Open full ideas">🗖 Expand</button>
+
+          <div class="split-actions" data-section="ideas">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Idea</a>
+              <a href="#" data-action="full">📝 Full Idea Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -496,8 +514,7 @@
         <div class="idea-item status-{{ idea.status }}">
           <div class="idea-content">{{ idea.content }}</div>
           <div class="idea-footer">
-            <form method="POST" action="{{ url_for('persprojects.update_idea_status', idea_id=idea.id) }}"
-              style="display:inline;">
+            <form method="POST" action="{{ url_for('persprojects.update_idea_status', idea_id=idea.id) }}" style="display:inline;">
               <select name="status" onchange="this.form.submit()">
                 <option value="new" {% if idea.status=='new' %}selected{% endif %}>New</option>
                 <option value="considering" {% if idea.status=='considering' %}selected{% endif %}>Considering</option>
@@ -506,12 +523,9 @@
               </select>
             </form>
             <span class="idea-date">{{ idea.created_at.strftime('%b %d') }}</span>
-            <div style="display: inline-flex; gap: 6px;">
-              <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit idea">
-                ✏️
-              </a>
-              <form method="POST" action="{{ url_for('persprojects.delete_idea', idea_id=idea.id) }}" style="display:inline;"
-                onsubmit="return confirm('Delete this idea?');">
+            <div style="display:inline-flex; gap:6px;">
+              <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit idea">✏️</a>
+              <form method="POST" action="{{ url_for('persprojects.delete_idea', idea_id=idea.id) }}" style="display:inline;" onsubmit="return confirm('Delete this idea?');">
                 <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
               </form>
             </div>
@@ -523,16 +537,20 @@
     </section>
 
     <!-- ===== Milestones ===== -->
-    <section class="content-section" id="milestones" aria-labelledby="milestones-title">
+    <section class="content-section" id="milestones" aria-labelledby="milestones-title" data-expandable="milestones">
       <div class="section-header">
-        <h2 id="milestones-title">🏁 Milestones</h2>
+        <h2 id="milestones-title" data-expand-trigger>🏁 Milestones</h2>
 
-        <div class="split-actions" data-section="milestones">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Milestone</a>
-            <a href="#" data-action="full">📝 Full Milestone Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="milestones" title="Open full milestones">🗖 Expand</button>
+
+          <div class="split-actions" data-section="milestones">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Milestone</a>
+              <a href="#" data-action="full">📝 Full Milestone Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -571,14 +589,9 @@
           {% if milestone.target_date %}
           <div class="milestone-date">📅 Target: {{ milestone.target_date.strftime('%b %d, %Y') }}</div>
           {% endif %}
-          <!-- ADD THIS PART FOR EDIT AND DELETE -->
           <div style="margin-top: 8px; display: flex; gap: 8px;">
-            <a href="{{ url_for('persprojects.edit_milestone', milestone_id=milestone.id) }}" class="btn-icon"
-              title="Edit milestone">
-              ✏️
-            </a>
-            <form method="POST" action="{{ url_for('persprojects.delete_milestone', milestone_id=milestone.id) }}"
-              onsubmit="return confirm('Delete this milestone?');" style="display:inline;">
+            <a href="{{ url_for('persprojects.edit_milestone', milestone_id=milestone.id) }}" class="btn-icon" title="Edit milestone">✏️</a>
+            <form method="POST" action="{{ url_for('persprojects.delete_milestone', milestone_id=milestone.id) }}" onsubmit="return confirm('Delete this milestone?');" style="display:inline;">
               <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
             </form>
           </div>
@@ -587,19 +600,23 @@
         <p class="empty-state">No milestones set. Use Add ⌄ to create one.</p>
         {% endfor %}
       </div>
-      </section>
+    </section>
 
     <!-- ===== Notes ===== -->
-    <section class="content-section" id="notes" aria-labelledby="notes-title">
+    <section class="content-section" id="notes" aria-labelledby="notes-title" data-expandable="notes">
       <div class="section-header">
-        <h2 id="notes-title">📝 Notes</h2>
+        <h2 id="notes-title" data-expand-trigger>📝 Notes</h2>
 
-        <div class="split-actions" data-section="notes">
-          <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
-          <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
-          <div class="menu" role="menu">
-            <a href="#" data-action="quick">➕ Quick Note</a>
-            <a href="#" data-action="full">📝 Full Note Form</a>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" data-expand-btn="notes" title="Open full notes">🗖 Expand</button>
+
+          <div class="split-actions" data-section="notes">
+            <button type="button" class="btn btn-primary btn-sm add-btn" data-action="quick">Add</button>
+            <button type="button" class="btn btn-primary btn-sm caret-btn" data-toggle="menu">⌄</button>
+            <div class="menu" role="menu">
+              <a href="#" data-action="quick">➕ Quick Note</a>
+              <a href="#" data-action="full">📝 Full Note Form</a>
+            </div>
           </div>
         </div>
       </div>
@@ -633,13 +650,9 @@
             <span class="note-date">{{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
           </div>
           <div class="note-content">{{ note.content }}</div>
-          <!-- ADD THIS PART FOR EDIT AND DELETE -->
           <div style="margin-top: 8px; display: flex; gap: 8px;">
-            <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" class="btn-icon" title="Edit note">
-              ✏️
-            </a>
-            <form method="POST" action="{{ url_for('persprojects.delete_note', note_id=note.id) }}"
-              onsubmit="return confirm('Delete this note?');" style="display:inline;">
+            <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" class="btn-icon" title="Edit note">✏️</a>
+            <form method="POST" action="{{ url_for('persprojects.delete_note', note_id=note.id) }}" onsubmit="return confirm('Delete this note?');" style="display:inline;">
               <button type="submit" class="btn btn-sm" title="Delete">🗑️</button>
             </form>
           </div>
@@ -652,27 +665,24 @@
 
   </div><!-- /content-grid -->
 
-  <!-- Files section - Always visible now -->
-  <div class="files-section" id="files">
+  <!-- Files -->
+  <div class="files-section" id="files" data-expandable="files">
     <div class="section-header">
-      <h2>📎 Project Files</h2>
-      <button class="btn btn-primary btn-sm" onclick="toggleFileUploadPanel()">
-        ➕ Add Files
-      </button>
+      <h2 data-expand-trigger>📎 Project Files</h2>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button type="button" class="btn btn-sm btn-outline" data-expand-btn="files" title="Open full files">🗖 Expand</button>
+        <button class="btn btn-primary btn-sm" onclick="toggleFileUploadPanel()">➕ Add Files</button>
+      </div>
     </div>
 
-    <!-- File upload panel (hidden by default) -->
     <div class="add-panel" id="file-upload-panel" style="display:none;">
-      <form method="POST" 
-            action="{{ url_for('persprojects.upload_file', project_id=project.id) }}" 
-            enctype="multipart/form-data">
+      <form method="POST" action="{{ url_for('persprojects.upload_file', project_id=project.id) }}" enctype="multipart/form-data">
         <input type="file" name="file" required>
         <button type="submit" class="btn btn-primary btn-sm">Upload File</button>
       </form>
     </div>
 
     {% if project.files %}
-      <!-- Existing files grid -->
       <div class="files-grid">
         {% for file in project.files %}
         <div class="file-card">
@@ -697,12 +707,9 @@
         {% endfor %}
       </div>
     {% else %}
-      <!-- Empty state -->
       <div class="empty-state-box">
         <p>📁 No files uploaded yet</p>
-        <button class="btn btn-primary" onclick="toggleFileUploadPanel()">
-          Upload your first file
-        </button>
+        <button class="btn btn-primary" onclick="toggleFileUploadPanel()">Upload your first file</button>
       </div>
     {% endif %}
   </div>
@@ -712,6 +719,7 @@
 
 {% block extra_js %}
 <script>
+/* ---------- menus + add panels ---------- */
 (function(){
   function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -738,7 +746,7 @@
       closeAllMenus();
       if (!isOpen) menu.classList.add('open');
     });
-    menu.querySelectorAll('a[data-action]').forEach(item => {
+    menu?.querySelectorAll('a[data-action]').forEach(item => {
       item.addEventListener('click', e => { e.preventDefault(); togglePanel(section, item.dataset.action); menu.classList.remove('open'); });
     });
   });
@@ -746,35 +754,142 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllMenus(); });
 })();
 
-(function(){
-  const boxes = document.querySelectorAll('.task-checkbox');
-  if (!boxes.length) return;
-  boxes.forEach(cb => {
-    cb.addEventListener('change', async function () {
-      const endpoint = this.getAttribute('data-endpoint');
-      if (!endpoint) return;
-      try {
-        const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
-        const data = await res.json();
-        if (data && data.success) {
-          const wrap = this.closest('.task-item');
-          if (wrap) wrap.classList.toggle('completed', !!data.completed);
-        } else {
-          this.checked = !this.checked;
-        }
-      } catch (e) {
-        this.checked = !this.checked;
-      }
-    });
-  });
-})();
-
-// Toggle file upload panel
+/* ---------- file upload panel ---------- */
 function toggleFileUploadPanel() {
   const panel = document.getElementById('file-upload-panel');
   if (panel) {
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'none') {
+      const input = panel.querySelector('input[type="file"]');
+      if (input) input.value = '';
+    }
   }
 }
+
+/* ---------- Expand any card into a modal (pop-up) ---------- */
+(function(){
+  const overlay = document.createElement('div');
+  overlay.className = 'pd-overlay';
+  overlay.setAttribute('hidden','');
+  document.body.appendChild(overlay);
+
+  let current = null;
+
+  function expand(id){
+    if(current) return;
+    const node = document.querySelector(`.content-section[data-expandable="${id}"], .files-section[data-expandable="${id}"]`);
+    if(!node) return;
+
+    const placeholder = document.createComment('pd-placeholder:'+id);
+    node.parentNode.insertBefore(placeholder, node);
+
+    overlay.removeAttribute('hidden');
+    node.classList.add('pd-fullscreen');
+    overlay.appendChild(node);
+
+    const bar = document.createElement('div');
+    bar.className = 'pd-closebar';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn btn-sm btn-secondary';
+    closeBtn.textContent = '✕ Close';
+    bar.appendChild(closeBtn);
+    node.insertBefore(bar, node.firstChild);
+
+    const onBackdrop = (e)=>{ if(e.target===overlay) collapse(); };
+    const onEsc = (e)=>{ if(e.key==='Escape') collapse(); };
+    overlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onEsc);
+    closeBtn.addEventListener('click', collapse);
+
+    current = { id, node, placeholder, closebar: bar, onEsc, onBackdrop };
+  }
+
+  function collapse(){
+    if(!current) return;
+    const { node, placeholder, closebar, onEsc, onBackdrop } = current;
+    if(closebar && closebar.parentNode===node) node.removeChild(closebar);
+    placeholder.parentNode.insertBefore(node, placeholder);
+    placeholder.remove();
+    node.classList.remove('pd-fullscreen');
+    overlay.setAttribute('hidden','');
+    overlay.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onEsc);
+    current = null;
+  }
+
+  document.querySelectorAll('[data-expand-btn]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      expand(btn.getAttribute('data-expand-btn'));
+    });
+  });
+  document.querySelectorAll('[data-expand-trigger]').forEach(h=>{
+    h.addEventListener('dblclick', ()=>{
+      const section = h.closest('[data-expandable]');
+      if(section) expand(section.getAttribute('data-expandable'));
+    });
+  });
+})();
+
+/* ---------- Quick change via existing /<id>/edit route ---------- */
+(function(){
+  const wrapSelector = '.quick-pop-wrap';
+  const chipSelector = '.chip.is-clickable';
+  const openClass = 'open';
+  const form = document.getElementById('pp-shadow-edit-form');
+
+  function closeAll(){ document.querySelectorAll('.quick-pop.'+openClass).forEach(p=>p.classList.remove(openClass)); }
+  document.addEventListener('click', e => { if(!e.target.closest(wrapSelector)) closeAll(); });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeAll(); });
+
+  document.querySelectorAll(chipSelector).forEach(chip=>{
+    chip.addEventListener('click', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const key = chip.getAttribute('data-pop');
+      if(!key) return;
+      const panel = chip.parentElement.querySelector(`[data-pop-panel="${key}"]`);
+      const isOpen = panel?.classList.contains(openClass);
+      closeAll();
+      if(panel && !isOpen) panel.classList.add(openClass);
+    });
+  });
+
+  document.querySelectorAll('.quick-pop .opt').forEach(opt=>{
+    opt.addEventListener('click', async e=>{
+      e.preventDefault();
+      if(!form) return;
+      const type = opt.getAttribute('data-opt-type');   // 'status' | 'priority'
+      const value = opt.getAttribute('data-opt-value');
+
+      // optimistic update
+      const pop = opt.closest('.quick-pop');
+      const wrap = pop.closest(wrapSelector);
+      const chip = wrap.querySelector('.chip');
+      if(chip){
+        chip.className = chip.className.replace(/status-[\w_]+/g,'').replace(/priority-[\w_]+/g,'').trim();
+        if(type==='status'){
+          chip.classList.add('chip-status', `status-${value}`);
+          chip.textContent = value.replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
+          form.querySelector('input[name="status"]').value = value;
+        } else {
+          chip.classList.add('chip-priority', `priority-${value}`);
+          chip.textContent = value.charAt(0).toUpperCase()+value.slice(1) + ' Priority';
+          form.querySelector('input[name="priority"]').value = value;
+        }
+      }
+      closeAll();
+
+      // POST to existing edit route; it redirects → reload to sync progress/flash
+      try{
+        const res = await fetch(form.action, { method:'POST', body:new FormData(form) });
+        if(res.ok){ location.reload(); } else { throw new Error('Bad response'); }
+      }catch(err){
+        console.warn('Quick update failed, refreshing.', err);
+        location.reload();
+      }
+    });
+  });
+})();
 </script>
 {% endblock %}

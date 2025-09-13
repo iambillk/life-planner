@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ contact.display_name }} {% if contact.title %}<small style="font-weight:normal;">• {{ contact.title }}</small>{% endif %}</h1>
+<p>
+  {% if contact.company %}Company: <a href="{{ url_for('rolodex.company_detail', id=contact.company.id) }}">{{ contact.company.name }}</a><br>{% endif %}
+  Email: {% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}<br>
+  Phone: {% if contact.phone %}<a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>{% else %}—{% endif %}<br>
+  Tags: {{ contact.tags or '—' }}<br>
+  <small>Created {{ contact.created_at.strftime('%Y-%m-%d') }} • Updated {{ (contact.updated_at or contact.created_at).strftime('%Y-%m-%d') }}</small>
+</p>
+
+<h3>Notes</h3>
+<p style="white-space:pre-wrap;">{{ contact.notes or '' }}</p>
+
+<form method="post" action="{{ url_for('rolodex.contact_archive', id=contact.id) }}" style="display:inline;">
+  <button type="submit">{{ 'Unarchive' if contact.archived else 'Archive' }}</button>
+</form>
+<a href="{{ url_for('rolodex.contact_edit', id=contact.id) }}">Edit</a>
+<form method="post" action="{{ url_for('rolodex.contact_delete', id=contact.id) }}" style="display:inline;" onsubmit="return confirm('Delete this contact?');">
+  <button type="submit" class="danger">Delete</button>
+</form>
+{% endblock %}

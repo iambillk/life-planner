@@ -4,29 +4,19 @@
     <!--
     =============================================================================
       FILE: base.html  (Billas Planner — Base Layout)
-      TEMPLATE VERSION: v1.0.3
-      LAST UPDATED: 2025-09-04
+      TEMPLATE VERSION: v1.1.0
+      LAST UPDATED: 2025-09-12
 
       CHANGELOG:
-        v1.0.3 (2025-09-04)
-        - TUNE: Much tighter sidebar spacing with high-specificity overrides so
-                external CSS can't re-inflate padding/margins.
-                • nav row-gap → 2px (forced)
-                • row height ≈ 34–36px (min-height + padding)
-                • icon font-size 16px, column 22px; gap 8px
-                • line-height normalized to 1.15
-        v1.0.2 (2025-09-04)
-        - TUNE: Initial density pass; normalized emoji sizing.
-        v1.0.1 (2025-09-04)
-        - FIX: Duplicate 'extra_css' block from comments.
-        v1.0.0 (2025-09-04)
-        - NEW: Dark refactor, sticky header, flash polish, About/Changelog.
+        v1.1.0 (2025-09-12)
+        - NEW: User-customizable sidebar order (drag & drop), saved to localStorage.
+        - FIX: Closing </a> for Weight Loss nav item.
+        - TUNE: Minimal CSS for drag handles / visual cues.
 
-      NOTES:
-        - Override the visible version badge via {{ base_version|default('v1.0.3') }}
+        v1.0.3 (2025-09-04)
+        - TUNE: Much tighter sidebar spacing…
     =============================================================================
     -->
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
@@ -64,7 +54,7 @@
       .sidebar-header h2{margin:0 0 6px 0;font-size:1.1rem;letter-spacing:.2px}
       .sidebar-date{margin:0;font-size:.875rem;color:var(--text-muted)}
 
-      /* —— HARD TIGHTENED NAV (beats external CSS) ——————————————— */
+      /* —— TIGHT NAV ——————————————————————————— */
       aside.sidebar nav.sidebar-nav{display:grid;row-gap:2px!important;margin:6px 0 10px}
       aside.sidebar nav.sidebar-nav a.nav-item{
         display:grid;grid-template-columns:22px 1fr;align-items:center;gap:8px;
@@ -79,6 +69,18 @@
       aside.sidebar nav.sidebar-nav a.nav-item.active{background:linear-gradient(180deg,rgba(110,168,255,.16),rgba(110,168,255,.10));border-color:rgba(110,168,255,.45)}
       aside.sidebar nav.sidebar-nav a.nav-item .icon{
         display:inline-block;text-align:center;font-size:16px;line-height:1;width:22px
+      }
+
+      /* —— Customize mode ——————————————————————— */
+      .nav-controls{display:flex;gap:8px;margin:6px 0 0}
+      .nav-controls .btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:6px 10px;cursor:pointer}
+      .nav-controls .btn:hover{border-color:rgba(110,168,255,.45)}
+      .sidebar-nav[data-customize="1"] a.nav-item{cursor:grab;user-select:none}
+      .sidebar-nav[data-customize="1"] a.nav-item:active{cursor:grabbing}
+      .sidebar-nav .drag-ghost{opacity:.6}
+      .sidebar-nav .drop-hint{position:relative}
+      .sidebar-nav .drop-hint::before{
+        content:"";position:absolute;left:8px;right:8px;top:-2px;height:2px;background:var(--primary)
       }
 
       .sidebar-footer{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
@@ -133,37 +135,48 @@
                 <p class="sidebar-date">{{ datetime.now().strftime('%B %d, %Y') }}</p>
             </div>
 
-            <nav class="sidebar-nav" role="navigation">
-                <a href="{{ url_for('daily.index') }}" class="nav-item {{ 'active' if active == 'daily' }}">
+            <!-- NAV: each item gets a stable data-key -->
+            <nav class="sidebar-nav" role="navigation" id="sidebar-nav">
+                <a data-key="daily"     href="{{ url_for('daily.index') }}"       class="nav-item {{ 'active' if active == 'daily' }}">
                     <span class="icon">📅</span><span>Daily Planner</span>
                 </a>
-                <a href="{{ url_for('weekly.index') }}" class="nav-item {{ 'active' if active == 'weekly' }}">
+                <a data-key="weekly"    href="{{ url_for('weekly.index') }}"      class="nav-item {{ 'active' if active == 'weekly' }}">
                     <span class="icon">📆</span><span>Weekly/Monthly</span>
                 </a>
-                <a href="{{ url_for('projects.tch_index') }}" class="nav-item {{ 'active' if active == 'tch' }}">
+                <a data-key="tch"       href="{{ url_for('projects.tch_index') }}" class="nav-item {{ 'active' if active == 'tch' }}">
                     <span class="icon">💼</span><span>TCH Projects</span>
                 </a>
-                <a href=" {{ url_for('persprojects.index') }}" class="nav-item {{ 'active' if active == 'personal' }}">
+                <a data-key="personal"  href="{{ url_for('persprojects.index') }}" class="nav-item {{ 'active' if active == 'personal' }}">
                     <span class="icon">🏠</span><span>Personal Projects</span>
                 </a>
-                <a href="{{ url_for('equipment.index') }}" class="nav-item {{ 'active' if active == 'equipment' }}">
+                <a data-key="equipment" href="{{ url_for('equipment.index') }}"   class="nav-item {{ 'active' if active == 'equipment' }}">
                     <span class="icon">🔧</span><span>Equipment Center</span>
                 </a>
-                {# Add this link to the navigation section in base.html #}
-                {# Place it after Equipment Center and before Goal Tracking #}
-                <a href="{{ url_for('realestate.dashboard') }}" class="nav-item {{ 'active' if active == 'realestate' }}">
+                <a data-key="realestate" href="{{ url_for('realestate.dashboard') }}" class="nav-item {{ 'active' if active == 'realestate' }}">
                     <span class="icon">🏠</span><span>Real Estate</span>
                 </a>
-                <a href="{{ url_for('financial.dashboard') }}" class="nav-item {{ 'active' if active == 'financial' }}">
+                <a data-key="financial" href="{{ url_for('financial.dashboard') }}" class="nav-item {{ 'active' if active == 'financial' }}">
                     <span class="icon">💳</span><span>Spending</span>
                 </a>
-                <a href="{{ url_for('goals.index') }}" class="nav-item {{ 'active' if active == 'goals' }}">
-                    <span class="icon">🎯</span><span>Goal Tracking</span>
+                <a data-key="goals"     href="{{ url_for('goals.index') }}"       class="nav-item {{ 'active' if active == 'goals' }}">
+                    <span class="icon">🎯</span><span>Goal Tracking (Placeholder)</span>
                 </a>
-                <a href="{{ url_for('health.weight_index') }}" class="nav-item {{ 'active' if active == 'weight' }}">
+                <a data-key="weight"    href="{{ url_for('health.weight_index') }}" class="nav-item {{ 'active' if active == 'weight' }}">
                     <span class="icon">⚖️</span><span>Weight Loss</span>
+                </a> <!-- fixed missing closing tag -->
+                <a data-key="rolodex"   href="{{ url_for('rolodex.contacts') }}"  class="nav-item {{ 'active' if active == 'rolodex' }}">
+                    <span class="icon">📇</span><span>Rolodex (Beta)</span>
+                <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
+                    <span class="icon">🏠</span><span>Home</span>
                 </a>
             </nav>
+
+            <!-- Customize controls -->
+            <div class="nav-controls" aria-label="Customize navigation order">
+              <button class="btn" id="nav-customize-toggle" type="button" title="Drag items to reorder">Customize</button>
+              <button class="btn" id="nav-customize-done" type="button" style="display:none">Done</button>
+              <button class="btn" id="nav-reset" type="button" title="Reset to default order">Reset</button>
+            </div>
 
             <div class="sidebar-footer">
                 <div class="quick-stats">
@@ -176,11 +189,12 @@
                   <summary>About & Changelog</summary>
                   <div class="about-grid">
                     <div><strong>Template:</strong> base.html</div>
-                    <div><strong>Version:</strong> <span class="badge">{{ base_version|default('v1.0.3') }}</span></div>
-                    <small>Last updated: 2025-09-04</small>
+                    <div><strong>Version:</strong> <span class="badge">{{ base_version|default('v1.1.0') }}</span></div>
+                    <small>Last updated: 2025-09-12</small>
                   </div>
                   <div class="about-changelog">
                     <code>
+v1.1.0 — User-customizable sidebar order (drag & drop), localStorage persist; fix Weight Loss closing tag.
 v1.0.3 — Strong overrides to significantly reduce sidebar spacing.
 v1.0.2 — Initial tightening and emoji normalization.
 v1.0.1 — Fixed duplicate 'extra_css' block from comments.
@@ -196,7 +210,7 @@ v1.0.0 — Dark refactor, a11y, sticky header, flash polish, changelog panel.
                 <h1>{% block header %}{% endblock %}</h1>
                 <div class="top-bar-actions">
                     <span class="badge" title="Base template version">
-                      <span aria-hidden="true">🏷️</span> {{ base_version|default('v1.0.3') }}
+                      <span aria-hidden="true">🏷️</span> {{ base_version|default('v1.1.0') }}
                     </span>
 
                     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -253,10 +267,129 @@ v1.0.0 — Dark refactor, a11y, sticky header, flash polish, changelog panel.
         if(t&&typeof c.tasksToday==='number') t.textContent=c.tasksToday;
         if(p&&typeof c.activeProjects==='number') p.textContent=c.activeProjects;
       })();
+
+      /* =========================
+         NAV ORDER CUSTOMIZATION
+         ========================= */
+      (function navOrder(){
+        const DEFAULT_ORDER = ["daily","weekly","tch","personal","equipment","realestate","financial","goals","weight","rolodex"];
+        const STORAGE_KEY = "planner.navOrder.v1";
+        const nav = document.getElementById("sidebar-nav");
+        if(!nav) return;
+
+        function getItemsMap(){
+          const nodes = nav.querySelectorAll('a.nav-item[data-key]');
+          const map = {};
+          nodes.forEach(a => map[a.dataset.key] = a);
+          return map;
+        }
+
+        function loadOrder(){
+          try{
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if(!raw) return null;
+            const arr = JSON.parse(raw);
+            if(Array.isArray(arr) && arr.every(k => typeof k === "string")) return arr;
+          }catch(e){}
+          return null;
+        }
+
+        function saveOrder(keys){
+          try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(keys)); }catch(e){}
+        }
+
+        function applyOrder(){
+          const map = getItemsMap();
+          const stored = loadOrder();
+          const order = stored || DEFAULT_ORDER;
+          // Append in requested order, then any unknowns
+          order.forEach(k => { if(map[k]) nav.appendChild(map[k]); delete map[k]; });
+          Object.keys(map).forEach(k => nav.appendChild(map[k]));
+        }
+
+        function currentOrderKeys(){
+          return Array.from(nav.querySelectorAll('a.nav-item[data-key]')).map(a => a.dataset.key);
+        }
+
+        // --- Drag & drop (customize mode)
+        function enableCustomize(){
+          nav.dataset.customize = "1";
+          Array.from(nav.children).forEach(a=>{
+            a.setAttribute('draggable','true');
+            a.addEventListener('dragstart',onDragStart);
+            a.addEventListener('dragover',onDragOver);
+            a.addEventListener('drop',onDrop);
+            a.addEventListener('dragend',onDragEnd);
+          });
+          toggleControls(true);
+        }
+        function disableCustomize(){
+          nav.dataset.customize = "0";
+          Array.from(nav.children).forEach(a=>{
+            a.removeAttribute('draggable');
+            a.classList.remove('drag-ghost','drop-hint');
+            a.removeEventListener('dragstart',onDragStart);
+            a.removeEventListener('dragover',onDragOver);
+            a.removeEventListener('drop',onDrop);
+            a.removeEventListener('dragend',onDragEnd);
+          });
+          toggleControls(false);
+        }
+
+        let dragEl = null;
+        function onDragStart(e){
+          dragEl = e.currentTarget;
+          dragEl.classList.add('drag-ghost');
+          e.dataTransfer.effectAllowed = 'move';
+          try{ e.dataTransfer.setData('text/plain', dragEl.dataset.key); }catch(_){}
+        }
+        function onDragOver(e){
+          e.preventDefault();
+          if(!dragEl) return;
+          const target = e.currentTarget;
+          if(target === dragEl) return;
+          // position hint
+          const rect = target.getBoundingClientRect();
+          const before = (e.clientY - rect.top) < rect.height/2;
+          target.classList.add('drop-hint');
+          // Insert hint position by actually moving the dragEl placeholder
+          if(before) nav.insertBefore(dragEl, target);
+          else nav.insertBefore(dragEl, target.nextSibling);
+        }
+        function onDrop(e){
+          e.preventDefault();
+          const keys = currentOrderKeys();
+          saveOrder(keys);
+        }
+        function onDragEnd(){
+          Array.from(nav.children).forEach(a=>a.classList.remove('drag-ghost','drop-hint'));
+          dragEl = null;
+        }
+
+        // Controls
+        const btnCustomize = document.getElementById('nav-customize-toggle');
+        const btnDone = document.getElementById('nav-customize-done');
+        const btnReset = document.getElementById('nav-reset');
+
+        function toggleControls(editing){
+          if(!btnCustomize || !btnDone) return;
+          btnCustomize.style.display = editing ? 'none' : '';
+          btnDone.style.display = editing ? '' : 'none';
+        }
+
+        btnCustomize?.addEventListener('click', enableCustomize);
+        btnDone?.addEventListener('click', disableCustomize);
+        btnReset?.addEventListener('click', ()=>{
+          localStorage.removeItem(STORAGE_KEY);
+          applyOrder();
+        });
+
+        // Initialize on load
+        applyOrder();
+      })();
     </script>
 
     {% block extra_js %}{% endblock %}
     <script src="{{ url_for('static', filename='js/pimp-splash.js') }}"></script>
   </body>
   </html>
-

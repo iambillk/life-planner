@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Contacts</h1>
+<form method="get" style="margin:12px 0; display:flex; gap:8px; align-items:center;">
+  <input type="text" name="q" value="{{ q or '' }}" placeholder="Search name, company, email, phone, tags" style="flex:1; padding:8px;">
+  <select name="sort">
+    <option value="name_asc" {{ 'selected' if sort=='name_asc' else '' }}>Name A→Z</option>
+    <option value="name_desc" {{ 'selected' if sort=='name_desc' else '' }}>Name Z→A</option>
+    <option value="updated_desc" {{ 'selected' if sort=='updated_desc' else '' }}>Recently updated</option>
+  </select>
+  <label style="font-size:14px;">
+    <input type="checkbox" name="archived" value="1" {{ 'checked' if show_archived else '' }}> Show archived
+  </label>
+  <button type="submit">Apply</button>
+  <a class="button" href="{{ url_for('rolodex.contact_new') }}" style="margin-left:auto;">+ New Contact</a>
+</form>
+
+{% if contacts.items %}
+<table class="table">
+  <thead><tr>
+    <th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Tags</th><th>Updated</th>
+  </tr></thead>
+  <tbody>
+  {% for c in contacts.items %}
+    <tr>
+      <td><a href="{{ url_for('rolodex.contact_detail', id=c.id) }}">{{ c.display_name }}</a>{% if c.archived %} <span class="badge">Archived</span>{% endif %}</td>
+      <td>
+        {% if c.company_id and companies_map.get(c.company_id) %}
+          <a href="{{ url_for('rolodex.company_detail', id=c.company_id) }}">{{ companies_map[c.company_id].name }}</a>
+        {% else %}-{% endif %}
+      </td>
+      <td>{{ c.email or '—' }}</td>
+      <td>{{ c.phone or '—' }}</td>
+      <td>{{ c.tags or '' }}</td>
+      <td>{{ (c.updated_at or c.created_at).strftime('%Y-%m-%d') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="pager">
+  {% if contacts.has_prev %}<a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.prev_num) }}">« Prev</a>{% endif %}
+  <span>Page {{ contacts.page }} / {{ contacts.pages }}</span>
+  {% if contacts.has_next %}<a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.next_num) }}">Next »</a>{% endif %}
+</div>
+{% else %}
+  <p>No contacts found.</p>
+  <p><a href="{{ url_for('rolodex.contact_new') }}">Add your first contact</a></p>
+{% endif %}
+{% endblock %}

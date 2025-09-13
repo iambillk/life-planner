@@ -1,7 +1,8 @@
-# modules/persprojects/routes.py - COMPLETE FILE
-from flask import render_template, request, redirect, url_for, flash
+# modules/persprojects/routes.py - COMPLETE FILE WITH NFS ATTACHMENTS
+from flask import render_template, request, redirect, url_for, flash, current_app, send_file
 from datetime import datetime
 import os
+from urllib.parse import unquote_plus
 from werkzeug.utils import secure_filename
 from . import persprojects_bp
 from .constants import PERSONAL_PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
@@ -84,6 +85,220 @@ def detail(id):
     
     return render_template('persprojects/detail.html', project=project)
 
+# ==================== EMAIL CAPTURE (PERSONAL) ====================
+
+def _clean_msgid(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    # raw may come like "<abc@ex>", sometimes URL-encoded
+    try:
+        raw = unquote_plus(raw)
+    except Exception:
+        pass
+    raw = raw.strip()
+    # strip angle brackets if present
+    if raw.startswith("<") and raw.endswith(">"):
+        raw = raw[1:-1]
+    return raw.strip().lower()
+
+def _clean_subject(raw: str | None) -> str:
+    if not raw:
+        return ""
+    try:
+        s = unquote_plus(raw).strip()
+    except Exception:
+        s = raw.strip()
+    # light cleanup for nicer titles
+    for prefix in ("Re: ", "RE: ", "Fwd: ", "FWD: ", "[EXT] "):
+        if s.startswith(prefix):
+            s = s[len(prefix):]
+    return s.strip()
+
+def save_email_attachment_reference(project_id, attach_path, filename):
+    """Save a reference to the file on the NFS drive without copying"""
+    # Create database record pointing to NFS location
+    file_record = PersonalProjectFile(
+        project_id=project_id,
+        filename=os.path.join(attach_path, filename),  # Store full path like Z:\test123\test.txt
+        original_name=filename
+    )
+    db.session.add(file_record)
+    return file_record
+
+@persprojects_bp.route('/capture/email/personal', methods=['GET'])
+def capture_personal_get():
+    """
+    Confirm form for capturing a Personal Project from an email.
+    Expects query params: msgid, from, subject (best-effort).
+    Example hotkey URL (from The Bat! filter):
+      /capture/email/personal?msgid=%OMSGID&from=%FROMADDR&subject=%SUBJECT
+    """
+    msgid_raw = request.args.get('msgid', '')
+    from_addr = request.args.get('from', '')
+    subject_raw = request.args.get('subject', '')
+    
+    msgid = _clean_msgid(msgid_raw)
+    title_suggest = _clean_subject(subject_raw)
+    
+    # Pull ALL projects for the "Add to Existing" dropdown (per your preference)
+    all_projects = PersonalProject.query.order_by(PersonalProject.created_at.desc()).all()
+    
+    # Optional soft dedupe check: look for any note that mentions this Message-ID
+    dup = None
+    if msgid:
+        dup = (db.session.query(PersonalProjectNote, PersonalProject)
+               .join(PersonalProject, PersonalProject.id == PersonalProjectNote.project_id)
+               .filter(PersonalProjectNote.content.ilike(f"%Message-ID:%{msgid}%"))
+               .first())
+    
+    # Check for attachments
+    attach_path = request.args.get('attach_path', '')
+    attachments = []
+    
+    if attach_path and os.path.exists(attach_path):
+        for filename in os.listdir(attach_path):
+            filepath = os.path.join(attach_path, filename)
+            file_size = os.path.getsize(filepath)
+            attachments.append({
+                'name': filename,
+                'size': file_size,
+                'size_mb': round(file_size / (1024 * 1024), 2)
+            })
+    
+    return render_template(
+        'persprojects/capture_personal.html',
+        msgid=msgid,
+        from_addr=from_addr,
+        subject_raw=unquote_plus(subject_raw) if subject_raw else '',
+        title_suggest=title_suggest,
+        categories=PERSONAL_PROJECT_CATEGORIES,
+        projects=all_projects,
+        duplicate=dup,
+        attachments=attachments,
+        attach_path=attach_path
+    )
+
+@persprojects_bp.route('/capture/email/personal', methods=['POST'])
+def capture_personal_post():
+    """
+    Handle form submit from the capture page.
+    Creates either a NEW PersonalProject or a TASK in an existing one.
+    Stores a first note with From/Subject/Message-ID for traceability.
+    """
+    mode = request.form.get('mode', 'new')  # 'new' or 'existing'
+    title = (request.form.get('title') or '').strip()
+    category = request.form.get('category') or None
+    due_date_str = request.form.get('due_date') or ''
+    existing_id = request.form.get('existing_id') or ''
+    from_addr = (request.form.get('from_addr') or '').strip()
+    subject_raw = (request.form.get('subject_raw') or '').strip()
+    msgid = _clean_msgid(request.form.get('msgid'))
+    
+    # Get attachment selections
+    attach_path = request.form.get('attach_path', '')
+    keep_files = request.form.getlist('keep_files')  # Gets list of checked files
+
+    # Parse due date (optional)
+    due_date = None
+    if due_date_str:
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+        except Exception:
+            due_date = None
+
+    # Build a small structured note body for provenance
+    provenance_lines = []
+    if from_addr:
+        provenance_lines.append(f"From: {from_addr}")
+    if subject_raw:
+        provenance_lines.append(f"Subject: {subject_raw}")
+    if msgid:
+        provenance_lines.append(f"Message-ID: {msgid}")
+    provenance_lines.append(f"Captured: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')} via The Bat!")
+    provenance = "\n".join(provenance_lines)
+
+    # Soft dedupe: if user didn't override and we already have a note with this msgid, nudge them
+    if request.form.get('dedupe_override') != '1' and msgid:
+        dup = (db.session.query(PersonalProjectNote, PersonalProject)
+               .join(PersonalProject, PersonalProject.id == PersonalProjectNote.project_id)
+               .filter(PersonalProjectNote.content.ilike(f"%Message-ID:%{msgid}%"))
+               .first())
+        if dup:
+            note, project = dup
+            flash('Looks like you already captured this email.', 'warning')
+            # Re-render confirm with a banner + option to continue anyway
+            all_projects = PersonalProject.query.order_by(PersonalProject.created_at.desc()).all()
+            return render_template(
+                'persprojects/capture_personal.html',
+                msgid=msgid,
+                from_addr=from_addr,
+                subject_raw=subject_raw,
+                title_suggest=title or _clean_subject(subject_raw),
+                categories=PERSONAL_PROJECT_CATEGORIES,
+                projects=all_projects,
+                duplicate=dup,
+                dedupe_can_override=True
+            )
+
+    if mode == 'existing' and existing_id:
+        # Add a TASK to an existing project
+        project = PersonalProject.query.get(int(existing_id))
+        if not project:
+            flash('Selected project not found.', 'error')
+            return redirect(url_for('persprojects.index'))
+
+        task = PersonalTask(
+            project_id=project.id,
+            content=title or _clean_subject(subject_raw),
+            category=category or 'general',
+        )
+        db.session.add(task)
+        db.session.flush()  # Get the task ID
+        
+        # Handle attachments for existing project (just save references)
+        if attach_path and keep_files:
+            for filename in keep_files:
+                try:
+                    save_email_attachment_reference(project.id, attach_path, filename)
+                except Exception as e:
+                    flash(f'Error saving reference to {filename}: {str(e)}', 'warning')
+        
+        db.session.commit()
+        flash('Task created from email.', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+    else:
+        # Default: create NEW Personal Project
+        project = PersonalProject(
+            name=title or _clean_subject(subject_raw) or 'New Personal Project',
+            description='',  # can be edited later
+            category=category or None,
+            status='planning',
+            priority='medium',
+            deadline=due_date
+        )
+        db.session.add(project)
+        db.session.flush()
+
+        # First note with provenance (email context)
+        note = PersonalProjectNote(
+            project_id=project.id,
+            content=provenance,
+            category='reference'
+        )
+        db.session.add(note)
+        
+        # Handle attachments for new project (just save references)
+        if attach_path and keep_files:
+            for filename in keep_files:
+                try:
+                    save_email_attachment_reference(project.id, attach_path, filename)
+                except Exception as e:
+                    flash(f'Error saving reference to {filename}: {str(e)}', 'warning')
+        
+        db.session.commit()
+        flash(f'Project "{project.name}" created from email.', 'success')
+        return redirect(url_for('persprojects.detail', id=project.id))
+
 # ==================== TASKS ====================
 
 @persprojects_bp.route('/<int:project_id>/task/add', methods=['POST'])
@@ -120,8 +335,6 @@ def delete_task(task_id):
     db.session.commit()
     flash('Task deleted!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
-
-# Add this route after the existing task routes (around line 56-75)
 
 @persprojects_bp.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
 def edit_task(task_id):
@@ -323,7 +536,7 @@ def edit_note(note_id):
                          note=note, 
                          project=project,
                          categories=['general', 'progress', 'issue', 'research', 'reference'])
-    
+
 # ==================== Edit ====================
 
 @persprojects_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -404,7 +617,6 @@ def upload_file(project_id):
         filename = secure_filename(f"{project_id}_{timestamp}_{original_name}")
         
         # Save file
-        from flask import current_app
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', filename)
         file.save(filepath)
         
@@ -425,37 +637,25 @@ def upload_file(project_id):
 
 @persprojects_bp.route('/file/<int:file_id>/download')
 def download_file(file_id):
-    """Download project file"""
-    from flask import send_file, current_app
-    
+    """Download project file from NFS"""
     file_record = PersonalProjectFile.query.get_or_404(file_id)
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', file_record.filename)
     
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True, download_name=file_record.original_name)
+    # File path is already the full NFS path (Z:\...)
+    if os.path.exists(file_record.filename):
+        return send_file(file_record.filename, as_attachment=True, download_name=file_record.original_name)
     else:
-        flash('File not found', 'error')
+        flash('File not found on NFS drive', 'error')
         return redirect(url_for('persprojects.detail', id=file_record.project_id))
 
 @persprojects_bp.route('/file/<int:file_id>/delete', methods=['POST'])
 def delete_file(file_id):
-    """Delete project file"""
-    from flask import current_app
-    
+    """Delete project file reference (doesn't delete from NFS)"""
     file_record = PersonalProjectFile.query.get_or_404(file_id)
     project_id = file_record.project_id
     
-    # Delete physical file
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'personal_project_files', file_record.filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    
-    # Delete database record
+    # Just delete database record, leave file on NFS
     db.session.delete(file_record)
     db.session.commit()
     
-    flash('File deleted successfully!', 'success')
+    flash('File reference removed from project', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
-
-
-

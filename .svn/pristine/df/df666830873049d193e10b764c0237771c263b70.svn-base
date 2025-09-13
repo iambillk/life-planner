@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ 'New Contact' if mode=='new' else 'Edit Contact' }}</h1>
+{% if dedupe %}<div class="warn">Possible duplicate detected. Submit again to confirm.</div>{% endif %}
+<form method="post">
+  {% if dedupe %}<input type="hidden" name="dedupe_override" value="1">{% endif %}
+  <div class="row"><label>First name</label>
+    <input type="text" name="first_name" value="{{ form.get('first_name','') }}"></div>
+  <div class="row"><label>Last name</label>
+    <input type="text" name="last_name" value="{{ form.get('last_name','') }}"></div>
+  <div class="row"><label>Display name</label>
+    <input type="text" name="display_name" value="{{ form.get('display_name', contact.display_name if contact else '') }}"></div>
+  <div class="row"><label>Title/Role</label>
+    <input type="text" name="title" value="{{ form.get('title', contact.title if contact else '') }}"></div>
+
+  <div class="row"><label>Company</label>
+    <select name="company_id">
+      <option value="">— none —</option>
+      {% for co in companies %}
+        <option value="{{ co.id }}"
+          {% if (form.get('company_id') and form.get('company_id')|int == co.id) or (contact and contact.company_id == co.id and not form.get('company_id')) %}selected{% endif %}>
+          {{ co.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="row"><label>Email</label>
+    <input type="text" name="email" value="{{ form.get('email', contact.email if contact else '') }}"></div>
+  <div class="row"><label>Phone</label>
+    <input type="text" name="phone" value="{{ form.get('phone', contact.phone if contact else '') }}"></div>
+  <div class="row"><label>Tags (comma-separated)</label>
+    <input type="text" name="tags" value="{{ form.get('tags', contact.tags if contact else '') }}"></div>
+  <div class="row"><label>Notes</label>
+    <textarea name="notes" rows="6">{{ form.get('notes', contact.notes if contact else '') }}</textarea></div>
+
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ url_for('rolodex.contacts') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

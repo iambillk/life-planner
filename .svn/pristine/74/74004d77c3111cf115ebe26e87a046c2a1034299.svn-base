@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ company.name }}</h1>
+<p>
+  Website: {{ company.website or '—' }}<br>
+  Phone: {{ company.phone or '—' }}<br>
+  Tags: {{ company.tags or '—' }}<br>
+  <small>Created {{ company.created_at.strftime('%Y-%m-%d') }} • Updated {{ (company.updated_at or company.created_at).strftime('%Y-%m-%d') }}</small>
+</p>
+
+<h3>Notes</h3>
+<p style="white-space:pre-wrap;">{{ company.notes or '' }}</p>
+
+<form method="post" action="{{ url_for('rolodex.company_archive', id=company.id) }}" style="display:inline;">
+  <button type="submit">{{ 'Unarchive' if company.archived else 'Archive' }}</button>
+</form>
+<a href="{{ url_for('rolodex.company_edit', id=company.id) }}">Edit</a>
+<form method="post" action="{{ url_for('rolodex.company_delete', id=company.id) }}" style="display:inline;" onsubmit="return confirm('Delete this company?');">
+  <button type="submit" class="danger">Delete</button>
+</form>
+{% endblock %}

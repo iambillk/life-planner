@@ -1,0 +1,111 @@
+# modules/home/routes.py
+from pathlib import Path
+from flask import render_template, jsonify, request, url_for, current_app
+
+from . import home_bp
+from .news_provider import fetch_headlines, list_sources, DEFAULT_IDS
+from .weather_provider import (
+    fetch_weather, DEFAULT_LAT, DEFAULT_LON, DEFAULT_TZ, PRESETS
+)
+
+# ===== Photos-of-the-day (PTOD) settings =====
+PTOD_RELATIVE_DIR = "images/ptod"  # under /static
+PTOD_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+def _list_ptod(limit: int = 24):
+    """
+    Return newest-first list of images in /static/images/ptod as:
+      [{'name': <filename>, 'url': <static_url>}]
+    """
+    # Resolve /static
+    static_dir = Path(current_app.static_folder or "static")
+    ptod_dir = static_dir / PTOD_RELATIVE_DIR
+    if not ptod_dir.exists():
+        return []
+
+    items = []
+    for p in ptod_dir.iterdir():
+        if p.is_file() and p.suffix.lower() in PTOD_EXTS:
+            try:
+                mtime = p.stat().st_mtime
+            except OSError:
+                mtime = 0
+            items.append((mtime, p.name))
+
+    # newest first
+    items.sort(reverse=True)
+
+    out = []
+    lim = max(1, int(limit)) if isinstance(limit, int) else 24
+    for _, name in items[:lim]:
+        out.append({
+            "name": name,
+            "url": url_for("static", filename=f"{PTOD_RELATIVE_DIR}/{name}")
+        })
+    return out
+
+
+@home_bp.route("/")
+def index():
+    # Optional count via ?ptod=<N>, default 24
+    try:
+        ptod_count = int(request.args.get("ptod", 24))
+    except (TypeError, ValueError):
+        ptod_count = 24
+
+    ptod_items = _list_ptod(limit=ptod_count)
+
+    return render_template(
+        "home/index.html",
+        active="home",
+        base_version="HomeBeta v0.4",
+        ptod_items=ptod_items,
+    )
+
+
+@home_bp.get("/api/weather")
+def api_weather():
+    # allows ?lat= & lon= & tz= & label=
+    lat = float(request.args.get("lat", DEFAULT_LAT))
+    lon = float(request.args.get("lon", DEFAULT_LON))
+    tz  = request.args.get("tz", DEFAULT_TZ)
+    label = request.args.get("label")
+    data = fetch_weather(lat, lon, tz, label=label)
+    return jsonify(data)
+
+
+@home_bp.get("/api/weather/presets")
+def api_weather_presets():
+    # Return the static list (could later read from DB/user settings)
+    return jsonify(PRESETS)
+
+
+# NEWS: list available source options
+@home_bp.get("/api/news/sources")
+def api_news_sources():
+    return jsonify(list_sources())
+
+
+# NEWS: fetch headlines (cap TOTAL to 25)
+@home_bp.get("/api/news")
+def api_news():
+    src_param = request.args.get("sources", ",".join(DEFAULT_IDS)).strip()
+    ids = [s for s in (src_param.split(",") if src_param else []) if s]
+    # fetch as usual; then hard-cap TOTAL to 25
+    try:
+        limit = int(request.args.get("limit", 25))  # per-source
+    except Exception:
+        limit = 25
+    data = fetch_headlines(ids, limit_per_source=limit)
+    return jsonify({"items": data[:25]})
+
+
+# PTOD: JSON list for lazy-loading or debugging
+@home_bp.get("/api/ptod")
+def api_ptod():
+    try:
+        lim = int(request.args.get("limit", 24))
+    except (TypeError, ValueError):
+        lim = 24
+    return jsonify({"items": _list_ptod(limit=lim)})

@@ -1,8 +1,8 @@
 {# =============================================================================
   FILE: templates/projects_tch_detail.html
   PURPOSE: TCH Project — Detail view (tasks, ideas, milestones, notes, files)
-  TEMPLATE VERSION: v1.3.0 + pop-up expand (non-breaking)
-  LAST UPDATED: 2025-09-09
+  TEMPLATE VERSION: v1.4.0 — Expand pop-up + Quick Status/Priority
+  LAST UPDATED: 2025-09-11
 ============================================================================= #}
 
 {% extends "base.html" %}
@@ -79,7 +79,7 @@
   .chip-status.status-on_hold{ background:#f59e0b; }
   .chip-status.status-completed{ background:#22c55e; }
   .chip-priority.priority-low{ background:#4b5563; color:#0a0f1a; }
-  .chip-priority.priority-medium{ background:#3b82f6; color:#0a0f1a; }
+  .chip-priority.priority-medium{ background:#3f7fe6; color:#0a0f1a; }
   .chip-priority.priority-high{ background:#f59e0b; color:#0a0f1a; }
   .chip-priority.priority-critical{ background:#ef4444; color:#0a0f1a; }
 
@@ -92,7 +92,7 @@
   .progress-fill-compact{ height:100%; background:linear-gradient(90deg, var(--pd-primary), var(--pd-primary-700)); }
   .progress-label{ font-size:.85rem; color:var(--pd-muted); min-width:70px; text-align:right; }
 
-  /* Info cards (goal/motivation/strategy) */
+  /* Info cards */
   .info-cards-section{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:12px; }
   .info-card{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius-sm); padding:12px; box-shadow:var(--pd-shadow); }
   .info-card-header{ display:flex; align-items:center; gap:8px; color:var(--pd-text); font-weight:700; margin-bottom:8px; border-bottom:1px dashed var(--pd-line); padding-bottom:6px; }
@@ -110,7 +110,7 @@
 
   .overdue-label{ background:var(--pd-danger); color:#0a0f1a; font-weight:800; font-size:.72rem; padding:2px 8px; border-radius:8px; margin-left:6px; }
 
-  /* Main content grid - FIXED FOR COMPACT CARDS */
+  /* Main content grid */
   .content-grid{
     display:grid; 
     grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); 
@@ -119,7 +119,7 @@
     align-items:start;
   }
 
-  /* Content sections with internal scrollers - FIXED HEIGHTS */
+  /* Compact cards with internal scrollers */
   .content-section{
     display:flex; 
     flex-direction:column; 
@@ -128,10 +128,10 @@
     border-radius:var(--pd-radius); 
     padding:12px; 
     box-shadow:var(--pd-shadow);
-    height: 280px; /* Fixed height for all cards */
+    height: 280px;
     min-height: 280px;
     max-height: 280px;
-    overflow: hidden; /* contain the inner scroller */
+    overflow: hidden;
   }
   
   .section-header{
@@ -142,7 +142,7 @@
     border-bottom:1px dashed var(--pd-line); 
     padding-bottom:6px;
     margin-bottom:10px;
-    flex-shrink: 0; /* Header doesn't shrink */
+    flex-shrink: 0;
   }
   .section-header h2{ margin:0; font-size:1.05rem; }
 
@@ -167,7 +167,7 @@
     border-radius:10px; 
     padding:10px;
     margin-bottom:10px;
-    flex-shrink: 0; /* Add panels don't shrink */
+    flex-shrink: 0;
   }
   .add-panel.open{ display:block; }
 
@@ -177,23 +177,16 @@
     border:1px solid var(--pd-line); border-radius:8px; padding:8px; font-size:.95rem; margin-bottom:8px;
   }
 
-  /* *** The actual scroller - COMPACT HEIGHT *** */
+  /* Inner scroller */
   .section-scroll{
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right:4px;
-    overscroll-behavior: contain;
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right:4px; overscroll-behavior: contain;
   }
-  
-  /* Compact scrollbar */
   .section-scroll::-webkit-scrollbar { width: 6px; }
   .section-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
   .section-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
   .section-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
-  /* Tasks - MORE COMPACT */
+  /* Tasks */
   .task-category{ margin-bottom:8px; }
   .task-category h3{ margin:4px 0; font-size:.9rem; color:var(--pd-text); }
   .task-item{
@@ -207,69 +200,29 @@
   .task-description{ color:var(--pd-muted); font-size:.85rem; margin-bottom:2px; }
   .task-meta{ display:flex; gap:8px; color:var(--pd-muted); font-size:.75rem; }
   .task-actions{ display:flex; gap:4px; flex-shrink: 0; }
-  .priority-low,.priority-medium,.priority-high{
-    background:#334155; color:#e2e8f0; padding:1px 6px; border-radius:999px; font-weight:800; font-size:.7rem;
-  }
+  .priority-low,.priority-medium,.priority-high{ background:#334155; color:#e2e8f0; padding:1px 6px; border-radius:999px; font-weight:800; font-size:.7rem; }
 
-  /* Ideas - MORE COMPACT */
-  .idea-item{ 
-    background:#0c1322; 
-    border:1px solid var(--pd-line); 
-    border-left:3px solid var(--pd-primary); 
-    border-radius:10px; 
-    padding:8px; 
-    margin-bottom:6px; 
-  }
+  /* Ideas */
+  .idea-item{ background:#0c1322; border:1px solid var(--pd-line); border-left:3px solid var(--pd-primary); border-radius:10px; padding:8px; margin-bottom:6px; }
   .idea-content{ color:var(--pd-text); margin-bottom:6px; font-size:.9rem; }
   .idea-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .idea-footer select{ 
-    background:#0b1120; 
-    color:var(--pd-text); 
-    border:1px solid var(--pd-line); 
-    border-radius:8px; 
-    padding:4px 6px; 
-    font-size:.85rem; 
-  }
+  .idea-footer select{ background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:8px; padding:4px 6px; font-size:.85rem; }
   .idea-date{ color:var(--pd-muted); font-size:.75rem; }
 
-  /* Milestones - MORE COMPACT */
-  .milestone-item{ 
-    background:#0c1322; 
-    border:1px solid var(--pd-line); 
-    border-radius:10px; 
-    padding:8px; 
-    margin-bottom:6px; 
-  }
+  /* Milestones */
+  .milestone-item{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px; }
   .milestone-item.completed{ border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.08); }
   .milestone-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
   .milestone-header h4{ margin:0; font-size:.9rem; }
   .completed-badge{ background:var(--pd-success); color:#0a0f1a; padding:2px 6px; border-radius:999px; font-weight:800; font-size:.7rem; }
   .milestone-date{ color:var(--pd-muted); font-size:.8rem; }
-  .milestone-item p { margin: 4px 0; font-size:.85rem; color:var(--pd-muted); }
+  .milestone-item p{ margin:4px 0; font-size:.85rem; color:var(--pd-muted); }
 
-  /* Notes - MORE COMPACT */
-  .note-item{ 
-    background:#0c1322; 
-    border:1px solid var(--pd-line); 
-    border-radius:10px; 
-    padding:8px; 
-    margin-bottom:6px; 
-  }
+  /* Notes */
+  .note-item{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:6px; }
   .note-header{ display:flex; justify-content:space-between; font-size:.75rem; color:var(--pd-muted); margin-bottom:4px; }
   .note-category{ background:var(--pd-primary); color:#0a0f1a; padding:1px 6px; border-radius:999px; font-weight:800; }
   .note-content{ color:var(--pd-text); font-size:.9rem; }
-
-  /* Empty states - COMPACT */
-  .empty-state{ text-align:center; color:var(--pd-muted); padding:40px 20px; font-size:.9rem; }
-
-  /* Todo lists */
-  .todo-lists-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
-  .todo-lists-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; margin-top:10px; }
-  .todo-list-card{ background:#0c1322; border:1px solid var(--pd-line); border-radius:12px; padding:12px; position:relative; }
-  .todo-list-card .pinned-badge{ position:absolute; right:10px; top:10px; color:var(--pd-danger); }
-  .todo-progress{ display:flex; align-items:center; gap:10px; margin-top:8px; color:var(--pd-muted); font-size:.85rem; }
-  .progress-bar-small{ flex:1; height:8px; border-radius:999px; overflow:hidden; background:#0b1120; border:1px solid var(--pd-line); }
-  .progress-fill-small{ height:100%; background:var(--pd-success); }
 
   /* Files */
   .files-section{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); padding:14px; box-shadow:var(--pd-shadow); }
@@ -284,7 +237,7 @@
   .btn-icon:hover{ border-color:var(--pd-primary); }
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
 
-  /* File upload specific styles */
+  /* File upload */
   .file-upload-panel{ background:#0c1322; border:1px solid var(--pd-line); border-radius:10px; padding:12px; margin-bottom:12px; }
   .drop{ position:relative; border:2px dashed var(--pd-line); border-radius:12px; background:#0b1120; padding:12px; transition: border-color .2s ease, background .2s ease; }
   .drop.is-drag{ border-color: var(--pd-primary); background: rgba(110,168,255,.06); }
@@ -298,6 +251,7 @@
   .pill-size{ margin-left:auto; color: var(--pd-muted); font-size:.8rem; }
   .totals{ margin-top:6px; padding-top:6px; border-top:1px dashed var(--pd-line); color: var(--pd-muted); font-size:.9rem; }
 
+  .empty-state{ text-align:center; color:var(--pd-muted); padding:40px 20px; font-size:.9rem; }
   .empty-state-box{ text-align:center; padding:30px; }
   .empty-state-box p{ color:var(--pd-muted); margin-bottom:12px; font-size:1.1rem; }
 
@@ -317,7 +271,7 @@
     .content-section{ height: 240px; min-height: 240px; max-height: 240px; }
   }
 
-  /* ===== Overlay (pop-up) — non-intrusive, only used when expanded ===== */
+  /* ===== Overlay (pop-up) for Expand ===== */
   .pd-overlay{
     position: fixed; inset: 0;
     background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
@@ -326,23 +280,49 @@
   }
   .pd-overlay[hidden]{ display: none; }
 
-  /* When a content section is expanded we re-use the same node */
-  .content-section.pd-fullscreen{
+  .content-section.pd-fullscreen, .files-section.pd-fullscreen{
     width: min(1100px, 94vw);
     height: min(88vh, 920px);
     max-height: min(88vh, 920px);
-    overflow: hidden; /* keep internal scroller behavior */
+    overflow: hidden;
     position: relative;
     box-shadow: 0 12px 36px rgba(0,0,0,.6);
   }
-
-  /* sticky close bar inside expanded card */
   .pd-closebar{
     position: sticky; top: -12px; z-index: 2;
     display: flex; justify-content: flex-end;
     padding: 4px; margin: -8px -8px 8px -8px;
     background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0));
   }
+
+  /* ===== Quick-pop (Status / Priority) ===== */
+  .quick-pop-wrap{ position:relative; display:inline-block; }
+  .quick-pop{
+    position:absolute; top: calc(100% + 6px); left:0;
+    background:#0c1322; border:1px solid var(--pd-line);
+    border-radius:12px; box-shadow:var(--pd-shadow);
+    padding:6px; min-width: 200px; z-index: 15; display:none;
+  }
+  .quick-pop.open{ display:block; }
+  .quick-pop h4{ margin:4px 8px 6px; font-size:.8rem; color:var(--pd-muted); }
+  .quick-pop .opt{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:8px 10px; border-radius:10px; cursor:pointer;
+    color:var(--pd-text); text-decoration:none; border:1px solid transparent;
+  }
+  .quick-pop .opt:hover{ background:rgba(255,255,255,.06); border-color:var(--pd-line); }
+  .opt .badge{ font-size:.72rem; padding:2px 8px; border-radius:999px; font-weight:800; }
+  .chip.is-clickable{ cursor:pointer; user-select:none; }
+
+  .opt.status-active   .badge{ background:#3b82f6; color:#0a0f1a; }
+  .opt.status-planning .badge{ background:#64748b; color:#0a0f1a; }
+  .opt.status-on_hold  .badge{ background:#f59e0b; color:#0a0f1a; }
+  .opt.status-completed .badge{ background:#22c55e; color:#0a0f1a; }
+
+  .opt.priority-low      .badge{ background:#4b5563; color:#0a0f1a; }
+  .opt.priority-medium   .badge{ background:#3f7fe6; color:#0a0f1a; }
+  .opt.priority-high     .badge{ background:#f59e0b; color:#0a0f1a; }
+  .opt.priority-critical .badge{ background:#ef4444; color:#0a0f1a; }
 </style>
 {% endblock %}
 
@@ -359,10 +339,55 @@
       </div>
     </div>
 
+    <!-- Quick-change shadow form (posts to existing edit_tch route) -->
+    <form id="tch-shadow-edit-form"
+          method="POST"
+          action="{{ url_for('projects.edit_tch', id=project.id) }}"
+          style="display:none;">
+      <input type="hidden" name="name" value="{{ project.name }}">
+      <input type="hidden" name="description" value="{{ project.description or '' }}">
+      <input type="hidden" name="category" value="{{ project.category or '' }}">
+      <input type="hidden" name="status" value="{{ project.status }}">
+      <input type="hidden" name="priority" value="{{ project.priority }}">
+      <input type="hidden" name="goal" value="{{ project.goal or '' }}">
+      <input type="hidden" name="motivation" value="{{ project.motivation or '' }}">
+      <input type="hidden" name="strategy" value="{{ project.strategy or '' }}">
+      <input type="hidden" name="start_date" value="{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else '' }}">
+      <input type="hidden" name="deadline" value="{{ project.deadline.strftime('%Y-%m-%d') if project.deadline else '' }}">
+    </form>
+
     <div class="project-metadata">
       <span class="chip"><strong>Category:</strong> {{ project.category }}</span>
-      <span class="chip chip-status status-{{ project.status }}">{{ project.status|replace('_',' ')|title }}</span>
-      <span class="chip chip-priority priority-{{ project.priority }}">{{ project.priority|title }} Priority</span>
+
+      <!-- Quick change: Status -->
+      <span class="quick-pop-wrap">
+        <span class="chip chip-status status-{{ project.status }} is-clickable"
+              data-pop="status">{{ project.status|replace('_',' ')|title }}</span>
+        <div class="quick-pop" data-pop-panel="status">
+          <h4>Set Status</h4>
+          {% for s in ['planning','active','on_hold','completed'] %}
+          <a href="#" class="opt status-{{ s }}" data-opt-type="status" data-opt-value="{{ s }}">
+            <span>{{ s|replace('_',' ')|title }}</span>
+            <span class="badge">{{ s|replace('_',' ')|title }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </span>
+
+      <!-- Quick change: Priority -->
+      <span class="quick-pop-wrap">
+        <span class="chip chip-priority priority-{{ project.priority }} is-clickable"
+              data-pop="priority">{{ project.priority|title }} Priority</span>
+        <div class="quick-pop" data-pop-panel="priority">
+          <h4>Set Priority</h4>
+          {% for p in ['low','medium','high','critical'] %}
+          <a href="#" class="opt priority-{{ p }}" data-opt-type="priority" data-opt-value="{{ p }}">
+            <span>{{ p|title }}</span>
+            <span class="badge">{{ p|title }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </span>
     </div>
 
     {% if project.description %}
@@ -632,8 +657,7 @@
               <span class="completed-badge">Completed</span>
               {% endif %}
               <a href="{{ url_for('projects.edit_tch_milestone', milestone_id=milestone.id) }}" class="btn btn-sm">✏️</a>
-              <form method="POST" action="{{ url_for('projects.delete_tch_milestone', milestone_id=milestone.id) }}"
-                style="display:inline;">
+              <form method="POST" action="{{ url_for('projects.delete_tch_milestone', milestone_id=milestone.id) }}" style="display:inline;">
                 <button type="submit" class="btn btn-sm" onclick="return confirm('Delete this milestone?')">🗑️</button>
               </form>
             </div>
@@ -733,7 +757,7 @@
   </div>
   {% endif %}
 
-  <!-- Files section - Always visible now -->
+  <!-- Files section -->
   <div class="files-section" id="files" data-expandable="files">
     <div class="section-header">
       <h2 data-expand-trigger>📎 Project Files</h2>
@@ -819,7 +843,7 @@
   <div class="page-foot">
     <details>
       <summary>Page Info & Changelog</summary>
-      <code>v1.3.0 — Fixed card heights, improved compact layout, better scrolling</code>
+      <code>v1.4.0 — Added Expand pop-up + Click-to-change Status/Priority (shadow form → edit_tch)</code>
     </details>
   </div>
 
@@ -828,7 +852,7 @@
 
 {% block extra_js %}
 <script>
-/* ---------- menus + add panels (existing) ---------- */
+/* ---------- menus + add panels ---------- */
 (function(){
   function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -887,7 +911,7 @@
   });
 })();
 
-/* ---------- file upload panel (existing) ---------- */
+/* ---------- file upload panel ---------- */
 function toggleFileUploadPanel() {
   const panel = document.getElementById('file-upload-panel');
   if (panel) {
@@ -903,7 +927,7 @@ function toggleFileUploadPanel() {
   }
 }
 
-/* drag & drop (existing) */
+/* drag & drop */
 (function(){
   const dz = document.getElementById('dropZone');
   const input = document.getElementById('attachments');
@@ -951,31 +975,27 @@ function toggleFileUploadPanel() {
   }
 })();
 
-/* ---------- NEW: Expand any card into a modal (pop-up) ---------- */
+/* ---------- Expand any card into a modal (pop-up) ---------- */
 (function(){
-  // Create a single overlay root once
   const overlay = document.createElement('div');
   overlay.className = 'pd-overlay';
   overlay.setAttribute('hidden','');
   document.body.appendChild(overlay);
 
-  let current = null; // { id, node, placeholder, closebar, onEsc, onBackdrop }
+  let current = null;
 
   function expand(id){
     if(current) return;
     const node = document.querySelector(`.content-section[data-expandable="${id}"], .files-section[data-expandable="${id}"]`);
     if(!node) return;
 
-    // Place a marker to restore original position
     const placeholder = document.createComment('pd-placeholder:'+id);
     node.parentNode.insertBefore(placeholder, node);
 
-    // Prepare overlay and move node inside (preserves all JS & forms)
     overlay.removeAttribute('hidden');
     node.classList.add('pd-fullscreen');
     overlay.appendChild(node);
 
-    // Add a sticky close bar to the top of the moved card
     const bar = document.createElement('div');
     bar.className = 'pd-closebar';
     const closeBtn = document.createElement('button');
@@ -991,46 +1011,94 @@ function toggleFileUploadPanel() {
     document.addEventListener('keydown', onEsc);
     closeBtn.addEventListener('click', collapse);
 
-    // Save state
     current = { id, node, placeholder, closebar: bar, onEsc, onBackdrop };
   }
 
   function collapse(){
     if(!current) return;
     const { node, placeholder, closebar, onEsc, onBackdrop } = current;
-
-    // Remove close bar
     if(closebar && closebar.parentNode===node) node.removeChild(closebar);
-
-    // Move node back to its original place
     placeholder.parentNode.insertBefore(node, placeholder);
     placeholder.remove();
-
     node.classList.remove('pd-fullscreen');
     overlay.setAttribute('hidden','');
-
     overlay.removeEventListener('click', onBackdrop);
     document.removeEventListener('keydown', onEsc);
-
     current = null;
   }
 
-  // Wire header expand buttons
   document.querySelectorAll('[data-expand-btn]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       expand(btn.getAttribute('data-expand-btn'));
     });
   });
-
-  // Optional: double-click the section title to expand
   document.querySelectorAll('[data-expand-trigger]').forEach(h=>{
     h.addEventListener('dblclick', ()=>{
       const section = h.closest('[data-expandable]');
       if(section) expand(section.getAttribute('data-expandable'));
     });
   });
+})();
 
+/* ---------- Quick change Status/Priority via existing edit_tch route ---------- */
+(function(){
+  const wrapSelector = '.quick-pop-wrap';
+  const chipSelector = '.chip.is-clickable';
+  const openClass = 'open';
+  const form = document.getElementById('tch-shadow-edit-form');
+
+  function closeAll(){ document.querySelectorAll('.quick-pop.'+openClass).forEach(p=>p.classList.remove(openClass)); }
+  document.addEventListener('click', e => { if(!e.target.closest(wrapSelector)) closeAll(); });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeAll(); });
+
+  document.querySelectorAll(chipSelector).forEach(chip=>{
+    chip.addEventListener('click', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const key = chip.getAttribute('data-pop');
+      if(!key) return;
+      const panel = chip.parentElement.querySelector(`[data-pop-panel="${key}"]`);
+      const isOpen = panel?.classList.contains(openClass);
+      closeAll();
+      if(panel && !isOpen) panel.classList.add(openClass);
+    });
+  });
+
+  document.querySelectorAll('.quick-pop .opt').forEach(opt=>{
+    opt.addEventListener('click', async e=>{
+      e.preventDefault();
+      if(!form) return;
+      const type = opt.getAttribute('data-opt-type');   // 'status' | 'priority'
+      const value = opt.getAttribute('data-opt-value');
+
+      // optimistic UI update
+      const pop = opt.closest('.quick-pop');
+      const wrap = pop.closest(wrapSelector);
+      const chip = wrap.querySelector('.chip');
+      if(chip){
+        chip.className = chip.className.replace(/status-[\w_]+/g,'').replace(/priority-[\w_]+/g,'').trim();
+        if(type==='status'){
+          chip.classList.add('chip-status', `status-${value}`);
+          chip.textContent = value.replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
+          form.querySelector('input[name="status"]').value = value;
+        } else {
+          chip.classList.add('chip-priority', `priority-${value}`);
+          chip.textContent = value.charAt(0).toUpperCase()+value.slice(1) + ' Priority';
+          form.querySelector('input[name="priority"]').value = value;
+        }
+      }
+      closeAll();
+
+      // POST to edit_tch; let server persist then reload to reflect flash/progress
+      try{
+        const res = await fetch(form.action, { method:'POST', body:new FormData(form) });
+        if(res.ok){ location.reload(); } else { throw new Error('Bad response'); }
+      }catch(err){
+        console.warn('Quick update failed, refreshing.', err);
+        location.reload();
+      }
+    });
+  });
 })();
 </script>
 {% endblock %}

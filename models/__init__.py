@@ -9,6 +9,7 @@ v1.0.0 (Original)
 - Initial model imports for all existing modules
 """
 from .base import db
+from .rolodex import Contact, Company
 
 from .equipment import (
     Equipment, 
@@ -126,5 +127,8 @@ __all__ = [
     'init_daily_planner',
     'SpendingCategory',
     'Transaction', 
-    'MerchantAlias'
+    'MerchantAlias',
+     # Rolodex
+    'Contact',
+    'Company'
 ]

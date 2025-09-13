@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Companies</h1>
+<form method="get" style="margin:12px 0; display:flex; gap:8px; align-items:center;">
+  <input type="text" name="q" value="{{ q or '' }}" placeholder="Search name, website, tags" style="flex:1; padding:8px;">
+  <select name="sort">
+    <option value="name_asc" {{ 'selected' if sort=='name_asc' else '' }}>Name A→Z</option>
+    <option value="name_desc" {{ 'selected' if sort=='name_desc' else '' }}>Name Z→A</option>
+    <option value="updated_desc" {{ 'selected' if sort=='updated_desc' else '' }}>Recently updated</option>
+  </select>
+  <label style="font-size:14px;">
+    <input type="checkbox" name="archived" value="1" {{ 'checked' if show_archived else '' }}> Show archived
+  </label>
+  <button type="submit">Apply</button>
+  <a class="button" href="{{ url_for('rolodex.company_new') }}" style="margin-left:auto;">+ New Company</a>
+</form>
+
+{% if companies.items %}
+<table class="table">
+  <thead><tr>
+    <th>Name</th><th>Website</th><th>Phone</th><th>Tags</th><th>Updated</th>
+  </tr></thead>
+  <tbody>
+  {% for co in companies.items %}
+    <tr>
+      <td><a href="{{ url_for('rolodex.company_detail', id=co.id) }}">{{ co.name }}</a>{% if co.archived %} <span class="badge">Archived</span>{% endif %}</td>
+      <td>{{ co.website or '—' }}</td>
+      <td>{{ co.phone or '—' }}</td>
+      <td>{{ co.tags or '' }}</td>
+      <td>{{ (co.updated_at or co.created_at).strftime('%Y-%m-%d') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="pager">
+  {% if companies.has_prev %}<a href="{{ url_for('rolodex.companies', q=q, sort=sort, archived=1 if show_archived else None, page=companies.prev_num) }}">« Prev</a>{% endif %}
+  <span>Page {{ companies.page }} / {{ companies.pages }}</span>
+  {% if companies.has_next %}<a href="{{ url_for('rolodex.companies', q=q, sort=sort, archived=1 if show_archived else None, page=companies.next_num) }}">Next »</a>{% endif %}
+</div>
+{% else %}
+  <p>No companies found.</p>
+  <p><a href="{{ url_for('rolodex.company_new') }}">Add your first company</a></p>
+{% endif %}
+{% endblock %}
