@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% block title %}Document Vault{% endblock %}
+
+{% block content %}
+<style>
+  /* Clean, simple styles matching your dark theme */
+  .vault-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .vault-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  
+  .search-bar {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 16px;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .quick-filters {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .filter-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .filter-btn:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  
+  .section {
+    margin-bottom: 32px;
+  }
+  
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .pinned-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .doc-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  
+  .doc-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .doc-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  
+  .doc-icon {
+    font-size: 24px;
+  }
+  
+  .doc-title {
+    color: var(--text);
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .doc-meta {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  
+  .recent-list {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .recent-item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto 100px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+  }
+  
+  .recent-item:last-child {
+    border-bottom: none;
+  }
+  
+  .recent-item:hover {
+    background: rgba(110,168,255,0.05);
+  }
+  
+  .sidebar-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr 200px;
+    gap: 24px;
+  }
+  
+  .folders-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  
+  .folder-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: var(--text);
+  }
+  
+  .folder-item:hover {
+    background: rgba(110,168,255,0.1);
+  }
+  
+  .folder-count {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  
+  .tags-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  
+  .tag-item {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 16px;
+    color: var(--primary);
+    font-size: 12px;
+    margin: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .tag-item:hover {
+    background: rgba(110,168,255,0.2);
+  }
+  
+  .pin-badge {
+    color: #fbbf24;
+    font-size: 14px;
+  }
+  
+  .btn {
+    padding: 10px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .btn:hover {
+    background: var(--primary-700);
+    transform: translateY(-1px);
+  }
+  
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--panel);
+    border-color: var(--primary);
+  }
+</style>
+
+<div class="vault-container">
+  <!-- Header -->
+  <div class="vault-header">
+    <div>
+      <h1 style="margin: 0; font-size: 28px; color: var(--text);">📁 Document Vault</h1>
+      <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 14px;">Your digital filing cabinet</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <a href="{{ url_for('vault.create_document') }}" class="btn">
+        <span>+</span> New Document
+      </a>
+      <button onclick="document.getElementById('quick-upload').click()" class="btn btn-secondary">
+        <span>📤</span> Upload
+      </button>
+      <input type="file" id="quick-upload" style="display: none;" onchange="quickUpload(this)">
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <input type="text" 
+           class="search-input" 
+           placeholder="🔍 Search everything..." 
+           id="vault-search"
+           onkeyup="if(event.key === 'Enter') searchVault()">
+    <div class="quick-filters">
+      <button class="filter-btn" onclick="filterByType('all')">All</button>
+      <button class="filter-btn" onclick="filterByType('code')">💻 Code</button>
+      <button class="filter-btn" onclick="filterByType('config')">⚙️ Configs</button>
+      <button class="filter-btn" onclick="filterByType('document')">📄 Documents</button>
+      <button class="filter-btn" onclick="filterByType('script')">🔧 Scripts</button>
+      <button class="filter-btn" onclick="showRecent()">🕐 Recent</button>
+    </div>
+  </div>
+
+  <!-- Pinned Documents -->
+  {% if pinned_docs %}
+  <div class="section">
+    <div class="section-header">
+      <span>📌</span>
+      <span>PINNED</span>
+    </div>
+    <div class="pinned-grid">
+      {% for doc in pinned_docs %}
+      <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="doc-card">
+        <div class="doc-card-header">
+          <span class="doc-icon">{{ doc.doc_type|file_icon }}</span>
+          <span class="doc-title">{{ doc.title }}</span>
+          <span class="pin-badge">📌</span>
+        </div>
+        <div class="doc-meta">
+          Modified: {{ doc.updated_at.strftime('%b %d') if doc.updated_at else 'Never' }}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Main Content Grid -->
+  <div class="sidebar-grid">
+    <!-- Folders -->
+    <div class="folders-section">
+      <div class="section-header" style="font-size: 14px; margin-bottom: 12px;">
+        <span>📂</span>
+        <span>FOLDERS</span>
+      </div>
+      {% for folder in folders %}
+      <a href="{{ url_for('vault.search', folder=folder.id) }}" class="folder-item">
+        <span>{{ folder.icon }}</span>
+        <span>{{ folder.name }}</span>
+        <span class="folder-count">{{ folder.documents|length }}</span>
+      </a>
+      {% endfor %}
+      <a href="{{ url_for('vault.manage_folders') }}" class="folder-item" style="opacity: 0.7;">
+        <span>➕</span>
+        <span>Manage Folders</span>
+      </a>
+    </div>
+
+    <!-- Recent Documents -->
+    <div class="section">
+      <div class="section-header">
+        <span>📅</span>
+        <span>RECENT</span>
+      </div>
+      <div class="recent-list">
+        {% for doc in recent_docs %}
+        <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="recent-item">
+          <span style="font-size: 20px;">{{ doc.doc_type|file_icon }}</span>
+          <div>
+            <div style="color: var(--text); font-weight: 500; font-size: 14px;">{{ doc.title }}</div>
+            {% if doc.folder %}
+            <div style="color: var(--text-muted); font-size: 11px;">📁 {{ doc.folder.name }}</div>
+            {% endif %}
+          </div>
+          <div style="text-align: right;">
+            <div style="color: var(--text-muted); font-size: 11px;">
+              {{ doc.updated_at|time_ago if doc.updated_at else 'Unknown' }}
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="tags-section">
+      <div class="section-header" style="font-size: 14px; margin-bottom: 12px;">
+        <span>🏷️</span>
+        <span>QUICK TAGS</span>
+      </div>
+      {% for tag in popular_tags %}
+      <a href="{{ url_for('vault.search', tag=tag.name) }}" class="tag-item">
+        #{{ tag.name }} ({{ tag.count }})
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+// Quick search function
+function searchVault() {
+  const query = document.getElementById('vault-search').value;
+  if (query) {
+    window.location.href = "{{ url_for('vault.search') }}?q=" + encodeURIComponent(query);
+  }
+}
+
+// Filter by document type
+function filterByType(type) {
+  if (type === 'all') {
+    window.location.href = "{{ url_for('vault.index') }}";
+  } else {
+    window.location.href = "{{ url_for('vault.search') }}?type=" + type;
+  }
+}
+
+// Show recent documents
+function showRecent() {
+  window.location.href = "{{ url_for('vault.search') }}?sort=recent";
+}
+
+// Quick file upload
+function quickUpload(input) {
+  if (input.files && input.files[0]) {
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    
+    fetch("{{ url_for('vault.upload_file') }}", {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = data.url;
+      } else {
+        alert('Upload failed: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(error => {
+      alert('Upload error: ' + error);
+    });
+  }
+}
+
+// Add custom time_ago filter in JS
+document.addEventListener('DOMContentLoaded', function() {
+  // Convert timestamps to "time ago" format
+  document.querySelectorAll('[data-timestamp]').forEach(function(el) {
+    const timestamp = new Date(el.dataset.timestamp);
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 60) {
+      el.textContent = minutes + ' min ago';
+    } else if (hours < 24) {
+      el.textContent = hours + ' hr ago';
+    } else if (days < 7) {
+      el.textContent = days + ' days ago';
+    } else {
+      el.textContent = timestamp.toLocaleDateString();
+    }
+  });
+});
+</script>
+{% endblock %}

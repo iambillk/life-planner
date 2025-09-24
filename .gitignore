@@ -1,3 +1,4 @@
 *.svn-base
 *.pyc
 /.svn
+/static/vault_files

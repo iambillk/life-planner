@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}Search Results · Vault{% endblock %}
+{% set active = 'vault' %}
+
+{% block content %}
+<style>
+  .search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .search-header {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .search-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .results-count {
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 500;
+  }
+  
+  .search-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 20px;
+    color: var(--primary);
+    font-size: 13px;
+  }
+  
+  .clear-filters {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .clear-filters:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+  }
+  
+  .results-grid {
+    display: grid;
+    gap: 16px;
+  }
+  
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  
+  .result-card:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .result-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .result-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+  
+  .result-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  
+  .result-path {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  
+  .result-content {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .result-highlight {
+    background: rgba(251,191,36,0.3);
+    color: var(--text);
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+  
+  .result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  
+  .result-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  
+  .result-tag {
+    padding: 2px 8px;
+    background: rgba(139,92,246,0.1);
+    border: 1px solid rgba(139,92,246,0.2);
+    border-radius: 12px;
+    color: #a78bfa;
+    font-size: 11px;
+  }
+  
+  .no-results {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  
+  .no-results-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+  
+  .search-tips {
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 24px;
+  }
+  
+  .search-tips h4 {
+    margin: 0 0 8px 0;
+    color: var(--primary);
+    font-size: 14px;
+  }
+  
+  .search-tips ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    color: var(--text);
+  }
+</style>
+
+<div class="search-container">
+  <!-- Back link -->
+  <div style="margin-bottom: 20px;">
+    <a href="{{ url_for('vault.index') }}" style="color: var(--text-muted); text-decoration: none;">
+      ← Back to Vault
+    </a>
+  </div>
+  
+  <!-- Search Header -->
+  <div class="search-header">
+    <div class="search-summary">
+      <div class="results-count">
+        {% if query %}
+          Found {{ results|length }} result{{ 's' if results|length != 1 }} for "{{ query }}"
+        {% elif tag %}
+          Documents tagged with #{{ tag }}
+        {% elif folder_id %}
+          Documents in folder
+        {% elif doc_type %}
+          All {{ doc_type }} documents
+        {% else %}
+          Search Results
+        {% endif %}
+      </div>
+      
+      {% if query or tag or folder_id or doc_type %}
+      <a href="{{ url_for('vault.index') }}" class="clear-filters">
+        ✕ Clear
+      </a>
+      {% endif %}
+    </div>
+    
+    {% if query or tag or folder_id or doc_type %}
+    <div class="search-filters">
+      {% if query %}
+      <span class="filter-badge">
+        🔍 Query: {{ query }}
+      </span>
+      {% endif %}
+      
+      {% if tag %}
+      <span class="filter-badge">
+        🏷️ Tag: {{ tag }}
+      </span>
+      {% endif %}
+      
+      {% if doc_type %}
+      <span class="filter-badge">
+        📄 Type: {{ doc_type }}
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Results -->
+  {% if results %}
+  <div class="results-grid">
+    {% for doc in results %}
+    <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="result-card">
+      <div class="result-header">
+        <span class="result-icon">{{ doc.doc_type|file_icon }}</span>
+        <div style="flex: 1;">
+          <div class="result-title">
+            {{ doc.title }}
+            {% if doc.pinned %}
+              <span style="color: #fbbf24; font-size: 14px; margin-left: 8px;">📌</span>
+            {% endif %}
+          </div>
+          {% if doc.folder %}
+          <div class="result-path">
+            {{ doc.folder.icon }} {{ doc.folder.name }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if doc.content %}
+      <div class="result-content">
+        {{ doc.content[:200] }}{% if doc.content|length > 200 %}...{% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="result-meta">
+        <span>📅 Updated {{ doc.updated_at|time_ago }}</span>
+        {% if doc.file_size %}
+        <span>📊 {{ (doc.file_size / 1024)|round(2) }} KB</span>
+        {% endif %}
+        <span>👁️ Accessed {{ doc.accessed_at|time_ago }}</span>
+      </div>
+      
+      {% if doc.tags %}
+      <div class="result-tags">
+        {% for tag in doc.tags %}
+        <span class="result-tag">#{{ tag.name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <!-- No Results -->
+  <div class="no-results">
+    <div class="no-results-icon">🔍</div>
+    <h2 style="margin: 0 0 12px 0; color: var(--text);">No documents found</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">
+      {% if query %}
+        No results match your search query
+      {% else %}
+        Try adjusting your filters or search terms
+      {% endif %}
+    </p>
+    <a href="{{ url_for('vault.index') }}" class="btn btn-primary" style="padding: 10px 20px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px;">
+      Back to Vault
+    </a>
+  </div>
+  
+  <!-- Search Tips -->
+  <div class="search-tips">
+    <h4>💡 Search Tips</h4>
+    <ul>
+      <li>Search looks in titles, content, and file names</li>
+      <li>Use tags to organize related documents</li>
+      <li>Pin important documents for quick access</li>
+      <li>Documents are auto-categorized by file type</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

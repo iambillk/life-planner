@@ -166,6 +166,9 @@
                 </a> <!-- fixed missing closing tag -->
                 <a data-key="rolodex"   href="{{ url_for('rolodex.contacts') }}"  class="nav-item {{ 'active' if active == 'rolodex' }}">
                     <span class="icon">📇</span><span>Rolodex (Beta)</span>
+                <a data-key="vault" href="{{ url_for('vault.index') }}" class="nav-item {{ 'active' if active == 'vault' }}">
+                    <span class="icon">📁</span><span>Vault</span>
+                </a>
                 <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
                     <span class="icon">🏠</span><span>Home</span>
                 </a>

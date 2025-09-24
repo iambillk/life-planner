@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Manage Folders · Vault{% endblock %}
+{% set active = 'vault' %}
+
+{% block content %}
+<style>
+  .folders-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .folders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .folder-form {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 80px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .form-input {
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .icon-picker {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  
+  .icon-option {
+    padding: 8px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 20px;
+  }
+  
+  .icon-option:hover {
+    background: rgba(110,168,255,0.2);
+  }
+  
+  .icon-option.selected {
+    background: rgba(110,168,255,0.3);
+    border: 1px solid var(--primary);
+  }
+  
+  .folders-list {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  
+  .folder-item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .folder-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .folder-icon {
+    font-size: 24px;
+    text-align: center;
+  }
+  
+  .folder-name {
+    font-weight: 500;
+    color: var(--text);
+  }
+  
+  .folder-count {
+    padding: 4px 8px;
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 12px;
+    color: var(--primary);
+    font-size: 12px;
+  }
+  
+  .folder-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .action-btn {
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .action-btn:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: var(--primary-700);
+  }
+  
+  .empty-folders {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+  }
+</style>
+
+<div class="folders-container">
+  <div style="margin-bottom: 20px;">
+    <a href="{{ url_for('vault.index') }}" style="color: var(--text-muted); text-decoration: none;">
+      ← Back to Vault
+    </a>
+  </div>
+  
+  <div class="folders-header">
+    <h1 style="margin: 0; font-size: 24px; color: var(--text);">
+      📁 Manage Folders
+    </h1>
+  </div>
+  
+  <!-- Create New Folder -->
+  <div class="folder-form">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      Create New Folder
+    </h3>
+    
+    <form method="POST" action="{{ url_for('vault.create_folder') }}">
+      <div class="form-row">
+        <input type="text" name="icon" class="form-input" value="📁" id="icon-input" readonly 
+               style="text-align: center; font-size: 24px; cursor: pointer;" 
+               onclick="toggleIconPicker()">
+        
+        <input type="text" name="name" class="form-input" placeholder="Folder name..." required>
+        
+        <select name="parent_id" class="form-input" style="width: 150px;">
+          <option value="">No Parent</option>
+          {% for folder in folders if not folder.parent_id %}
+            <option value="{{ folder.id }}">{{ folder.icon }} {{ folder.name }}</option>
+          {% endfor %}
+        </select>
+        
+        <button type="submit" class="btn btn-primary">Create</button>
+      </div>
+      
+      <div class="icon-picker" id="icon-picker" style="display: none;">
+        {% for icon in ['📁', '📂', '💼', '🔧', '🏠', '📋', '🔐', '📚', '⚙️', '💻', '📊', '🎯', '🚀', '💡', '📌', '🔗', '🗂️', '📦', '🏷️', '⭐'] %}
+        <div class="icon-option" onclick="selectIcon('{{ icon }}')">{{ icon }}</div>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+  
+  <!-- Existing Folders -->
+  <div class="folders-list">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      Existing Folders
+    </h3>
+    
+    {% if folders %}
+      {% for folder in folders %}
+      <div class="folder-item">
+        <div class="folder-icon">{{ folder.icon }}</div>
+        <div>
+          <div class="folder-name">{{ folder.name }}</div>
+          {% if folder.parent %}
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Parent: {{ folder.parent.icon }} {{ folder.parent.name }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="folder-count">
+          {{ folder.documents|length }} docs
+        </div>
+        <div class="folder-actions">
+          {% if folder.documents|length == 0 %}
+          <form method="POST" action="{{ url_for('vault.delete_folder', id=folder.id) }}" 
+                style="display: inline;"
+                onsubmit="return confirm('Delete this folder?');">
+            <button type="submit" class="action-btn">Delete</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-folders">
+        <div style="font-size: 48px; margin-bottom: 12px;">📁</div>
+        <p>No folders created yet</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function toggleIconPicker() {
+  const picker = document.getElementById('icon-picker');
+  picker.style.display = picker.style.display === 'none' ? 'grid' : 'none';
+}
+
+function selectIcon(icon) {
+  document.getElementById('icon-input').value = icon;
+  document.getElementById('icon-picker').style.display = 'none';
+}
+
+// Click outside to close icon picker
+document.addEventListener('click', function(e) {
+  const picker = document.getElementById('icon-picker');
+  const input = document.getElementById('icon-input');
+  
+  if (!picker.contains(e.target) && e.target !== input) {
+    picker.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

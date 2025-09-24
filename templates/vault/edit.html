@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Edit: {{ doc.title }} · Vault{% endblock %}
+{% set active = 'vault' %}
+
+{% block content %}
+<style>
+  /* Reuse styles from create template */
+  .edit-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-label {
+    display: block;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .form-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    resize: vertical;
+  }
+  
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .version-note {
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 20px;
+    color: #fbbf24;
+    font-size: 13px;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: var(--primary-700);
+  }
+  
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--panel);
+    border-color: var(--primary);
+  }
+  
+  .file-info {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .doc-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .doc-type-option {
+    text-align: center;
+  }
+  
+  .doc-type-option input[type="radio"] {
+    display: none;
+  }
+  
+  .doc-type-option label {
+    display: block;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .doc-type-option input[type="radio"]:checked + label {
+    background: rgba(110,168,255,0.2);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  
+  .doc-type-option label:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: var(--primary);
+  }
+  
+  .doc-type-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 4px;
+  }
+</style>
+
+<div class="edit-container">
+  <div style="margin-bottom: 24px;">
+    <a href="{{ url_for('vault.view_document', id=doc.id) }}" style="color: var(--text-muted); text-decoration: none;">
+      ← Back to Document
+    </a>
+  </div>
+  
+  <h1 style="margin: 0 0 24px 0; font-size: 24px; color: var(--text);">
+    ✏️ Edit Document
+  </h1>
+  
+  {% if doc.versions %}
+  <div class="version-note">
+    ⚠️ Changes will create version #{{ doc.versions|length + 2 }}. Previous versions are preserved.
+  </div>
+  {% endif %}
+  
+  <form method="POST" class="form-card">
+    <div class="form-group">
+      <label class="form-label">Title *</label>
+      <input type="text" name="title" class="form-input" value="{{ doc.title }}" required>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Document Type</label>
+      <div class="doc-type-grid">
+        {% for type in ['note', 'code', 'config', 'script', 'document', 'contract'] %}
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="{{ type }}" id="type-{{ type }}" 
+                 {% if doc.doc_type == type %}checked{% endif %}>
+          <label for="type-{{ type }}">
+            <span class="doc-type-icon">
+              {% if type == 'note' %}📝
+              {% elif type == 'code' %}💻
+              {% elif type == 'config' %}⚙️
+              {% elif type == 'script' %}🔧
+              {% elif type == 'document' %}📄
+              {% elif type == 'contract' %}📜
+              {% endif %}
+            </span>
+            {{ type|title }}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    
+    {% if doc.file_path %}
+    <div class="file-info">
+      <span style="font-size: 24px;">📎</span>
+      <div style="flex: 1;">
+        <div style="font-weight: 500; color: var(--text);">{{ doc.file_name }}</div>
+        <div style="font-size: 12px; color: var(--text-muted);">
+          {{ (doc.file_size / 1024)|round(2) }} KB · {{ doc.mime_type or 'Unknown type' }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <div class="form-group">
+      <label class="form-label">Content</label>
+      <textarea name="content" class="form-textarea">{{ doc.content or '' }}</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Version Note (Optional)</label>
+      <input type="text" name="change_note" class="form-input" 
+             placeholder="What changed in this version?">
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label class="form-label">Folder</label>
+        <select name="folder_id" class="form-select">
+          <option value="">— No Folder —</option>
+          {% for folder in folders %}
+            <option value="{{ folder.id }}" {% if doc.folder_id == folder.id %}selected{% endif %}>
+              {{ folder.icon }} {{ folder.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Tags (comma separated)</label>
+        <input type="text" name="tags" class="form-input" value="{{ current_tags }}">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <input type="checkbox" name="pinned" id="pinned" {% if doc.pinned %}checked{% endif %}>
+        <label for="pinned" style="color: var(--text); cursor: pointer;">
+          📌 Pin this document to the top
+        </label>
+      </div>
+    </div>
+    
+    <div class="form-actions">
+      <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+<script>
+// Auto-resize textarea
+const textarea = document.querySelector('.form-textarea');
+if (textarea) {
+  // Set initial height based on content
+  textarea.style.height = 'auto';
+  textarea.style.height = (textarea.scrollHeight + 2) + 'px';
+  
+  // Auto-resize as user types
+  textarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight + 2) + 'px';
+  });
+}
+</script>
+{% endblock %}

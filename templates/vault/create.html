@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}Create Document · Vault{% endblock %}
+{% set active = 'vault' %}
+
+{% block content %}
+<style>
+  .create-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-label {
+    display: block;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .form-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    resize: vertical;
+  }
+  
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  
+  .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .doc-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .doc-type-option {
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .doc-type-option:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: var(--primary);
+  }
+  
+  .doc-type-option input[type="radio"] {
+    display: none;
+  }
+  
+  .doc-type-option input[type="radio"]:checked + label {
+    background: rgba(110,168,255,0.2);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  
+  .doc-type-label {
+    display: block;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  
+  .doc-type-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed var(--line);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  
+  .file-upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(110,168,255,0.05);
+  }
+  
+  .file-upload-area.drag-over {
+    border-color: var(--primary);
+    background: rgba(110,168,255,0.1);
+  }
+  
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: var(--primary-700);
+  }
+  
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--panel);
+    border-color: var(--primary);
+  }
+</style>
+
+<div class="create-container">
+  <div style="margin-bottom: 24px;">
+    <a href="{{ url_for('vault.index') }}" style="color: var(--text-muted); text-decoration: none;">
+      ← Back to Vault
+    </a>
+  </div>
+  
+  <h1 style="margin: 0 0 24px 0; font-size: 24px; color: var(--text);">
+    📝 Create New Document
+  </h1>
+  
+  <form method="POST" enctype="multipart/form-data" class="form-card">
+    <div class="form-group">
+      <label class="form-label">Title *</label>
+      <input type="text" name="title" class="form-input" placeholder="Enter document title..." required autofocus>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Document Type</label>
+      <div class="doc-type-grid">
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="note" id="type-note" checked>
+          <label for="type-note" class="doc-type-label">
+            <span class="doc-type-icon">📝</span>
+            Note
+          </label>
+        </div>
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="code" id="type-code">
+          <label for="type-code" class="doc-type-label">
+            <span class="doc-type-icon">💻</span>
+            Code
+          </label>
+        </div>
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="config" id="type-config">
+          <label for="type-config" class="doc-type-label">
+            <span class="doc-type-icon">⚙️</span>
+            Config
+          </label>
+        </div>
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="script" id="type-script">
+          <label for="type-script" class="doc-type-label">
+            <span class="doc-type-icon">🔧</span>
+            Script
+          </label>
+        </div>
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="document" id="type-document">
+          <label for="type-document" class="doc-type-label">
+            <span class="doc-type-icon">📄</span>
+            Document
+          </label>
+        </div>
+        <div class="doc-type-option">
+          <input type="radio" name="doc_type" value="contract" id="type-contract">
+          <label for="type-contract" class="doc-type-label">
+            <span class="doc-type-icon">📜</span>
+            Contract
+          </label>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Content</label>
+      <textarea name="content" class="form-textarea" placeholder="Enter content, paste code, or documentation..."></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Upload File (Optional)</label>
+      <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
+        <div style="font-size: 32px; margin-bottom: 8px;">📤</div>
+        <div style="color: var(--text); font-weight: 500;">Click to upload or drag & drop</div>
+        <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">
+          Supports: PDF, DOC, TXT, Images, Code files, Configs
+        </div>
+        <input type="file" name="file" id="file-input" style="display: none;" onchange="updateFileName(this)">
+        <div id="file-name" style="color: var(--primary); margin-top: 12px; display: none;"></div>
+      </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label class="form-label">Folder</label>
+        <select name="folder_id" class="form-select">
+          <option value="">— No Folder —</option>
+          {% for folder in folders %}
+            <option value="{{ folder.id }}">{{ folder.icon }} {{ folder.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Tags (comma separated)</label>
+        <input type="text" name="tags" class="form-input" placeholder="proxmox, config, network">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <div class="checkbox-group">
+        <input type="checkbox" name="pinned" id="pinned">
+        <label for="pinned" style="color: var(--text); cursor: pointer;">
+          📌 Pin this document to the top
+        </label>
+      </div>
+    </div>
+    
+    <div class="form-actions">
+      <a href="{{ url_for('vault.index') }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Create Document</button>
+    </div>
+  </form>
+</div>
+
+<script>
+// File upload handling
+function updateFileName(input) {
+  const fileName = input.files[0]?.name;
+  if (fileName) {
+    document.getElementById('file-name').textContent = '📎 ' + fileName;
+    document.getElementById('file-name').style.display = 'block';
+  }
+}
+
+// Drag and drop
+const uploadArea = document.querySelector('.file-upload-area');
+const fileInput = document.getElementById('file-input');
+
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+  uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    updateFileName(fileInput);
+  }
+});
+
+// Auto-detect document type based on content
+document.querySelector('.form-textarea').addEventListener('paste', function(e) {
+  const content = e.clipboardData.getData('text');
+  
+  // Detect code patterns
+  if (content.includes('#!/bin/bash') || content.includes('#!/usr/bin/env')) {
+    document.getElementById('type-script').checked = true;
+  } else if (content.includes('import ') || content.includes('function ') || content.includes('def ') || content.includes('class ')) {
+    document.getElementById('type-code').checked = true;
+  } else if (content.includes('server {') || content.includes('location /') || content.includes('[') && content.includes(']')) {
+    document.getElementById('type-config').checked = true;
+  }
+});
+</script>
+{% endblock %}

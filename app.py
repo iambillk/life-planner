@@ -23,6 +23,7 @@ from models.base import db
 from datetime import datetime
 import os
 
+
 def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
@@ -79,6 +80,7 @@ def register_blueprints(app):
     from modules.financial import financial_bp
     from modules.rolodex import rolodex_bp
     from modules.home import home_bp
+    from modules.vault import vault_bp
 
         
     app.register_blueprint(daily_bp, url_prefix='/daily')
@@ -92,6 +94,7 @@ def register_blueprints(app):
     app.register_blueprint(financial_bp, url_prefix='/financial')
     app.register_blueprint(rolodex_bp, url_prefix='/rolodex')
     app.register_blueprint(home_bp, url_prefix='/home')
+    app.register_blueprint(vault_bp, url_prefix='/vault')
 
     # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)
