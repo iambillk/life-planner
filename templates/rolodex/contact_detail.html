@@ -1,460 +1,348 @@
 {% extends "base.html" %}
 {% block title %}{{ contact.display_name }} · Rolodex{% endblock %}
 
-{% block head %}
+{% block content %}
 <style>
-  .contact-detail-container * {
-    box-sizing: border-box !important;
+  /* Force small profile photo */
+  .profile-photo img {
+    width: 80px !important;
+    height: 80px !important;
+    max-width: 80px !important;
+    max-height: 80px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
   }
   
-  .detail-section {
-    transition: transform 0.2s ease;
-  }
-  
-  .detail-section:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  }
-  
-  .info-row {
-    display: flex;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  
-  .info-row:last-child {
-    border-bottom: none;
-  }
-  
-  .info-label {
-    flex: 0 0 150px;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-  
-  .info-value {
-    flex: 1;
-    color: var(--text);
-  }
-  
-  .info-value a {
-    color: #3b82f6;
-    text-decoration: none;
-    transition: color 0.2s ease;
-  }
-  
-  .info-value a:hover {
-    color: #60a5fa;
-    text-decoration: underline;
-  }
-  
-  .tag-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-    border-radius: 20px;
-    font-size: 14px;
-    margin-right: 8px;
-    margin-bottom: 8px;
-  }
-  
-  .empty-value {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  
-  .photo-container {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-  }
-  
-  .profile-photo-large {
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 12px;
-    border: 3px solid var(--line);
-  }
-  
-  .business-card-photo {
-    width: 200px;
-    height: auto;
-    border-radius: 8px;
-    border: 2px solid var(--line);
+  /* Business card photo */
+  .business-card img {
+    max-width: 400px !important;
+    height: auto !important;
     cursor: pointer;
-    transition: transform 0.2s ease;
-  }
-  
-  .business-card-photo:hover {
-    transform: scale(1.05);
+    border-radius: 8px;
   }
 </style>
-{% endblock %}
 
-{% block content %}
-<div class="contact-detail-container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+<div style="padding: 20px; max-width: 1000px; margin: 0 auto;">
+  <!-- Back link -->
+  <div style="margin-bottom: 20px;">
+    <a href="{{ url_for('rolodex.contacts') }}" style="color: var(--text-muted); text-decoration: none;">
+      ← Back to Contacts
+    </a>
+  </div>
+
   <!-- Header -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--line);">
-    <div style="display: flex; align-items: center; gap: 20px;">
-      {% if contact.profile_photo %}
-      <img src="{{ url_for('static', filename='contact_photos/' + contact.profile_photo) }}" 
-           alt="{{ contact.display_name }}"
-           class="profile-photo-large">
-      {% else %}
-      <div style="width: 150px; height: 150px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: white; font-weight: bold;">
-        {{ contact.display_name[0] | upper }}
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; gap: 20px;">
+    <div style="display: flex; gap: 16px; align-items: center;">
+      <div class="profile-photo">
+        {% if contact.profile_photo %}
+          <img src="{{ url_for('static', filename='contact_photos/' + contact.profile_photo) }}" alt="{{ contact.display_name }}">
+        {% else %}
+          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px;">
+            {{ contact.display_name[0]|upper if contact.display_name else '?' }}
+          </div>
+        {% endif %}
       </div>
-      {% endif %}
       
       <div>
-        <h1 style="margin: 0; color: var(--text); font-size: 36px;">
+        <h1 style="margin: 0; font-size: 28px; color: var(--text);">
           {{ contact.display_name }}
         </h1>
         {% if contact.title or contact.company %}
-        <p style="margin: 8px 0 0 0; color: var(--text-muted); font-size: 18px;">
+        <p style="margin: 4px 0; color: var(--text-muted); font-size: 14px;">
           {% if contact.title %}{{ contact.title }}{% endif %}
           {% if contact.title and contact.company %} at {% endif %}
-          {% if contact.company %}{{ contact.company.name }}{% endif %}
+          {% if contact.company %}
+            <a href="{{ url_for('rolodex.company_detail', id=contact.company.id) }}" style="color: var(--primary); text-decoration: none;">
+              {{ contact.company.name }}
+            </a>
+          {% endif %}
         </p>
         {% endif %}
         {% if contact.tags %}
-        <div style="margin-top: 12px;">
+        <div style="margin-top: 8px;">
           {% for tag in contact.tags.split(',') %}
-          <span class="tag-badge">{{ tag.strip() }}</span>
+          <span style="display: inline-block; padding: 2px 8px; background: rgba(139,92,246,0.2); color: #a78bfa; border-radius: 4px; font-size: 11px; margin-right: 4px;">
+            {{ tag.strip() }}
+          </span>
           {% endfor %}
         </div>
         {% endif %}
       </div>
     </div>
     
-    <div style="display: flex; gap: 12px;">
+    <div style="display: flex; gap: 8px;">
       <a href="{{ url_for('rolodex.contact_edit', id=contact.id) }}" 
-         style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
-         onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'"
-         onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'">
-        ✏️ Edit
+         style="padding: 8px 16px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px;">
+        Edit
       </a>
-      <form method="POST" action="{{ url_for('rolodex.contact_delete', id=contact.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this contact?');">
-        <button type="submit"
-                style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)'"
-                onmouseout="this.style.background='#ef4444'; this.style.transform='translateY(0)'">
-          🗑️ Delete
+      <form method="POST" action="{{ url_for('rolodex.contact_delete', id=contact.id) }}" 
+            style="display: inline;" 
+            onsubmit="return confirm('Delete this contact?');">
+        <button type="submit" 
+                style="padding: 8px 16px; background: var(--danger); color: white; border: none; border-radius: 6px; cursor: pointer;">
+          Delete
         </button>
       </form>
-      <form method="POST" action="{{ url_for('rolodex.contact_archive', id=contact.id) }}" style="display: inline;">
-        <button type="submit"
-                style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
-                onmouseout="this.style.background='#6b7280'; this.style.transform='translateY(0)'">
-          {% if contact.archived %}♻️ Unarchive{% else %}📦 Archive{% endif %}
-        </button>
-      </form>
-      <a href="{{ url_for('rolodex.contacts') }}" 
-         style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
-         onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
-         onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
-        ← Back
-      </a>
     </div>
   </div>
-
-  <!-- Archived Warning -->
-  {% if contact.archived %}
-  <div style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-    <span style="font-size: 20px;">📦</span>
-    <strong>This contact is archived.</strong> It won't appear in normal searches.
-  </div>
-  {% endif %}
-
-  <!-- Business Card if exists -->
-  {% if contact.business_card_photo %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">💼</span>Business Card
-    </h3>
-    <div style="padding: 24px; text-align: center;">
-      <img src="{{ url_for('static', filename='contact_photos/' + contact.business_card_photo) }}" 
-           alt="Business Card"
-           class="business-card-photo"
-           onclick="window.open(this.src, '_blank')">
-    </div>
-  </div>
-  {% endif %}
 
   <!-- Basic Information -->
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">👤</span>Basic Information
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      👤 Basic Information
     </h3>
-    <div style="padding: 24px;">
+    
+    <div style="display: grid; gap: 12px;">
       {% if contact.first_name or contact.last_name %}
-      <div class="info-row">
-        <div class="info-label">Full Name</div>
-        <div class="info-value">
-          {{ contact.first_name or '' }} {{ contact.last_name or '' }}
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">Full Name:</span>
+        <span>{{ contact.first_name or '' }} {{ contact.last_name or '' }}</span>
       </div>
       {% endif %}
       
-      <div class="info-row">
-        <div class="info-label">Display Name</div>
-        <div class="info-value">{{ contact.display_name }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">Display Name:</span>
+        <span>{{ contact.display_name }}</span>
       </div>
       
       {% if contact.title %}
-      <div class="info-row">
-        <div class="info-label">Title/Role</div>
-        <div class="info-value">{{ contact.title }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">Title:</span>
+        <span>{{ contact.title }}</span>
       </div>
       {% endif %}
       
       {% if contact.company %}
-      <div class="info-row">
-        <div class="info-label">Company</div>
-        <div class="info-value">
-          <a href="{{ url_for('rolodex.company_detail', id=contact.company.id) }}">
-            {{ contact.company.name }}
-          </a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">Company:</span>
+        <a href="{{ url_for('rolodex.company_detail', id=contact.company.id) }}" style="color: var(--primary); text-decoration: none;">
+          {{ contact.company.name }}
+        </a>
       </div>
       {% endif %}
     </div>
   </div>
 
   <!-- Contact Information -->
-  {% if contact.email or contact.phone or contact.mobile_phone or contact.work_phone or contact.home_phone or contact.personal_email or contact.website %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">📞</span>Contact Methods
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      📞 Contact Methods
     </h3>
-    <div style="padding: 24px;">
+    
+    <div style="display: grid; gap: 12px;">
       {% if contact.email %}
-      <div class="info-row">
-        <div class="info-label">📧 Primary Email</div>
-        <div class="info-value">
-          <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">📧 Email:</span>
+        <a href="mailto:{{ contact.email }}" style="color: var(--primary); text-decoration: none;">
+          {{ contact.email }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.personal_email %}
-      <div class="info-row">
-        <div class="info-label">✉️ Personal Email</div>
-        <div class="info-value">
-          <a href="mailto:{{ contact.personal_email }}">{{ contact.personal_email }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">✉️ Personal:</span>
+        <a href="mailto:{{ contact.personal_email }}" style="color: var(--primary); text-decoration: none;">
+          {{ contact.personal_email }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.phone %}
-      <div class="info-row">
-        <div class="info-label">☎️ Primary Phone</div>
-        <div class="info-value">
-          <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">☎️ Phone:</span>
+        <a href="tel:{{ contact.phone }}" style="color: var(--text); text-decoration: none;">
+          {{ contact.phone }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.mobile_phone %}
-      <div class="info-row">
-        <div class="info-label">📱 Mobile Phone</div>
-        <div class="info-value">
-          <a href="tel:{{ contact.mobile_phone }}">{{ contact.mobile_phone }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">📱 Mobile:</span>
+        <a href="tel:{{ contact.mobile_phone }}" style="color: var(--text); text-decoration: none;">
+          {{ contact.mobile_phone }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.work_phone %}
-      <div class="info-row">
-        <div class="info-label">💼 Work Phone</div>
-        <div class="info-value">
-          <a href="tel:{{ contact.work_phone }}">{{ contact.work_phone }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">💼 Work:</span>
+        <a href="tel:{{ contact.work_phone }}" style="color: var(--text); text-decoration: none;">
+          {{ contact.work_phone }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.home_phone %}
-      <div class="info-row">
-        <div class="info-label">🏠 Home Phone</div>
-        <div class="info-value">
-          <a href="tel:{{ contact.home_phone }}">{{ contact.home_phone }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">🏠 Home:</span>
+        <a href="tel:{{ contact.home_phone }}" style="color: var(--text); text-decoration: none;">
+          {{ contact.home_phone }}
+        </a>
       </div>
       {% endif %}
       
       {% if contact.website %}
-      <div class="info-row">
-        <div class="info-label">🌐 Website</div>
-        <div class="info-value">
-          <a href="{{ contact.website }}" target="_blank">{{ contact.website }}</a>
-        </div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">🌐 Website:</span>
+        <a href="{{ contact.website }}" target="_blank" style="color: var(--primary); text-decoration: none;">
+          {{ contact.website }}
+        </a>
       </div>
+      {% endif %}
+      
+      {% if not (contact.email or contact.phone or contact.mobile_phone or contact.work_phone or contact.home_phone or contact.personal_email or contact.website) %}
+      <span style="color: var(--text-muted); font-style: italic;">No contact information provided</span>
       {% endif %}
     </div>
   </div>
-  {% endif %}
 
-  <!-- Physical Address -->
-  {% if contact.street_address or contact.city or contact.state or contact.zip_code or contact.country %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">📍</span>Physical Address
+  <!-- Address if exists -->
+  {% if contact.street_address or contact.city or contact.state or contact.zip_code %}
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      📍 Address
     </h3>
-    <div style="padding: 24px;">
-      <div class="info-row">
-        <div class="info-label">Address</div>
-        <div class="info-value">
-          {% if contact.street_address %}
-            {{ contact.street_address }}<br>
-          {% endif %}
-          {% if contact.address_line_2 %}
-            {{ contact.address_line_2 }}<br>
-          {% endif %}
-          {% if contact.city or contact.state or contact.zip_code %}
-            {{ contact.city }}{% if contact.city and contact.state %}, {% endif %}
-            {{ contact.state }} {{ contact.zip_code }}<br>
-          {% endif %}
-          {% if contact.country %}
-            {{ contact.country }}
-          {% endif %}
-          {% if not (contact.street_address or contact.city or contact.state or contact.zip_code or contact.country) %}
-            <span class="empty-value">No address provided</span>
-          {% endif %}
-        </div>
-      </div>
+    
+    <div>
+      {% if contact.street_address %}{{ contact.street_address }}<br>{% endif %}
+      {% if contact.address_line_2 %}{{ contact.address_line_2 }}<br>{% endif %}
+      {% if contact.city or contact.state or contact.zip_code %}
+        {{ contact.city }}{% if contact.city and contact.state %}, {% endif %}
+        {{ contact.state }} {{ contact.zip_code }}
+      {% endif %}
+      {% if contact.country %}<br>{{ contact.country }}{% endif %}
     </div>
   </div>
   {% endif %}
 
-  <!-- Social Media -->
+  <!-- Social Media if exists -->
   {% if contact.linkedin_url or contact.twitter_url or contact.facebook_url or contact.instagram_url or contact.github_url %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">🔗</span>Social Media
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      🔗 Social Media
     </h3>
-    <div style="padding: 24px;">
+    
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
       {% if contact.linkedin_url %}
-      <div class="info-row">
-        <div class="info-label">💼 LinkedIn</div>
-        <div class="info-value">
-          <a href="{{ contact.linkedin_url }}" target="_blank">{{ contact.linkedin_url }}</a>
-        </div>
-      </div>
+        <a href="{{ contact.linkedin_url }}" target="_blank" 
+           style="padding: 6px 12px; background: #0077b5; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+          LinkedIn
+        </a>
       {% endif %}
-      
       {% if contact.twitter_url %}
-      <div class="info-row">
-        <div class="info-label">🐦 Twitter/X</div>
-        <div class="info-value">
-          <a href="{{ contact.twitter_url }}" target="_blank">{{ contact.twitter_url }}</a>
-        </div>
-      </div>
+        <a href="{{ contact.twitter_url }}" target="_blank" 
+           style="padding: 6px 12px; background: #1da1f2; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+          Twitter
+        </a>
       {% endif %}
-      
       {% if contact.facebook_url %}
-      <div class="info-row">
-        <div class="info-label">📘 Facebook</div>
-        <div class="info-value">
-          <a href="{{ contact.facebook_url }}" target="_blank">{{ contact.facebook_url }}</a>
-        </div>
-      </div>
+        <a href="{{ contact.facebook_url }}" target="_blank" 
+           style="padding: 6px 12px; background: #1877f2; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+          Facebook
+        </a>
       {% endif %}
-      
       {% if contact.instagram_url %}
-      <div class="info-row">
-        <div class="info-label">📷 Instagram</div>
-        <div class="info-value">
-          <a href="{{ contact.instagram_url }}" target="_blank">{{ contact.instagram_url }}</a>
-        </div>
-      </div>
+        <a href="{{ contact.instagram_url }}" target="_blank" 
+           style="padding: 6px 12px; background: #e4405f; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+          Instagram
+        </a>
       {% endif %}
-      
       {% if contact.github_url %}
-      <div class="info-row">
-        <div class="info-label">💻 GitHub</div>
-        <div class="info-value">
-          <a href="{{ contact.github_url }}" target="_blank">{{ contact.github_url }}</a>
-        </div>
-      </div>
+        <a href="{{ contact.github_url }}" target="_blank" 
+           style="padding: 6px 12px; background: #333; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+          GitHub
+        </a>
       {% endif %}
     </div>
   </div>
   {% endif %}
 
-  <!-- Personal Information -->
+  <!-- Personal Info if exists -->
   {% if contact.birthday or contact.anniversary or contact.spouse_name or contact.children_names or contact.assistant_name %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">❤️</span>Personal Information
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      👨‍👩‍👧‍👦 Personal Information
     </h3>
-    <div style="padding: 24px;">
+    
+    <div style="display: grid; gap: 12px;">
       {% if contact.birthday %}
-      <div class="info-row">
-        <div class="info-label">🎂 Birthday</div>
-        <div class="info-value">{{ contact.birthday.strftime('%B %d, %Y') }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">🎂 Birthday:</span>
+        <span>{{ contact.birthday.strftime('%B %d, %Y') }}</span>
       </div>
       {% endif %}
       
       {% if contact.anniversary %}
-      <div class="info-row">
-        <div class="info-label">💍 Anniversary</div>
-        <div class="info-value">{{ contact.anniversary.strftime('%B %d, %Y') }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">💑 Anniversary:</span>
+        <span>{{ contact.anniversary.strftime('%B %d, %Y') }}</span>
       </div>
       {% endif %}
       
       {% if contact.spouse_name %}
-      <div class="info-row">
-        <div class="info-label">💑 Spouse/Partner</div>
-        <div class="info-value">{{ contact.spouse_name }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">💍 Spouse:</span>
+        <span>{{ contact.spouse_name }}</span>
       </div>
       {% endif %}
       
       {% if contact.children_names %}
-      <div class="info-row">
-        <div class="info-label">👨‍👩‍👧‍👦 Children</div>
-        <div class="info-value">{{ contact.children_names }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">👶 Children:</span>
+        <span>{{ contact.children_names }}</span>
       </div>
       {% endif %}
       
       {% if contact.assistant_name %}
-      <div class="info-row">
-        <div class="info-label">👔 Assistant</div>
-        <div class="info-value">{{ contact.assistant_name }}</div>
+      <div style="display: flex; gap: 12px;">
+        <span style="color: var(--text-muted); width: 120px;">👤 Assistant:</span>
+        <span>{{ contact.assistant_name }}</span>
       </div>
       {% endif %}
     </div>
   </div>
   {% endif %}
 
-  <!-- Notes -->
-  {% if contact.notes %}
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">📝</span>Notes
+  <!-- Business Card if exists -->
+  {% if contact.business_card_photo %}
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text);">
+      💼 Business Card
     </h3>
-    <div style="padding: 24px;">
-      <div style="white-space: pre-wrap; color: var(--text); line-height: 1.6;">{{ contact.notes }}</div>
+    <div class="business-card" style="text-align: center;">
+      <img src="{{ url_for('static', filename='contact_photos/' + contact.business_card_photo) }}" 
+           alt="Business Card"
+           onclick="window.open(this.src, '_blank')">
     </div>
   </div>
   {% endif %}
 
-  <!-- Metadata -->
-  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;">
-    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
-      <span style="margin-right: 8px;">ℹ️</span>Record Information
+  <!-- Notes if exists -->
+  {% if contact.notes %}
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text);">
+      📝 Notes
     </h3>
-    <div style="padding: 24px;">
-      <div class="info-row">
-        <div class="info-label">Created</div>
-        <div class="info-value">{{ contact.created_at.strftime('%B %d, %Y at %I:%M %p') if contact.created_at else 'Unknown' }}</div>
+    <div style="white-space: pre-wrap; color: var(--text); line-height: 1.5;">{{ contact.notes }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Metadata -->
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+    <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text);">
+      ℹ️ Record Information
+    </h3>
+    <div style="display: grid; gap: 8px; font-size: 13px;">
+      <div>
+        <span style="color: var(--text-muted);">Created:</span>
+        <span style="margin-left: 8px;">{{ contact.created_at.strftime('%B %d, %Y at %I:%M %p') if contact.created_at else 'Unknown' }}</span>
       </div>
-      <div class="info-row">
-        <div class="info-label">Last Updated</div>
-        <div class="info-value">{{ contact.updated_at.strftime('%B %d, %Y at %I:%M %p') if contact.updated_at else 'Never' }}</div>
+      <div>
+        <span style="color: var(--text-muted);">Updated:</span>
+        <span style="margin-left: 8px;">{{ contact.updated_at.strftime('%B %d, %Y at %I:%M %p') if contact.updated_at else 'Never' }}</span>
       </div>
     </div>
   </div>

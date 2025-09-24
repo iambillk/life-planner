@@ -1,459 +1,143 @@
 {% extends "base.html" %}
 {% block title %}Contacts · Rolodex{% endblock %}
 
-{% block head %}
+{% block content %}
 <style>
-  .contacts-container * {
-    box-sizing: border-box !important;
-  }
-  
-  .nav-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 20px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 4px;
-  }
-  
-  .nav-tab {
-    flex: 1;
-    padding: 12px;
-    text-align: center;
-    border-radius: 8px;
-    text-decoration: none;
-    color: var(--text);
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  
-  .nav-tab:hover {
-    background: rgba(59, 130, 246, 0.1);
-  }
-  
-  .nav-tab.active {
-    background: #3b82f6;
-    color: white;
-  }
-  
-  .nav-tab.active:hover {
-    background: #2563eb;
-  }
-  
-  .search-bar {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  
-  .search-input {
-    flex: 1;
-    min-width: 250px;
-    padding: 12px 16px;
-    background: #0c1322;
-    border: 2px solid var(--line);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 15px;
-    transition: all 0.3s ease;
-  }
-  
-  .search-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    outline: none;
-  }
-  
-  .contacts-table {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
-  
-  .contacts-table table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .contacts-table thead {
-    background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent);
-    border-bottom: 2px solid var(--line);
-  }
-  
-  .contacts-table th {
-    text-align: left;
-    padding: 16px 20px;
-    font-weight: 600;
-    color: var(--text);
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .contacts-table tbody tr {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s ease;
-  }
-  
-  .contacts-table tbody tr:hover {
-    background: rgba(59, 130, 246, 0.05);
-  }
-  
-  .contacts-table td {
-    padding: 16px 20px;
-    color: var(--text-muted);
-  }
-  
-  .contact-avatar {
-    width: 80px !important;
-    height: 80px !important;
+  /* Override the massive avatar problem */
+  td img {
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
     border-radius: 50% !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 28px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    overflow: hidden !important;
-    flex-shrink: 0;
-  }
-  
-  .contact-avatar img {
-    width: 80px !important;
-    height: 80px !important;
-    max-width: 80px !important;
-    max-height: 80px !important;
     object-fit: cover !important;
-    border-radius: 50% !important;
-  }
-  
-  .contact-name {
-    color: #3b82f6;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
-  }
-  
-  .contact-name:hover {
-    color: #60a5fa;
-    text-decoration: underline;
-  }
-  
-  .tag-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-    border-radius: 12px;
-    font-size: 12px;
-    margin-right: 6px;
-  }
-  
-  .archived-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    background: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
-    border-radius: 12px;
-    font-size: 12px;
-    margin-left: 8px;
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-  }
-  
-  .empty-state h2 {
-    color: var(--text);
-    margin-bottom: 12px;
-    font-size: 24px;
-  }
-  
-  .empty-state p {
-    color: var(--text-muted);
-    margin-bottom: 24px;
-  }
-  
-  .pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    padding: 20px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-  }
-  
-  .pagination a {
-    padding: 10px 20px;
-    background: #374151;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    font-weight: 500;
-  }
-  
-  .pagination a:hover {
-    background: #4b5563;
-    transform: translateY(-1px);
-  }
-  
-  .pagination span {
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-  
-  .stats-bar {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-  }
-  
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .stat-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-  }
-  
-  .stat-value {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--text);
   }
 </style>
-{% endblock %}
 
-{% block content %}
-<div class="contacts-container" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+<div style="padding: 20px;">
   <!-- Header -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div>
-      <h1 style="margin: 0; color: var(--text); font-size: 32px;">
-        📋 Rolodex
-      </h1>
-      <p style="margin: 5px 0 0 0; color: var(--text-muted);">
-        Manage your professional network
-      </p>
+      <h1 style="margin: 0; font-size: 24px;">📋 Rolodex</h1>
+      <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 14px;">Manage your professional network</p>
     </div>
-    <div style="display: flex; gap: 12px;">
-      <a href="{{ url_for('rolodex.contact_new') }}" 
-         style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease; font-size: 15px;"
-         onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 20px rgba(59, 130, 246, 0.3)'"
-         onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-        ➕ New Contact
-      </a>
-      <a href="{{ url_for('rolodex.company_new') }}" 
-         style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease; font-size: 15px;"
-         onmouseover="this.style.background='#059669'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 20px rgba(16, 185, 129, 0.3)'"
-         onmouseout="this.style.background='#10b981'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-        ➕ New Company
-      </a>
+    <div>
+      <a href="{{ url_for('rolodex.contact_new') }}" style="padding: 8px 16px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px; margin-right: 8px;">+ New Contact</a>
+      <a href="{{ url_for('rolodex.company_new') }}" style="padding: 8px 16px; background: var(--success); color: white; text-decoration: none; border-radius: 6px;">+ New Company</a>
     </div>
   </div>
 
-  <!-- Navigation Tabs -->
-  <div class="nav-tabs">
-    <a href="{{ url_for('rolodex.contacts') }}" class="nav-tab active">
-      <span style="font-size: 20px;">👥</span>
-      <span>Contacts</span>
-    </a>
-    <a href="{{ url_for('rolodex.companies') }}" class="nav-tab">
-      <span style="font-size: 20px;">🏢</span>
-      <span>Companies</span>
-    </a>
+  <!-- Tabs -->
+  <div style="display: flex; gap: 4px; margin-bottom: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px;">
+    <a href="{{ url_for('rolodex.contacts') }}" style="flex: 1; padding: 8px; text-align: center; background: var(--primary); color: white; text-decoration: none; border-radius: 4px;">👥 Contacts</a>
+    <a href="{{ url_for('rolodex.companies') }}" style="flex: 1; padding: 8px; text-align: center; color: var(--text); text-decoration: none;">🏢 Companies</a>
   </div>
 
-  <!-- Stats Bar -->
-  <div class="stats-bar">
-    <div class="stat-item">
-      <span class="stat-label">Total Contacts</span>
-      <span class="stat-value">{{ contacts.total }}</span>
+  <!-- Quick Stats -->
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+    <div style="background: var(--card); border: 1px solid var(--line); padding: 12px; border-radius: 6px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Total</div>
+      <div style="font-size: 20px; font-weight: bold;">{{ contacts.total }}</div>
     </div>
-    <div class="stat-item">
-      <span class="stat-label">Current Page</span>
-      <span class="stat-value">{{ contacts.page }}/{{ contacts.pages }}</span>
+    <div style="background: var(--card); border: 1px solid var(--line); padding: 12px; border-radius: 6px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Active</div>
+      <div style="font-size: 20px; font-weight: bold; color: var(--success);">{{ contacts.total }}</div>
     </div>
-    {% if show_archived %}
-    <div class="stat-item">
-      <span class="stat-label">Status</span>
-      <span class="stat-value" style="color: #fbbf24;">Including Archived</span>
+    <div style="background: var(--card); border: 1px solid var(--line); padding: 12px; border-radius: 6px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Companies</div>
+      <div style="font-size: 20px; font-weight: bold;">{{ companies_map|length if companies_map else 0 }}</div>
     </div>
-    {% endif %}
+    <div style="background: var(--card); border: 1px solid var(--line); padding: 12px; border-radius: 6px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Page</div>
+      <div style="font-size: 20px; font-weight: bold;">{{ contacts.page }}/{{ contacts.pages or 1 }}</div>
+    </div>
   </div>
 
-  <!-- Search and Filter Bar -->
-  <form method="get" class="search-bar">
-    <input type="text" 
-           name="q" 
-           value="{{ q or '' }}" 
-           placeholder="🔍 Search name, email, company, tags..." 
-           class="search-input">
-    
-    <select name="sort" 
-            style="padding: 12px 16px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text); cursor: pointer; transition: all 0.3s ease;"
-            onmouseover="this.style.borderColor='#3b82f6'"
-            onmouseout="this.style.borderColor='var(--line)'">
-      <option value="name_asc" {% if sort=='name_asc' %}selected{% endif %}>📝 Name A→Z</option>
-      <option value="name_desc" {% if sort=='name_desc' %}selected{% endif %}>📝 Name Z→A</option>
-      <option value="updated_desc" {% if sort=='updated_desc' %}selected{% endif %}>🕐 Recently Updated</option>
+  <!-- Search -->
+  <form method="get" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--card); padding: 12px; border: 1px solid var(--line); border-radius: 8px;">
+    <input type="text" name="q" value="{{ q or '' }}" placeholder="Search..." style="flex: 1; padding: 6px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; color: var(--text);">
+    <select name="sort" style="padding: 6px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; color: var(--text);">
+      <option value="name_asc" {% if sort=='name_asc' %}selected{% endif %}>Name A→Z</option>
+      <option value="name_desc" {% if sort=='name_desc' %}selected{% endif %}>Name Z→A</option>
+      <option value="updated_desc" {% if sort=='updated_desc' %}selected{% endif %}>Recently Updated</option>
     </select>
-    
-    <label style="display: flex; align-items: center; gap: 8px; color: var(--text); cursor: pointer; user-select: none;">
-      <input type="checkbox" 
-             name="archived" 
-             value="1" 
-             {% if show_archived %}checked{% endif %}
-             style="width: 18px; height: 18px; cursor: pointer;">
+    <label style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" name="archived" value="1" {% if show_archived %}checked{% endif %}>
       <span>Show Archived</span>
     </label>
-    
-    <button type="submit" 
-            style="padding: 12px 24px; background: #374151; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-            onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
-            onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
-      🔍 Search
-    </button>
-    
-    {% if q or show_archived %}
-    <a href="{{ url_for('rolodex.contacts') }}" 
-       style="padding: 12px 24px; background: transparent; color: var(--text-muted); text-decoration: none; border: 2px solid var(--line); border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
-       onmouseover="this.style.borderColor='#ef4444'; this.style.color='#ef4444'"
-       onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--text-muted)'">
-      ✖ Clear
-    </a>
-    {% endif %}
+    <button type="submit" style="padding: 6px 14px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Search</button>
   </form>
 
-  <!-- Contacts Table -->
+  <!-- Table -->
   {% if contacts.items %}
-  <div class="contacts-table">
-    <table>
+  <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
       <thead>
-        <tr>
-          <th style="width: 100px;"></th>
-          <th>Name</th>
-          <th>Company</th>
-          <th>Contact</th>
-          <th>Tags</th>
-          <th style="width: 120px;">Updated</th>
+        <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--line);">
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; width: 50px;"></th>
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase;">Name</th>
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase;">Company</th>
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase;">Contact</th>
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase;">Tags</th>
+          <th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for contact in contacts.items %}
-        <tr>
-          <td>
-            <div class="contact-avatar">
-              {% if contact.profile_photo %}
-                <img src="{{ url_for('static', filename='contact_photos/' + contact.profile_photo) }}" 
-                     alt="{{ contact.display_name }}"
-                     style="width: 80px !important; height: 80px !important; object-fit: cover !important; border-radius: 50% !important;">
-              {% else %}
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
+          <td style="padding: 8px 10px;">
+            {% if contact.profile_photo %}
+              <img src="{{ url_for('static', filename='contact_photos/' + contact.profile_photo) }}" alt="{{ contact.display_name }}">
+            {% else %}
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
                 {{ contact.display_name[0]|upper if contact.display_name else '?' }}
-              {% endif %}
-            </div>
-          </td>
-          
-          <td>
-            <a href="{{ url_for('rolodex.contact_detail', id=contact.id) }}" class="contact-name">
-              {{ contact.display_name }}
-            </a>
-            {% if contact.archived %}
-              <span class="archived-badge">📦 Archived</span>
-            {% endif %}
-            {% if contact.title %}
-              <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-                {{ contact.title }}
               </div>
             {% endif %}
           </td>
           
-          <td>
-            {% if contact.company %}
-              <a href="{{ url_for('rolodex.company_detail', id=companies_map[contact.company_id].id) }}" 
-                 style="color: #3b82f6; text-decoration: none; transition: color 0.2s ease;"
-                 onmouseover="this.style.color='#60a5fa'; this.style.textDecoration='underline'"
-                 onmouseout="this.style.color='#3b82f6'; this.style.textDecoration='none'">
+          <td style="padding: 8px 10px;">
+            <a href="{{ url_for('rolodex.contact_detail', id=contact.id) }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+              {{ contact.display_name }}
+            </a>
+            {% if contact.title %}
+              <div style="font-size: 12px; color: var(--text-muted);">{{ contact.title }}</div>
+            {% endif %}
+          </td>
+          
+          <td style="padding: 8px 10px;">
+            {% if contact.company_id and contact.company_id in companies_map %}
+              <a href="{{ url_for('rolodex.company_detail', id=contact.company_id) }}" style="color: var(--success); text-decoration: none;">
                 🏢 {{ companies_map[contact.company_id].name }}
               </a>
             {% else %}
-              <span style="color: var(--text-muted);">—</span>
+              —
             {% endif %}
           </td>
           
-          <td>
+          <td style="padding: 8px 10px; font-size: 13px;">
             {% if contact.email %}
-              <div style="margin-bottom: 4px;">
-                <a href="mailto:{{ contact.email }}" 
-                   style="color: var(--text-muted); text-decoration: none; transition: color 0.2s ease;"
-                   onmouseover="this.style.color='#3b82f6'"
-                   onmouseout="this.style.color='var(--text-muted)'">
-                  📧 {{ contact.email }}
-                </a>
-              </div>
+              <div><a href="mailto:{{ contact.email }}" style="color: var(--text-muted); text-decoration: none;">📧 {{ contact.email }}</a></div>
             {% endif %}
             {% if contact.phone %}
-              <div>
-                <a href="tel:{{ contact.phone }}" 
-                   style="color: var(--text-muted); text-decoration: none; transition: color 0.2s ease;"
-                   onmouseover="this.style.color='#3b82f6'"
-                   onmouseout="this.style.color='var(--text-muted)'">
-                  📞 {{ contact.phone }}
-                </a>
-              </div>
-            {% endif %}
-            {% if not contact.email and not contact.phone %}
-              <span style="color: var(--text-muted);">—</span>
+              <div><a href="tel:{{ contact.phone }}" style="color: var(--text-muted); text-decoration: none;">📱 {{ contact.phone }}</a></div>
             {% endif %}
           </td>
           
-          <td>
+          <td style="padding: 8px 10px;">
             {% if contact.tags %}
-              {% for tag in contact.tags.split(',')[:3] %}
-                <span class="tag-badge">{{ tag.strip() }}</span>
+              {% for tag in contact.tags.split(',')[:2] %}
+                <span style="display: inline-block; padding: 2px 6px; background: rgba(139,92,246,0.2); color: #a78bfa; border-radius: 4px; font-size: 11px; margin-right: 2px;">
+                  {{ tag.strip() }}
+                </span>
               {% endfor %}
-              {% if contact.tags.split(',')|length > 3 %}
-                <span class="tag-badge">+{{ contact.tags.split(',')|length - 3 }}</span>
-              {% endif %}
             {% else %}
-              <span style="color: var(--text-muted);">—</span>
+              —
             {% endif %}
           </td>
           
-          <td>
-            <span style="color: var(--text-muted); font-size: 14px;">
-              {{ (contact.updated_at or contact.created_at).strftime('%b %d, %Y') }}
-            </span>
+          <td style="padding: 8px 10px;">
+            <a href="{{ url_for('rolodex.contact_detail', id=contact.id) }}" style="padding: 4px 8px; background: var(--primary); color: white; text-decoration: none; border-radius: 4px; font-size: 12px; margin-right: 4px;">View</a>
+            <a href="{{ url_for('rolodex.contact_edit', id=contact.id) }}" style="padding: 4px 8px; background: var(--panel); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 12px;">Edit</a>
           </td>
         </tr>
         {% endfor %}
@@ -463,9 +147,10 @@
 
   <!-- Pagination -->
   {% if contacts.pages > 1 %}
-  <div class="pagination">
+  <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px;">
     {% if contacts.has_prev %}
-      <a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.prev_num) }}">
+      <a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.prev_num) }}" 
+         style="padding: 6px 12px; background: var(--card); color: var(--text); text-decoration: none; border: 1px solid var(--line); border-radius: 4px;">
         ← Previous
       </a>
     {% endif %}
@@ -473,7 +158,8 @@
     <span>Page {{ contacts.page }} of {{ contacts.pages }}</span>
     
     {% if contacts.has_next %}
-      <a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.next_num) }}">
+      <a href="{{ url_for('rolodex.contacts', q=q, sort=sort, archived=1 if show_archived else None, page=contacts.next_num) }}"
+         style="padding: 6px 12px; background: var(--card); color: var(--text); text-decoration: none; border: 1px solid var(--line); border-radius: 4px;">
         Next →
       </a>
     {% endif %}
@@ -482,26 +168,11 @@
 
   {% else %}
   <!-- Empty State -->
-  <div class="empty-state">
-    <div style="font-size: 64px; margin-bottom: 20px;">👥</div>
+  <div style="text-align: center; padding: 60px; background: var(--card); border: 1px solid var(--line); border-radius: 8px;">
+    <div style="font-size: 48px;">👥</div>
     <h2>No contacts found</h2>
-    {% if q or show_archived %}
-      <p>Try adjusting your search or filters</p>
-      <a href="{{ url_for('rolodex.contacts') }}" 
-         style="display: inline-block; padding: 12px 24px; background: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
-         onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
-         onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
-        Clear Filters
-      </a>
-    {% else %}
-      <p>Start building your professional network</p>
-      <a href="{{ url_for('rolodex.contact_new') }}" 
-         style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
-         onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'"
-         onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'">
-        ➕ Add Your First Contact
-      </a>
-    {% endif %}
+    <p style="color: var(--text-muted);">Start building your network</p>
+    <a href="{{ url_for('rolodex.contact_new') }}" style="padding: 8px 16px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px;">Add First Contact</a>
   </div>
   {% endif %}
 </div>
