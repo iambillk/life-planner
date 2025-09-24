@@ -4,56 +4,66 @@
 {% block header %}Home — Beta{% endblock %}
 
 {% block content %}
-<!-- Local GridStack CSS (ship this alongside gridstack-all.js) -->
 <link rel="stylesheet" href="/static/js/gridstack.min.css">
 
 <style>
   :root{
-    --gap: 8px;          /* grid gutter (set in JS, not CSS) */
-    --cell: 78px;        /* row unit height */
+    --gap: 12px;               /* total visible gap between cards */
+    --cell: 86px;
     --radius: 12px;
-    --ring: rgba(130,170,255,.45);
+    --ring: rgba(130,170,255,.5);
   }
 
-  .topbar{display:flex;gap:8px;align-items:center;margin:6px 0 14px}
+  .topbar{display:flex;gap:8px;align-items:center;margin:8px 0 14px}
   .topbar h2{margin:0;font-weight:800}
   .btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--text);
        border-radius:999px;padding:7px 12px;font-weight:700;cursor:pointer}
   .btn:hover{border-color:var(--ring)}
-  .muted{color:var(--text-muted);font-size:.92rem}
+  .muted{color:var(--text-muted)}
+  .chip{font-size:.78rem;border:1px solid var(--line);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.03)}
+  .chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 
-  /* GridStack skin — IMPORTANT: let GridStack own the gutter; no custom margins here */
-  .grid-stack{ margin:0; }
+  /* ---- GridStack spacing (rock-solid even if base.css is opinionated) ---- */
+  .grid-stack{ margin:0; padding: calc(var(--gap)/2); }  /* tiny breathing room at edges */
+  .grid-stack > .grid-stack-item{
+    padding: calc(var(--gap)/2) !important; /* THIS creates the gutter */
+    background: transparent !important;     /* let page bg show through the gap */
+    box-sizing: border-box;
+  }
+
   .grid-stack-item-content{
-    background:rgba(18,22,28,.78);
+    background: var(--card, #0f141a);
+    background-clip: padding-box;
     border:1px solid rgba(255,255,255,.08);
     border-radius:var(--radius);
     box-shadow:0 2px 18px rgba(0,0,0,.24);
     padding:12px;
     overflow:hidden;
-    height:100%; /* fill grid cell */
+    height:100%;
   }
-  /* Avoid “ghost” overlays */
-  .grid-stack .grid-stack-item{ z-index:auto; }
-  .grid-stack .grid-stack-item.ui-draggable-dragging{ z-index:1000; }
+  .grid-stack .grid-stack-item{ z-index:auto }
+  .grid-stack .grid-stack-item.ui-draggable-dragging{ z-index:1000 }
 
   /* Edit affordances */
-  .card-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .card-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .card-toolbar h3{margin:0;font-size:1rem;font-weight:800}
   .drag-handle{display:none}
   body.edit .drag-handle{display:inline-block;cursor:grab}
   .ui-resizable-handle{display:none}
   body.edit .ui-resizable-handle{display:block}
 
-  /* Widget styles */
+  /* Inner layouts */
+  .links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media (max-width:980px){ .links{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .link{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid rgba(255,255,255,.08);
+        border-radius:10px;background:rgba(255,255,255,.03);text-decoration:none;color:var(--text);font-weight:600}
+  .link:hover{border-color:var(--ring)}
+
   #weather-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  @media (max-width: 900px){ #weather-grid{grid-template-columns:1fr} }
+  @media (max-width:900px){ #weather-grid{grid-template-columns:1fr} }
   .wx{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:10px;padding:10px}
   .wx .row{display:flex;align-items:center}.wx .row .muted{margin-left:auto}
 
-  .chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .chip{font-size:.78rem;border:1px solid var(--line);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.03);cursor:pointer}
-  .chip.active{border-color:rgba(130,170,255,.6);background:rgba(130,170,255,.12)}
   .news-hero{border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;background:rgba(255,255,255,.03);
              display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin-bottom:6px}
   .news-list .item{display:flex;gap:10px;align-items:flex-start;padding:8px;border-radius:10px}
@@ -64,12 +74,6 @@
   .meta{display:flex;gap:8px;align-items:center;color:var(--text-muted);font-size:.82rem}
   .fresh-dot{width:8px;height:8px;border-radius:999px}
   .fresh-1{background:#22c55e}.fresh-6{background:#f59e0b}.fresh-old{background:#475569}
-
-  .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  @media (min-width: 980px){ .links{grid-template-columns:repeat(3,minmax(0,1fr));} }
-  .link{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid rgba(255,255,255,.08);
-        border-radius:10px;background:rgba(255,255,255,.03);text-decoration:none;color:var(--text);font-weight:600}
-  .link:hover{border-color:rgba(130,170,255,.45)}
 
   .img-fit{width:100%;height:240px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.09)}
   .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.10),rgba(255,255,255,.05));
@@ -83,11 +87,11 @@
   <button id="reset-layout" class="btn">Reset</button>
 </div>
 
-<!-- Sections that get mounted into GridStack items -->
+<!-- Sections to mount inside GridStack items -->
 <div id="cards-origin" style="display:none">
   <section id="card-potd">
     <div class="card-toolbar">
-      <span class="drag-handle">⠿</span><h3>Photo of the Day</h3>
+      <span class="drag-handle" title="Drag">⠿</span><h3>Photo of the Day</h3>
       <button class="btn" id="photo-refresh" style="margin-left:auto">Shuffle</button>
     </div>
     <img id="potd" class="img-fit skeleton" alt="Photo of the day"/>
@@ -96,7 +100,7 @@
 
   <section id="card-links">
     <div class="card-toolbar">
-      <span class="drag-handle">⠿</span><h3>Quick Links</h3>
+      <span class="drag-handle" title="Drag">⠿</span><h3>Quick Links</h3>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" id="link-add">Add</button>
         <button class="btn" id="link-reset">Reset</button>
@@ -107,7 +111,7 @@
 
   <section id="card-news">
     <div class="card-toolbar">
-      <span class="drag-handle">⠿</span><h3>News <span class="chip">live</span></h3>
+      <span class="drag-handle" title="Drag">⠿</span><h3>News <span class="chip">live</span></h3>
       <div id="news-chips" class="chips" style="margin-left:8px"></div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" id="news-prev">Prev</button>
@@ -125,7 +129,7 @@
 
   <section id="card-quote">
     <div class="card-toolbar">
-      <span class="drag-handle">⠿</span><h3>Quote of the Day</h3>
+      <span class="drag-handle" title="Drag">⠿</span><h3>Quote of the Day</h3>
       <button class="btn" id="quote-next" style="margin-left:auto">Next</button>
     </div>
     <div id="quote-body" class="muted">Fetching wisdom…</div>
@@ -133,144 +137,106 @@
 
   <section id="card-weather">
     <div class="card-toolbar">
-      <span class="drag-handle">⠿</span><h3>Weather <span class="chip">multi-city</span></h3>
+      <span class="drag-handle" title="Drag">⠿</span><h3>Weather <span class="chip">multi-city</span></h3>
       <button class="btn" id="weather-refresh" style="margin-left:auto">Refresh</button>
     </div>
     <div id="weather-grid"></div>
   </section>
 </div>
 
-<!-- GridStack mount -->
+<!-- Grid mount -->
 <div id="gs" class="grid-stack"></div>
 
 <script>
-/* ===== Storage & tiny utils ===== */
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-const LAYOUT_KEY='home.gs.v3';            // bump to avoid stale layouts
-const CELL_HEIGHT=78, GAP=8;
-const $=(s,r=document)=>r.querySelector(s);
+const LAYOUT_KEY='home.gridstack.v15'; // bump so spacing applies immediately
+const CELL_HEIGHT=86;
 
-/* ===== Load local GridStack ===== */
-async function loadGridStack(){
-  if(window.GridStack) return;
-  await new Promise((res,rej)=>{
+/* Load GridStack */
+(function(){
+  function start(){ if(window.GridStack){ initGrid(); } else { loadGS(); } }
+  function loadGS(){
     const s=document.createElement('script');
     s.src='/static/js/gridstack-all.js';
-    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    s.onload=initGrid; s.onerror=()=>console.error('GridStack failed to load');
+    document.head.appendChild(s);
+  }
+  start();
+})();
+
+function initGrid(){
+  const root=document.getElementById('gs');
+
+  const defaults=[
+    {id:'card-potd',    x:0,  y:0, w:4, h:4},
+    {id:'card-links',   x:4,  y:0, w:8, h:2},
+    {id:'card-news',    x:0,  y:4, w:8, h:4},
+    {id:'card-quote',   x:8,  y:4, w:4, h:2},
+    {id:'card-weather', x:8,  y:6, w:4, h:3}
+  ];
+
+  const grid=GridStack.init({
+    column: 12,
+    margin: 0,                 // let our per-item padding create the visible gap
+    cellHeight: CELL_HEIGHT,
+    float: true,
+    handle: '.drag-handle',
+    resizable: { handles: 'e, se, s' },
+    draggable: { handle: '.drag-handle', scroll: true, appendTo: 'body' },
+    disableOneColumnMode: false,
+    oneColumnModeDomSort: true,
+    animate: true
+  }, root);
+
+  function addCard(cfg){
+    const el = grid.addWidget({id: cfg.id, x:cfg.x, y:cfg.y, w:cfg.w, h:cfg.h});
+    const content = el.querySelector('.grid-stack-item-content');
+    const section = document.getElementById(cfg.id);
+    if (content && section) content.appendChild(section);
+    return el;
+  }
+
+  const saved=LS.get(LAYOUT_KEY, null);
+  const validIds={'card-potd':1,'card-links':1,'card-news':1,'card-quote':1,'card-weather':1};
+  grid.removeAll();
+
+  if(Array.isArray(saved) && saved.length && saved.every(n=>validIds[n.id])){
+    saved.forEach(addCard);
+  }else{
+    defaults.forEach(addCard);
+    LS.set(LAYOUT_KEY, grid.save(true));
+  }
+
+  /* Controls */
+  const toggleBtn=document.getElementById('toggle-edit');
+  function setEdit(on){
+    document.body.classList.toggle('edit', !!on);
+    grid.setStatic(!on);
+    toggleBtn.textContent = on ? 'Lock Layout' : 'Customize';
+  }
+  toggleBtn.addEventListener('click', ()=> setEdit(!document.body.classList.contains('edit')));
+  setEdit(false);
+
+  const persist=()=> LS.set(LAYOUT_KEY, grid.save(true));
+  grid.on('change', persist);
+  grid.on('resizestop', ()=>{ persist(); grid.compact(); });
+  grid.on('dragstop',   ()=>{ persist(); grid.compact(); });
+
+  root.addEventListener('dblclick', (e)=>{
+    const item=e.target.closest('.grid-stack-item'); if(!item) return;
+    const inner=item.querySelector('.grid-stack-item-content > section'); if(!inner) return;
+    const needed=Math.ceil((inner.scrollHeight + 24)/CELL_HEIGHT);
+    grid.update(item, {h: Math.max(1, needed)});
+    persist();
   });
+
+  window._grid=grid;
+
+  /* Boot widgets */
+  renderQuote(); renderLinks(); renderPhoto(); renderAllWeather(); renderNews();
 }
 
-/* ===== Self-healing Grid init ===== */
-async function enableGrid(){
-  const root = document.getElementById('gs');
-
-  function mountInto(id){
-    const item = root.querySelector(`.grid-stack-item[gs-id="${id}"] .grid-stack-item-content`);
-    const section = document.getElementById(id);
-    if(item && section){ item.appendChild(section); return true; }
-    return false;
-  }
-  function contentMissing(){
-    return Array.from(root.querySelectorAll('.grid-stack-item'))
-      .some(it => !it.querySelector('.grid-stack-item-content > section'));
-  }
-
-  try{
-    await loadGridStack();
-    const grid = GridStack.init({
-      column: 12,
-      margin: GAP,                 // GridStack owns the gutter
-      cellHeight: CELL_HEIGHT,
-      float: true,
-      handle: '.drag-handle',
-      resizable: { handles: 'e, se, s' },
-      draggable: { handle: '.drag-handle', scroll: true, appendTo: 'body' },
-      disableOneColumnMode: false,
-      oneColumnModeDomSort: true,
-      animate: true
-    }, root);
-
-    const defaults = [
-      {id:'card-potd',    x:0,  y:0, w:4, h:3},
-      {id:'card-links',   x:4,  y:0, w:8, h:2},
-      {id:'card-news',    x:0,  y:3, w:8, h:4},
-      {id:'card-quote',   x:8,  y:3, w:4, h:2},
-      {id:'card-weather', x:8,  y:5, w:4, h:3},
-    ];
-
-    const saved = LS.get(LAYOUT_KEY, null);
-
-    if (Array.isArray(saved) && saved.length){
-      grid.load(saved.map(n=>({id:n.id, x:n.x, y:n.y, w:n.w, h:n.h})));
-      let ok = true;
-      saved.forEach(n => { ok = mountInto(n.id) && ok; });
-      if (!ok || contentMissing()){
-        console.warn('Saved layout corrupt/empty — rebuilding defaults');
-        LS.set(LAYOUT_KEY, null);
-        grid.removeAll();
-        defaults.forEach(({id,x,y,w,h})=>{
-          const node = grid.addWidget({x,y,w,h,id});
-          node.el.querySelector('.grid-stack-item-content').appendChild(document.getElementById(id));
-        });
-        LS.set(LAYOUT_KEY, grid.save(true));
-      }
-    } else {
-      defaults.forEach(({id,x,y,w,h})=>{
-        const node = grid.addWidget({x,y,w,h,id});
-        node.el.querySelector('.grid-stack-item-content').appendChild(document.getElementById(id));
-      });
-      LS.set(LAYOUT_KEY, grid.save(true));
-    }
-
-    // pack tightly once after load
-    grid.compact();
-
-    // Persist on change
-    const save = ()=> LS.set(LAYOUT_KEY, grid.save(true));
-    grid.on('change', save);
-    grid.on('resizestop', ()=>{ save(); grid.compact(); });
-    grid.on('dragstop',   ()=>{ save(); grid.compact(); });
-
-    // Edit mode
-    const toggleBtn = document.getElementById('toggle-edit');
-    const setEdit = on => {
-      document.body.classList.toggle('edit', !!on);
-      grid.setStatic(!on);
-      toggleBtn.textContent = on ? 'Lock Layout' : 'Customize';
-    };
-    toggleBtn.addEventListener('click', ()=> setEdit(!document.body.classList.contains('edit')));
-    setEdit(false);
-
-    // Double-click to auto-fit height to content
-    root.addEventListener('dblclick', (e)=>{
-      const item = e.target.closest('.grid-stack-item'); if(!item) return;
-      const inner = item.querySelector('.grid-stack-item-content > section');
-      const needed = Math.ceil((inner.scrollHeight + 24) / (CELL_HEIGHT + GAP));
-      const node = grid.getNode(item);
-      if(node) grid.update(item, {h: Math.max(1, needed)});
-    });
-
-    // Compact on resize / content changes
-    const compact = () => grid.compact();
-    window.addEventListener('resize', () => requestAnimationFrame(compact));
-    window._grid = grid; // debug hook
-  }catch(e){
-    console.warn('GridStack failed, fallback static layout:', e);
-    // Fallback: simple grid so content still shows
-    root.style.display='grid';
-    root.style.gridTemplateColumns='repeat(12,1fr)';
-    root.style.gap=GAP+'px';
-    ['card-potd','card-links','card-news','card-quote','card-weather'].forEach(id=>{
-      const wrap=document.createElement('div');
-      wrap.className='grid-stack-item-content';
-      wrap.style.gridColumn='span 4';
-      wrap.appendChild(document.getElementById(id));
-      root.appendChild(wrap);
-    });
-  }
-}
-
-/* ===== Reset ===== */
+/* Reset */
 document.getElementById('reset-layout').addEventListener('click', ()=>{
   if(confirm('Reset saved layout?')){
     localStorage.removeItem(LAYOUT_KEY);
@@ -278,7 +244,7 @@ document.getElementById('reset-layout').addEventListener('click', ()=>{
   }
 });
 
-/* ===== Widgets ===== */
+/* ===== Widgets (your existing ones) ===== */
 const QUOTES=[
   "You have power over your mind — not outside events. ~ Marcus Aurelius",
   "Waste no more time arguing what a good man should be. Be one. ~ Marcus Aurelius",
@@ -287,7 +253,7 @@ const QUOTES=[
   "The impediment to action advances action. ~ Marcus Aurelius"
 ];
 function renderQuote(){ document.getElementById('quote-body').textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)]; }
-document.getElementById('quote-next').addEventListener('click', renderQuote);
+document.getElementById('quote-next').addEventListener('click', ()=>{ renderQuote(); window._grid?.compact(); });
 
 const DEF_LINKS=[
   {title:"TCH Portal", url:"https://www.totalchoicehosting.com/"},
@@ -301,16 +267,22 @@ function renderLinks(){
   links.forEach((ln,i)=>{
     const a=document.createElement('a'); a.className='link'; a.href=ln.url; a.target='_blank'; a.rel='noopener';
     a.innerHTML=`<span>🔗</span><span>${ln.title}</span>`;
-    a.addEventListener('contextmenu', (e)=>{ e.preventDefault(); if(confirm(`Remove '${ln.title}'?`)){ const upd=LS.get('home.links', DEF_LINKS).filter((_,idx)=>idx!==i); LS.set('home.links', upd); renderLinks(); }});
+    a.addEventListener('contextmenu', (e)=>{
+      e.preventDefault();
+      if(confirm(`Remove '${ln.title}'?`)){
+        const upd=LS.get('home.links', DEF_LINKS).filter((_,idx)=>idx!==i);
+        LS.set('home.links', upd); renderLinks();
+      }
+    });
     root.appendChild(a);
   });
 }
 document.getElementById('link-add').addEventListener('click', ()=>{
   const t=prompt('Link title:'); if(!t) return;
   const u=prompt('URL (include http/https):'); if(!u) return;
-  const ls=LS.get('home.links', DEF_LINKS); ls.push({title:t, url:u}); LS.set('home.links', ls); renderLinks();
+  const ls=LS.get('home.links', DEF_LINKS); ls.push({title:t, url:u}); LS.set('home.links', ls); renderLinks(); window._grid?.compact();
 });
-document.getElementById('link-reset').addEventListener('click', ()=>{ if(confirm('Reset links to defaults?')){ LS.set('home.links', DEF_LINKS); renderLinks(); } });
+document.getElementById('link-reset').addEventListener('click', ()=>{ if(confirm('Reset links to defaults?')){ LS.set('home.links', DEF_LINKS); renderLinks(); window._grid?.compact(); } });
 
 const POTD_ITEMS = {{ (potd_items or [])|tojson|safe }};
 const POTD_FALLBACK=[
@@ -328,9 +300,9 @@ function renderPhoto(){
   img.onerror=()=>{ img.classList.remove('skeleton'); cap.textContent='Image failed to load.'; window._grid?.compact(); };
   img.src=c.url; cap.textContent = hasLocal ? (prettyName(c.name)||c.name) : "Random demo image — add files to /static/images/potd/";
 }
-document.getElementById('photo-refresh').addEventListener('click', ()=>{ renderPhoto(); setTimeout(()=>window._grid?.compact(), 150); });
+document.getElementById('photo-refresh').addEventListener('click', ()=>{ renderPhoto(); });
 
-/* ===== Weather ===== */
+/* WEATHER */
 const WEATHER_API="{{ url_for('home.api_weather') }}";
 const WEATHER_PRESETS_API="{{ url_for('home.api_weather_presets') }}";
 function tfmt(ts){ try{ return new Date((ts||0)*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}catch{return''} }
@@ -364,12 +336,12 @@ async function renderAllWeather(){
   }));
   window._grid?.compact();
 }
-document.getElementById('weather-refresh').addEventListener('click', ()=>{ renderAllWeather(); setTimeout(()=>window._grid?.compact(),150); });
+document.getElementById('weather-refresh').addEventListener('click', ()=>{ renderAllWeather(); });
 
-/* ===== News ===== */
+/* NEWS */
 const NEWS_API="{{ url_for('home.api_news') }}";
 const NEWS_SOURCES_API="{{ url_for('home.api_news_sources') }}";
-const NS={itemsAll:[],itemsFiltered:[],page:0,pageSize:LS.get('home.news.page_size',7),perSource:LS.get('home.news.per_source',20),filter:LS.get('home.news.filter','All'),density:LS.get('home.news.density','cozy')};
+const NS={itemsAll:[],itemsFiltered:[],page:0,pageSize:LS.get('home.news.page_size',7),perSource:LS.get('home.news.per_source',30),filter:LS.get('home.news.filter','All'),density:LS.get('home.news.density','cozy')};
 function ago(p){ if(!p) return ''; const d=new Date(p); if(isNaN(d)) return ''; const s=(Date.now()-d)/1000; if(s<90) return 'just now'; const m=Math.floor(s/60); if(m<60) return `${m}m`; const h=Math.floor(m/60); if(h<24) return `${h}h`; return `${Math.floor(h/24)}d`; }
 function fresh(p){ const d=new Date(p); if(isNaN(d)) return 'fresh-old'; const h=(Date.now()-d)/3600000; return h<1?'fresh-1':(h<6?'fresh-6':'fresh-old'); }
 function fav(link){ try{return `https://www.google.com/s2/favicons?domain=${new URL(link).hostname}&sz=64`;}catch{return '';} }
@@ -433,8 +405,7 @@ async function renderNews(){
     const res=await fetch(u.toString(), {cache:'no-store'}); const j=await res.json();
     NS.itemsAll=j.items||[];
     chips(NS.itemsAll); applyFilter();
-  }catch(e){
-    console.warn('News failed:', e);
+  }catch{
     list.innerHTML='<div class="muted">News unavailable.</div>';
     NS.itemsAll=[]; chips([]); applyFilter();
   }
@@ -445,19 +416,16 @@ document.getElementById('news-count').addEventListener('click', ()=>{ const cur=
 document.getElementById('news-density').addEventListener('click', ()=>{ document.getElementById('news-list').classList.toggle('compact'); window._grid?.compact(); });
 document.getElementById('news-sources').addEventListener('click', async ()=>{
   try{
-   const res=await fetch(NEWS_SOURCES_API,{cache:'no-store'}); const all=await res.json();
-   const cur=LS.get('home.news.sources',[]);
-   const v=prompt("Choose sources (comma-separated).\nAvailable:\n"+all.map(x=>x.name).join(", ")+"\n\nCurrent: "+(cur.join(", ")||"Server default"), cur.join(", "));
-   if(v!=null){ const names=v.split(',').map(s=>s.trim()).filter(Boolean); if(names.length){ LS.set('home.news.sources', names);} else { localStorage.removeItem('home.news.sources'); } renderNews(); }
+    const res=await fetch("{{ url_for('home.api_news_sources') }}",{cache:'no-store'}); const all=await res.json();
+    const cur=LS.get('home.news.sources',[]);
+    const v=prompt("Choose sources (comma-separated).\nAvailable:\n"+all.map(x=>x.name).join(", ")+"\n\nCurrent: "+(cur.join(", ")||"Server default"), cur.join(", "));
+    if(v!=null){
+      const names=v.split(',').map(s=>s.trim()).filter(Boolean);
+      if(names.length){ LS.set('home.news.sources', names);} else { localStorage.removeItem('home.news.sources'); }
+      renderNews();
+    }
   }catch{ alert('Could not load sources.'); }
 });
-document.getElementById('news-refresh').addEventListener('click', ()=>{ renderNews(); setTimeout(()=>window._grid?.compact(),150); });
-
-/* ===== Init ===== */
-(async function(){
-  await enableGrid();
-  renderQuote(); renderLinks(); renderPhoto();
-  renderAllWeather(); renderNews();
-})();
+document.getElementById('news-refresh').addEventListener('click', ()=>{ renderNews(); });
 </script>
 {% endblock %}

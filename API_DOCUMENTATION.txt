@@ -622,7 +622,7 @@ Mark goal as complete
 Returns: Redirect to dashboard
 
 ================================================================================
-WEEKLY MODULE (/weekly)
+WEEKLY MODULE (/weekly) TEEEEEEEEEEEEEEEEEEEEEEST
 ================================================================================
 
 GET /weekly/

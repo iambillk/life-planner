@@ -1,22 +1,276 @@
 {% extends "base.html" %}
+{% block title %}{{ 'New Company' if mode=='new' else 'Edit Company' }} · Rolodex{% endblock %}
+
+{% block head %}
+<style>
+  .company-form-container * {
+    box-sizing: border-box !important;
+  }
+  
+  .company-form-container input,
+  .company-form-container select,
+  .company-form-container textarea {
+    min-width: 0 !important;
+    width: 100% !important;
+    transition: all 0.3s ease;
+  }
+  
+  .company-form-container input:focus,
+  .company-form-container select:focus,
+  .company-form-container textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+  
+  .form-section {
+    transition: transform 0.2s ease;
+  }
+  
+  .form-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+  
+  .badge-required {
+    color: #ef4444;
+    font-weight: normal;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed var(--line);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .file-upload-area:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+  }
+  
+  .logo-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 2px solid var(--line);
+    background: #0c1322;
+    padding: 10px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>{{ 'New Company' if mode=='new' else 'Edit Company' }}</h1>
-{% if dedupe %}<div class="warn">Possible duplicate detected. Submit again to confirm.</div>{% endif %}
-<form method="post">
-  {% if dedupe %}<input type="hidden" name="dedupe_override" value="1">{% endif %}
-  <div class="row"><label>Company name</label>
-    <input type="text" name="name" value="{{ form.get('name', company.name if company else '') }}" required></div>
-  <div class="row"><label>Website</label>
-    <input type="text" name="website" value="{{ form.get('website', company.website if company else '') }}"></div>
-  <div class="row"><label>Phone</label>
-    <input type="text" name="phone" value="{{ form.get('phone', company.phone if company else '') }}"></div>
-  <div class="row"><label>Tags (comma-separated)</label>
-    <input type="text" name="tags" value="{{ form.get('tags', company.tags if company else '') }}"></div>
-  <div class="row"><label>Notes</label>
-    <textarea name="notes" rows="6">{{ form.get('notes', company.notes if company else '') }}</textarea></div>
-  <div class="actions">
-    <button type="submit">Save</button>
-    <a href="{{ url_for('rolodex.companies') }}">Cancel</a>
+<div class="company-form-container" style="max-width: 900px; margin: 0 auto; padding: 20px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--line);">
+    <div>
+      <h1 style="margin: 0; color: var(--text); font-size: 32px;">
+        {{ '✨ New Company' if mode=='new' else '✏️ Edit Company' }}
+      </h1>
+      <p style="margin: 5px 0 0 0; color: var(--text-muted);">
+        {{ 'Add a new company to your database' if mode=='new' else 'Update company information' }}
+      </p>
+    </div>
+    <a href="{{ url_for('rolodex.companies') }}" 
+       style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
+       onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
+       onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
+      ← Back to Companies
+    </a>
   </div>
-</form>
+
+  {% if dedupe %}
+  <div style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 20px;">⚠️</span>
+    <strong>Possible duplicate detected.</strong> Submit again to confirm, or go back to check existing companies.
+  </div>
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" novalidate>
+    {% if dedupe %}<input type="hidden" name="dedupe_override" value="1">{% endif %}
+    
+    <!-- Company Information -->
+    <div class="form-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+      <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
+        <span style="margin-right: 8px; font-size: 18px;">🏢</span>Company Information
+      </h3>
+      <div style="padding: 24px;">
+        
+        <!-- Logo Upload -->
+        <div style="margin-bottom: 25px;">
+          <label style="display: block; margin-bottom: 10px; color: var(--text); font-weight: 600;">
+            🎨 Company Logo
+          </label>
+          {% if mode=='edit' and company.logo %}
+            <div style="margin-bottom: 10px;">
+              <img src="{{ url_for('static', filename='company_logos/' + company.logo) }}" 
+                   class="logo-preview">
+            </div>
+          {% endif %}
+          <div class="file-upload-area">
+            <input type="file" name="logo" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp, image/svg+xml" id="logo" style="display: none;">
+            <label for="logo" style="cursor: pointer;">
+              <div>📸 Click to upload logo</div>
+              <small style="color: var(--text-muted);">JPG, PNG, SVG, GIF, WEBP (max 5MB) - Square logos work best</small>
+            </label>
+          </div>
+        </div>
+
+        <!-- Company Name -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+            Company Name <span class="badge-required">*</span>
+          </label>
+          <input type="text" name="name" required 
+                 value="{{ form.get('name', company.name if company else '') }}" 
+                 placeholder="Acme Corporation"
+                 style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text); font-size: 16px;">
+        </div>
+
+        <!-- Website and Phone -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              🌐 Website
+            </label>
+            <input type="text" name="website" 
+                   value="{{ form.get('website', company.website if company else '') }}" 
+                   placeholder="https://example.com"
+                   style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+          </div>
+          
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              📞 Phone
+            </label>
+            <input type="tel" name="phone" 
+                   value="{{ form.get('phone', company.phone if company else '') }}" 
+                   placeholder="(555) 123-4567"
+                   style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+          </div>
+        </div>
+
+        <!-- Industry and Size -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              🏭 Industry
+            </label>
+            <select name="industry" 
+                    style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+              <option value="">— Select Industry —</option>
+              <option value="technology" {% if company and company.industry == 'technology' %}selected{% endif %}>Technology</option>
+              <option value="finance" {% if company and company.industry == 'finance' %}selected{% endif %}>Finance</option>
+              <option value="healthcare" {% if company and company.industry == 'healthcare' %}selected{% endif %}>Healthcare</option>
+              <option value="retail" {% if company and company.industry == 'retail' %}selected{% endif %}>Retail</option>
+              <option value="manufacturing" {% if company and company.industry == 'manufacturing' %}selected{% endif %}>Manufacturing</option>
+              <option value="education" {% if company and company.industry == 'education' %}selected{% endif %}>Education</option>
+              <option value="entertainment" {% if company and company.industry == 'entertainment' %}selected{% endif %}>Entertainment</option>
+              <option value="other" {% if company and company.industry == 'other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              👥 Company Size
+            </label>
+            <select name="size" 
+                    style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+              <option value="">— Select Size —</option>
+              <option value="1-10" {% if company and company.size == '1-10' %}selected{% endif %}>1-10 employees</option>
+              <option value="11-50" {% if company and company.size == '11-50' %}selected{% endif %}>11-50 employees</option>
+              <option value="51-200" {% if company and company.size == '51-200' %}selected{% endif %}>51-200 employees</option>
+              <option value="201-1000" {% if company and company.size == '201-1000' %}selected{% endif %}>201-1000 employees</option>
+              <option value="1000+" {% if company and company.size == '1000+' %}selected{% endif %}>1000+ employees</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="form-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+      <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
+        <span style="margin-right: 8px; font-size: 18px;">📋</span>Additional Details
+      </h3>
+      <div style="padding: 24px;">
+        
+        <!-- Address -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+            📍 Address
+          </label>
+          <input type="text" name="address" 
+                 value="{{ form.get('address', company.address if company else '') }}"
+                 placeholder="123 Business Ave, Suite 100, City, State 12345"
+                 style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+        </div>
+
+        <!-- Social Media -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              💼 LinkedIn
+            </label>
+            <input type="text" name="linkedin" 
+                   value="{{ form.get('linkedin', company.linkedin if company else '') }}"
+                   placeholder="https://linkedin.com/company/..."
+                   style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+          </div>
+          
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+              🐦 Twitter/X
+            </label>
+            <input type="text" name="twitter" 
+                   value="{{ form.get('twitter', company.twitter if company else '') }}"
+                   placeholder="@companyhandle"
+                   style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+            🏷️ Tags
+          </label>
+          <input type="text" name="tags" 
+                 value="{{ form.get('tags', company.tags if company else '') }}"
+                 placeholder="client, vendor, partner, prospect (comma-separated)"
+                 style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text);">
+          <small style="color: var(--text-muted); margin-top: 5px; display: block;">Use tags to organize and quickly find companies</small>
+        </div>
+        
+        <!-- Notes -->
+        <div>
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">
+            📝 Notes
+          </label>
+          <textarea name="notes" rows="6" 
+                    placeholder="Key contacts, important details, contract information, etc..."
+                    style="width: 100%; padding: 12px; background: #0c1322; border: 2px solid var(--line); border-radius: 8px; color: var(--text); resize: vertical;">{{ form.get('notes', company.notes if company else '') }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div style="display: flex; gap: 12px; justify-content: center; margin-top: 40px; padding: 30px; background: var(--card); border-radius: 12px; border: 1px solid var(--line);">
+      <button type="submit" 
+              style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+              onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 20px rgba(59, 130, 246, 0.3)'"
+              onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+        💾 Save Company
+      </button>
+      <a href="{{ url_for('rolodex.companies') }}" 
+         style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: #374151; color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+         onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
+         onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
 {% endblock %}

@@ -54,7 +54,7 @@ def _download(url: str) -> bytes | None:
     except Exception:
         return None
 
-def fetch_feed(feed_id: str, limit: int = 25) -> List[dict]:
+def fetch_feed(feed_id: str, limit: int = 50) -> List[dict]:
     """Fetch and normalize a single feed by id. Returns up to `limit` items."""
     if feed_id not in NEWS_SOURCES:
         return []

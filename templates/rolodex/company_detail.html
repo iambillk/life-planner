@@ -1,21 +1,337 @@
 {% extends "base.html" %}
+{% block title %}{{ company.name }} · Rolodex{% endblock %}
+
+{% block head %}
+<style>
+  .company-detail-container * {
+    box-sizing: border-box !important;
+  }
+  
+  .detail-section {
+    transition: transform 0.2s ease;
+  }
+  
+  .detail-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+  
+  .info-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .info-row:last-child {
+    border-bottom: none;
+  }
+  
+  .info-label {
+    flex: 0 0 150px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  
+  .info-value {
+    flex: 1;
+    color: var(--text);
+  }
+  
+  .info-value a {
+    color: #3b82f6;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  
+  .info-value a:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+  }
+  
+  .tag-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-radius: 20px;
+    font-size: 14px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .empty-value {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  
+  .company-logo-large {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 3px solid var(--line);
+    background: #0c1322;
+    padding: 15px;
+  }
+  
+  .contact-card {
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .contact-card:hover {
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateX(5px);
+  }
+  
+  .contact-avatar-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  
+  .contact-avatar-small img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>{{ company.name }}</h1>
-<p>
-  Website: {{ company.website or '—' }}<br>
-  Phone: {{ company.phone or '—' }}<br>
-  Tags: {{ company.tags or '—' }}<br>
-  <small>Created {{ company.created_at.strftime('%Y-%m-%d') }} • Updated {{ (company.updated_at or company.created_at).strftime('%Y-%m-%d') }}</small>
-</p>
+<div class="company-detail-container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--line);">
+    <div style="display: flex; align-items: center; gap: 20px;">
+      {% if company.logo %}
+      <img src="{{ url_for('static', filename='company_logos/' + company.logo) }}" 
+           alt="{{ company.name }}"
+           class="company-logo-large">
+      {% else %}
+      <div style="width: 120px; height: 120px; background: linear-gradient(135deg, #3b82f6, #1e40af); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: white; font-weight: bold;">
+        {{ company.name[0] | upper }}
+      </div>
+      {% endif %}
+      
+      <div>
+        <h1 style="margin: 0; color: var(--text); font-size: 36px;">
+          {{ company.name }}
+        </h1>
+        {% if company.industry or company.size %}
+        <p style="margin: 8px 0 0 0; color: var(--text-muted); font-size: 16px;">
+          {% if company.industry %}{{ company.industry|title }}{% endif %}
+          {% if company.industry and company.size %} • {% endif %}
+          {% if company.size %}{{ company.size }} employees{% endif %}
+        </p>
+        {% endif %}
+        {% if company.tags %}
+        <div style="margin-top: 12px;">
+          {% for tag in company.tags.split(',') %}
+          <span class="tag-badge">{{ tag.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 12px;">
+      <a href="{{ url_for('rolodex.company_edit', id=company.id) }}" 
+         style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
+         onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'"
+         onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'">
+        ✏️ Edit
+      </a>
+      <form method="POST" action="{{ url_for('rolodex.company_delete', id=company.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this company?');">
+        <button type="submit"
+                style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)'"
+                onmouseout="this.style.background='#ef4444'; this.style.transform='translateY(0)'">
+          🗑️ Delete
+        </button>
+      </form>
+      <form method="POST" action="{{ url_for('rolodex.company_archive', id=company.id) }}" style="display: inline;">
+        <button type="submit"
+                style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
+                onmouseout="this.style.background='#6b7280'; this.style.transform='translateY(0)'">
+          {% if company.archived %}♻️ Unarchive{% else %}📦 Archive{% endif %}
+        </button>
+      </form>
+      <a href="{{ url_for('rolodex.companies') }}" 
+         style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s ease;"
+         onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'"
+         onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
+        ← Back
+      </a>
+    </div>
+  </div>
 
-<h3>Notes</h3>
-<p style="white-space:pre-wrap;">{{ company.notes or '' }}</p>
+  <!-- Archived Warning -->
+  {% if company.archived %}
+  <div style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 20px;">📦</span>
+    <strong>This company is archived.</strong> It won't appear in normal searches.
+  </div>
+  {% endif %}
 
-<form method="post" action="{{ url_for('rolodex.company_archive', id=company.id) }}" style="display:inline;">
-  <button type="submit">{{ 'Unarchive' if company.archived else 'Archive' }}</button>
-</form>
-<a href="{{ url_for('rolodex.company_edit', id=company.id) }}">Edit</a>
-<form method="post" action="{{ url_for('rolodex.company_delete', id=company.id) }}" style="display:inline;" onsubmit="return confirm('Delete this company?');">
-  <button type="submit" class="danger">Delete</button>
-</form>
+  <!-- Company Information -->
+  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
+      <span style="margin-right: 8px;">🏢</span>Company Information
+    </h3>
+    <div style="padding: 24px;">
+      {% if company.website %}
+      <div class="info-row">
+        <div class="info-label">🌐 Website</div>
+        <div class="info-value">
+          <a href="{{ company.website }}" target="_blank">{{ company.website }}</a>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if company.phone %}
+      <div class="info-row">
+        <div class="info-label">📞 Phone</div>
+        <div class="info-value">
+          <a href="tel:{{ company.phone }}">{{ company.phone }}</a>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if company.address %}
+      <div class="info-row">
+        <div class="info-label">📍 Address</div>
+        <div class="info-value">{{ company.address }}</div>
+      </div>
+      {% endif %}
+      
+      {% if company.linkedin %}
+      <div class="info-row">
+        <div class="info-label">💼 LinkedIn</div>
+        <div class="info-value">
+          <a href="{{ company.linkedin }}" target="_blank">{{ company.linkedin }}</a>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if company.twitter %}
+      <div class="info-row">
+        <div class="info-label">🐦 Twitter/X</div>
+        <div class="info-value">
+          <a href="https://twitter.com/{{ company.twitter.replace('@', '') }}" target="_blank">{{ company.twitter }}</a>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if not company.website and not company.phone and not company.address %}
+      <div class="info-row">
+        <div class="info-value">
+          <span class="empty-value">No contact information provided</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Associated Contacts -->
+  {% if company.contacts %}
+  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px; display: flex; justify-content: space-between; align-items: center;">
+      <span><span style="margin-right: 8px;">👥</span>Contacts ({{ company.contacts.count() }})</span>
+      <a href="{{ url_for('rolodex.contact_new') }}?company_id={{ company.id }}" 
+         style="padding: 6px 12px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;"
+         onmouseover="this.style.background='#2563eb'"
+         onmouseout="this.style.background='#3b82f6'">
+        + Add Contact
+      </a>
+    </h3>
+    <div style="padding: 24px;">
+      {% for contact in company.contacts.all() %}
+      <a href="{{ url_for('rolodex.contact_detail', id=contact.id) }}" style="text-decoration: none;">
+        <div class="contact-card">
+          <div class="contact-avatar-small">
+            {% if contact.profile_photo %}
+              <img src="{{ url_for('static', filename='contact_photos/' + contact.profile_photo) }}" alt="{{ contact.display_name }}">
+            {% else %}
+              {{ contact.display_name[0]|upper if contact.display_name else '?' }}
+            {% endif %}
+          </div>
+          <div style="flex: 1;">
+            <div style="color: #3b82f6; font-weight: 500;">{{ contact.display_name }}</div>
+            {% if contact.title %}
+              <div style="color: var(--text-muted); font-size: 14px;">{{ contact.title }}</div>
+            {% endif %}
+          </div>
+          <div style="text-align: right;">
+            {% if contact.email %}
+              <div style="color: var(--text-muted); font-size: 13px;">📧 {{ contact.email }}</div>
+            {% endif %}
+            {% if contact.phone %}
+              <div style="color: var(--text-muted); font-size: 13px;">📞 {{ contact.phone }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; padding: 40px; text-align: center;">
+    <div style="font-size: 32px; margin-bottom: 10px;">👥</div>
+    <h3 style="color: var(--text); margin-bottom: 10px;">No contacts yet</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Add contacts associated with this company</p>
+    <a href="{{ url_for('rolodex.contact_new') }}?company_id={{ company.id }}" 
+       style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 500;"
+       onmouseover="this.style.background='#2563eb'"
+       onmouseout="this.style.background='#3b82f6'">
+      + Add First Contact
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Notes -->
+  {% if company.notes %}
+  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
+      <span style="margin-right: 8px;">📝</span>Notes
+    </h3>
+    <div style="padding: 24px;">
+      <div style="white-space: pre-wrap; color: var(--text); line-height: 1.6;">{{ company.notes }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Metadata -->
+  <div class="detail-section" style="background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;">
+    <h3 style="background: linear-gradient(135deg, rgba(110,168,255,0.1), transparent); padding: 16px 24px; margin: 0; border-bottom: 1px solid var(--line); font-size: 18px;">
+      <span style="margin-right: 8px;">ℹ️</span>Record Information
+    </h3>
+    <div style="padding: 24px;">
+      <div class="info-row">
+        <div class="info-label">Created</div>
+        <div class="info-value">{{ company.created_at.strftime('%B %d, %Y at %I:%M %p') if company.created_at else 'Unknown' }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Last Updated</div>
+        <div class="info-value">{{ company.updated_at.strftime('%B %d, %Y at %I:%M %p') if company.updated_at else 'Never' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

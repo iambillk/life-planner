@@ -1,12 +1,19 @@
 from flask import render_template, request, redirect, url_for, flash
+from werkzeug.utils import secure_filename
 from sqlalchemy import or_, func
 from datetime import datetime
+import os
 from . import rolodex_bp
 from models import db, Contact, Company
 
 # ---------- helpers ----------
 def _norm(s: str | None) -> str:
     return (s or '').strip()
+
+def _allowed_file(filename):
+    """Check if file extension is allowed for photos"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def _company_choices():
     return Company.query.filter_by(archived=False).order_by(Company.name.asc()).all()
@@ -18,6 +25,15 @@ def _parse_tags(raw: str | None) -> str:
     parts = [p.strip() for p in raw.split(',')]
     parts = [p for p in parts if p]
     return ', '.join(dict.fromkeys(parts))  # dedupe, keep order
+
+def _parse_date(date_string: str | None):
+    """Parse date string to date object"""
+    if not date_string:
+        return None
+    try:
+        return datetime.strptime(date_string, '%Y-%m-%d').date()
+    except:
+        return None
 
 # ---------- index / tabs ----------
 @rolodex_bp.route('/')
@@ -87,6 +103,7 @@ def contact_new():
         display = _norm(request.form.get('display_name') or f"{first} {last}".strip() or 'New Contact')
         email = _norm(request.form.get('email'))
         phone = _norm(request.form.get('phone'))
+        
         # dedupe warn
         dup = None
         if email:
@@ -98,7 +115,36 @@ def contact_new():
             companies = _company_choices()
             return render_template('rolodex/contact_form.html', mode='new', companies=companies, form=request.form, dedupe=True)
 
+        # Handle profile photo upload
+        profile_photo_filename = None
+        if 'profile_photo' in request.files:
+            file = request.files['profile_photo']
+            if file and file.filename and _allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name, ext = os.path.splitext(filename)
+                filename = f"{name}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'contact_photos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                profile_photo_filename = filename
+
+        # Handle business card photo
+        business_card_filename = None
+        if 'business_card_photo' in request.files:
+            file = request.files['business_card_photo']
+            if file and file.filename and _allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name, ext = os.path.splitext(filename)
+                filename = f"card_{name}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'contact_photos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                business_card_filename = filename
+
         c = Contact(
+            # Basic info
             first_name=first,
             last_name=last,
             display_name=display,
@@ -108,11 +154,45 @@ def contact_new():
             company_id=int(request.form.get('company_id')) if request.form.get('company_id') else None,
             tags=_parse_tags(request.form.get('tags')),
             notes=_norm(request.form.get('notes')),
+            profile_photo=profile_photo_filename,
+            business_card_photo=business_card_filename,
+            
+            # Address
+            street_address=_norm(request.form.get('street_address')) or None,
+            address_line_2=_norm(request.form.get('address_line_2')) or None,
+            city=_norm(request.form.get('city')) or None,
+            state=_norm(request.form.get('state')) or None,
+            zip_code=_norm(request.form.get('zip_code')) or None,
+            country=_norm(request.form.get('country')) or None,
+            
+            # Additional phones/contact
+            mobile_phone=_norm(request.form.get('mobile_phone')) or None,
+            work_phone=_norm(request.form.get('work_phone')) or None,
+            home_phone=_norm(request.form.get('home_phone')) or None,
+            personal_email=_norm(request.form.get('personal_email')) or None,
+            website=_norm(request.form.get('website')) or None,
+            
+            # Social
+            linkedin_url=_norm(request.form.get('linkedin_url')) or None,
+            twitter_url=_norm(request.form.get('twitter_url')) or None,
+            facebook_url=_norm(request.form.get('facebook_url')) or None,
+            instagram_url=_norm(request.form.get('instagram_url')) or None,
+            github_url=_norm(request.form.get('github_url')) or None,
+            
+            # Dates
+            birthday=_parse_date(request.form.get('birthday')),
+            anniversary=_parse_date(request.form.get('anniversary')),
+            
+            # Personal
+            spouse_name=_norm(request.form.get('spouse_name')) or None,
+            children_names=_norm(request.form.get('children_names')) or None,
+            assistant_name=_norm(request.form.get('assistant_name')) or None
         )
         db.session.add(c)
         db.session.commit()
         flash('Contact saved.', 'success')
         return redirect(url_for('rolodex.contact_detail', id=c.id))
+        
     companies = _company_choices()
     return render_template('rolodex/contact_form.html', mode='new', companies=companies, form={})
 
@@ -127,6 +207,7 @@ def contact_edit(id):
         c.display_name = _norm(request.form.get('display_name') or f"{first} {last}".strip() or c.display_name)
         email = _norm(request.form.get('email'))
         phone = _norm(request.form.get('phone'))
+        
         # dedupe warn (exclude self)
         dup = None
         if email:
@@ -138,18 +219,94 @@ def contact_edit(id):
             companies = _company_choices()
             return render_template('rolodex/contact_form.html', mode='edit', companies=companies, form=request.form, contact=c, dedupe=True)
 
+        # Handle profile photo upload
+        if 'profile_photo' in request.files:
+            file = request.files['profile_photo']
+            if file and file.filename and _allowed_file(file.filename):
+                # Delete old photo if exists
+                if c.profile_photo:
+                    old_path = os.path.join('static', 'contact_photos', c.profile_photo)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                
+                # Save new photo
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name, ext = os.path.splitext(filename)
+                filename = f"{name}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'contact_photos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                c.profile_photo = filename
+
+        # Handle business card photo
+        if 'business_card_photo' in request.files:
+            file = request.files['business_card_photo']
+            if file and file.filename and _allowed_file(file.filename):
+                # Delete old card if exists
+                if c.business_card_photo:
+                    old_path = os.path.join('static', 'contact_photos', c.business_card_photo)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                
+                # Save new card
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name, ext = os.path.splitext(filename)
+                filename = f"card_{name}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'contact_photos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                c.business_card_photo = filename
+
+        # Update all fields
         c.title = _norm(request.form.get('title'))
         c.email = email or None
         c.phone = phone or None
         c.company_id = int(request.form.get('company_id')) if request.form.get('company_id') else None
         c.tags = _parse_tags(request.form.get('tags'))
         c.notes = _norm(request.form.get('notes'))
+        
+        # Address
+        c.street_address = _norm(request.form.get('street_address')) or None
+        c.address_line_2 = _norm(request.form.get('address_line_2')) or None
+        c.city = _norm(request.form.get('city')) or None
+        c.state = _norm(request.form.get('state')) or None
+        c.zip_code = _norm(request.form.get('zip_code')) or None
+        c.country = _norm(request.form.get('country')) or None
+        
+        # Additional phones/contact
+        c.mobile_phone = _norm(request.form.get('mobile_phone')) or None
+        c.work_phone = _norm(request.form.get('work_phone')) or None
+        c.home_phone = _norm(request.form.get('home_phone')) or None
+        c.personal_email = _norm(request.form.get('personal_email')) or None
+        c.website = _norm(request.form.get('website')) or None
+        
+        # Social
+        c.linkedin_url = _norm(request.form.get('linkedin_url')) or None
+        c.twitter_url = _norm(request.form.get('twitter_url')) or None
+        c.facebook_url = _norm(request.form.get('facebook_url')) or None
+        c.instagram_url = _norm(request.form.get('instagram_url')) or None
+        c.github_url = _norm(request.form.get('github_url')) or None
+        
+        # Dates
+        c.birthday = _parse_date(request.form.get('birthday'))
+        c.anniversary = _parse_date(request.form.get('anniversary'))
+        
+        # Personal
+        c.spouse_name = _norm(request.form.get('spouse_name')) or None
+        c.children_names = _norm(request.form.get('children_names')) or None
+        c.assistant_name = _norm(request.form.get('assistant_name')) or None
+        
         c.updated_at = datetime.utcnow()
         db.session.commit()
         flash('Contact updated.', 'success')
         return redirect(url_for('rolodex.contact_detail', id=c.id))
+        
     companies = _company_choices()
-    return render_template('rolodex/contact_form.html', mode='edit', companies=companies, contact=c, form=c.__dict__)
+    # Convert None values to empty strings for form display
+    form_data = {k: (v if v is not None else '') for k, v in c.__dict__.items()}
+    return render_template('rolodex/contact_form.html', mode='edit', companies=companies, contact=c, form=form_data)
 
 @rolodex_bp.route('/contacts/<int:id>/archive', methods=['POST'])
 def contact_archive(id):
@@ -162,6 +319,18 @@ def contact_archive(id):
 @rolodex_bp.route('/contacts/<int:id>/delete', methods=['POST'])
 def contact_delete(id):
     c = Contact.query.get_or_404(id)
+    
+    # Delete photos if they exist
+    if c.profile_photo:
+        photo_path = os.path.join('static', 'contact_photos', c.profile_photo)
+        if os.path.exists(photo_path):
+            os.remove(photo_path)
+    
+    if c.business_card_photo:
+        card_path = os.path.join('static', 'contact_photos', c.business_card_photo)
+        if os.path.exists(card_path):
+            os.remove(card_path)
+    
     db.session.delete(c)
     db.session.commit()
     flash('Contact deleted.', 'success')
@@ -215,12 +384,32 @@ def company_new():
             flash('Company may already exist. Click save again to confirm.', 'warning')
             return render_template('rolodex/company_form.html', mode='new', form=request.form, dedupe=True)
 
+        # Handle logo upload
+        logo_filename = None
+        if 'logo' in request.files:
+            file = request.files['logo']
+            if file and file.filename and _allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name_part, ext = os.path.splitext(filename)
+                filename = f"logo_{name_part}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'company_logos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                logo_filename = filename
+
         co = Company(
             name=name,
             website=website or None,
             phone=_norm(request.form.get('phone')),
             tags=_parse_tags(request.form.get('tags')),
             notes=_norm(request.form.get('notes')),
+            logo=logo_filename,
+            industry=_norm(request.form.get('industry')) or None,
+            size=_norm(request.form.get('size')) or None,
+            address=_norm(request.form.get('address')) or None,
+            linkedin=_norm(request.form.get('linkedin')) or None,
+            twitter=_norm(request.form.get('twitter')) or None,
         )
         db.session.add(co)
         db.session.commit()
@@ -241,28 +430,63 @@ def company_edit(id):
             flash('Name/website already used by another company. Click save again to confirm.', 'warning')
             return render_template('rolodex/company_form.html', mode='edit', form=request.form, company=co, dedupe=True)
 
+        # Handle logo upload
+        if 'logo' in request.files:
+            file = request.files['logo']
+            if file and file.filename and _allowed_file(file.filename):
+                # Delete old logo if exists
+                if co.logo:
+                    old_path = os.path.join('static', 'company_logos', co.logo)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                
+                # Save new logo
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name_part, ext = os.path.splitext(filename)
+                filename = f"logo_{name_part}_{timestamp}{ext}"
+                upload_path = os.path.join('static', 'company_logos')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                co.logo = filename
+
         co.name = name
         co.website = website or None
         co.phone = _norm(request.form.get('phone'))
         co.tags = _parse_tags(request.form.get('tags'))
         co.notes = _norm(request.form.get('notes'))
+        co.industry = _norm(request.form.get('industry')) or None
+        co.size = _norm(request.form.get('size')) or None
+        co.address = _norm(request.form.get('address')) or None
+        co.linkedin = _norm(request.form.get('linkedin')) or None
+        co.twitter = _norm(request.form.get('twitter')) or None
         co.updated_at = datetime.utcnow()
         db.session.commit()
         flash('Company updated.', 'success')
         return redirect(url_for('rolodex.company_detail', id=co.id))
-    return render_template('rolodex/company_form.html', mode='edit', company=co, form=co.__dict__)
+    
+    # Convert None values to empty strings for form display
+    form_data = {k: (v if v is not None else '') for k, v in co.__dict__.items()}
+    return render_template('rolodex/company_form.html', mode='edit', company=co, form=form_data)
 
 @rolodex_bp.route('/companies/<int:id>/archive', methods=['POST'])
 def company_archive(id):
     co = Company.query.get_or_404(id)
     co.archived = not co.archived
     db.session.commit()
-    flash('Company archived.' if co.archived else 'Company unarchived.', 'success')
+    flash('Company archived.' if co.archived else 'Company unarchive.', 'success')
     return redirect(url_for('rolodex.company_detail', id=co.id))
 
 @rolodex_bp.route('/companies/<int:id>/delete', methods=['POST'])
 def company_delete(id):
     co = Company.query.get_or_404(id)
+    
+    # Delete logo if it exists
+    if co.logo:
+        logo_path = os.path.join('static', 'company_logos', co.logo)
+        if os.path.exists(logo_path):
+            os.remove(logo_path)
+    
     db.session.delete(co)
     db.session.commit()
     flash('Company deleted.', 'success')

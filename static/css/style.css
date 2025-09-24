@@ -286,3 +286,28 @@ aside.sidebar nav.sidebar-nav .nav-item.active{
   background: linear-gradient(180deg, rgba(110,168,255,.16), rgba(110,168,255,.10)) !important;
   border: 1px solid rgba(110,168,255,.45) !important;
 }
+
+/* Hard gutters for GridStack cards */
+:root { --gs-gap: 20px; }
+
+.grid-stack { margin: 0 !important; }                     /* ignore GS margin */
+.grid-stack > .grid-stack-item { background: transparent !important; }
+
+/* The trick: inset the *content* inside each tile */
+.grid-stack > .grid-stack-item .grid-stack-item-content{
+  position: absolute !important;
+  top:    calc(var(--gs-gap) / 2) !important;
+  right:  calc(var(--gs-gap) / 2) !important;
+  bottom: calc(var(--gs-gap) / 2) !important;
+  left:   calc(var(--gs-gap) / 2) !important;
+  width: auto !important;
+  height: auto !important;
+
+  /* keep your card styling */
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 2px 18px rgba(0,0,0,.24);
+  padding: 12px;
+  background-clip: padding-box;
+}
