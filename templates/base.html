@@ -131,14 +131,14 @@
     <div class="container">
         <aside class="sidebar" aria-label="Primary">
             <div class="sidebar-header">
-                <h2>📋 Billas Planner 1.03Beta</h2>
+                <h2>📋 P.I.M.P Planner v1.5</h2>
                 <p class="sidebar-date">{{ datetime.now().strftime('%B %d, %Y') }}</p>
             </div>
 
             <!-- NAV: each item gets a stable data-key -->
             <nav class="sidebar-nav" role="navigation" id="sidebar-nav">
                 <a data-key="daily"     href="{{ url_for('daily.index') }}"       class="nav-item {{ 'active' if active == 'daily' }}">
-                    <span class="icon">📅</span><span>Daily Planner</span>
+                    <span class="icon">📅</span><span>Daily Grind</span>
                 </a>
                 <a data-key="weekly"    href="{{ url_for('weekly.index') }}"      class="nav-item {{ 'active' if active == 'weekly' }}">
                     <span class="icon">📆</span><span>Weekly/Monthly</span>
@@ -165,9 +165,9 @@
                     <span class="icon">⚖️</span><span>Weight Loss</span>
                 </a> <!-- fixed missing closing tag -->
                 <a data-key="rolodex"   href="{{ url_for('rolodex.contacts') }}"  class="nav-item {{ 'active' if active == 'rolodex' }}">
-                    <span class="icon">📇</span><span>Rolodex (Beta)</span>
+                    <span class="icon">📇</span><span>Player’s Black Book</span>
                 <a data-key="vault" href="{{ url_for('vault.index') }}" class="nav-item {{ 'active' if active == 'vault' }}">
-                    <span class="icon">📁</span><span>Vault</span>
+                    <span class="icon">📁</span><span>CribVault</span>
                 </a>
                 <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
                     <span class="icon">🏠</span><span>Home</span>
