@@ -70,19 +70,23 @@ def dashboard():
         Transaction.id.desc()
     ).limit(20).all()
     
-    # Get monthly spending by category
+    # Get monthly spending by category - FIXED: Added count field
     category_spending = db.session.query(
         SpendingCategory.name,
         SpendingCategory.icon,
         SpendingCategory.color,
-        func.sum(Transaction.amount).label('total')
+        func.sum(Transaction.amount).label('total'),
+        func.count(Transaction.id).label('count')  # ADDED THIS LINE
     ).join(
         Transaction
     ).filter(
         Transaction.date >= month_start,
         Transaction.date <= month_end
     ).group_by(
-        SpendingCategory.id
+        SpendingCategory.id,
+        SpendingCategory.name,  # Added to GROUP BY
+        SpendingCategory.icon,  # Added to GROUP BY
+        SpendingCategory.color  # Added to GROUP BY
     ).order_by(
         func.sum(Transaction.amount).desc()
     ).all()
@@ -274,131 +278,73 @@ def delete_transaction(id):
     return redirect(url_for('financial.dashboard'))
 
 
-# Updated analytics route for modules/financial/routes.py
-# Replace the existing analytics route with this improved version
-
 # ==================== ANALYTICS ====================
 
 @financial_bp.route('/analytics')
 def analytics():
-    """Spending analytics and insights - UPDATED VERSION"""
-    
+    """Spending analytics and insights"""
     # Date range selector (default to last 6 months)
     end_date = date.today()
     start_date = request.args.get('start_date')
-    end_date_param = request.args.get('end_date')
-    
-    if end_date_param:
-        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
-    
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     else:
         start_date = end_date - timedelta(days=180)
     
-    # Card filter
-    card_filter = request.args.get('card', 'all')
-    
-    # Build query
-    query = Transaction.query.filter(
+    # Get all transactions in range
+    transactions = Transaction.query.filter(
         Transaction.date >= start_date,
         Transaction.date <= end_date
-    )
+    ).order_by(Transaction.date).all()
     
-    # Apply card filter
-    if card_filter != 'all':
-        query = query.filter_by(card=card_filter)
-    
-    transactions = query.order_by(Transaction.date).all()
-    
-    # Monthly spending trend - with proper month filling
+    # Monthly spending trend
     monthly_spending = defaultdict(float)
     monthly_transactions = defaultdict(int)
-    monthly_by_card = defaultdict(lambda: defaultdict(float))
-    
     for t in transactions:
         month_key = t.date.strftime('%Y-%m')
         monthly_spending[month_key] += t.amount
         monthly_transactions[month_key] += 1
-        monthly_by_card[month_key][t.card] += t.amount
     
-    # Fill in missing months with zeros
+    # Sort by month
     monthly_data = []
-    current_date = start_date.replace(day=1)
-    while current_date <= end_date:
-        month_key = current_date.strftime('%Y-%m')
-        month_name = current_date.strftime('%b %y')
-        
+    for month_key in sorted(monthly_spending.keys()):
+        year, month = month_key.split('-')
+        month_name = calendar.month_name[int(month)][:3] + ' ' + year[2:]
         monthly_data.append({
             'month': month_name,
-            'month_key': month_key,
-            'total': monthly_spending.get(month_key, 0),
-            'count': monthly_transactions.get(month_key, 0),
-            'average': monthly_spending.get(month_key, 0) / monthly_transactions.get(month_key, 1) if monthly_transactions.get(month_key) else 0,
-            'amex': monthly_by_card[month_key].get('Amex', 0),
-            'other': monthly_by_card[month_key].get('Other', 0)
+            'total': monthly_spending[month_key],
+            'count': monthly_transactions[month_key],
+            'average': monthly_spending[month_key] / monthly_transactions[month_key]
         })
-        
-        # Move to next month
-        if current_date.month == 12:
-            current_date = current_date.replace(year=current_date.year + 1, month=1)
-        else:
-            current_date = current_date.replace(month=current_date.month + 1)
     
-    # Category breakdown with better handling of uncategorized
-    category_totals = defaultdict(lambda: {
-        'total': 0, 
-        'count': 0, 
-        'icon': '📌', 
-        'color': '#94a3b8',
-        'merchants': set()  # Track unique merchants per category
-    })
-    
-    uncategorized_total = 0
-    uncategorized_count = 0
-    
+    # Category breakdown
+    category_totals = defaultdict(lambda: {'total': 0, 'count': 0, 'icon': '💰', 'color': '#6ea8ff'})
     for t in transactions:
         if t.category:
             category_totals[t.category.name]['total'] += t.amount
             category_totals[t.category.name]['count'] += 1
             category_totals[t.category.name]['icon'] = t.category.icon
             category_totals[t.category.name]['color'] = t.category.color
-            category_totals[t.category.name]['merchants'].add(t.merchant)
-        else:
-            uncategorized_total += t.amount
-            uncategorized_count += 1
     
-    # Add uncategorized if any
-    if uncategorized_count > 0:
-        category_totals['Uncategorized'] = {
-            'total': uncategorized_total,
-            'count': uncategorized_count,
-            'icon': '❓',
-            'color': '#6b7280',
-            'merchants': set()
-        }
-    
-    # Sort categories by total and prepare data
+    # Sort categories by total
     category_data = []
     total_spending = sum(t.amount for t in transactions)
-    
     for cat_name, cat_info in sorted(category_totals.items(), key=lambda x: x[1]['total'], reverse=True):
         percentage = (cat_info['total'] / total_spending * 100) if total_spending > 0 else 0
         category_data.append({
             'name': cat_name,
             'total': cat_info['total'],
             'count': cat_info['count'],
-            'average': cat_info['total'] / cat_info['count'] if cat_info['count'] > 0 else 0,
+            'average': cat_info['total'] / cat_info['count'],
             'percentage': percentage,
             'icon': cat_info['icon'],
-            'color': cat_info['color'],
-            'unique_merchants': len(cat_info['merchants'])
+            'color': cat_info['color']
         })
     
-    # Top merchants with better grouping
+    # BUILD merchant_totals FIRST (MOVE THIS UP!)
     merchant_totals = defaultdict(lambda: {
         'total': 0, 
-        'count': 0, 
+        'count': 0,
         'category': None,
         'first_date': None,
         'last_date': None
@@ -415,20 +361,25 @@ def analytics():
         if not merchant_totals[t.merchant]['last_date'] or t.date > merchant_totals[t.merchant]['last_date']:
             merchant_totals[t.merchant]['last_date'] = t.date
     
-    # Enhanced top merchants data
+    # THEN build enhanced top merchants data
     top_merchants = []
-    for merchant, data in sorted(merchant_totals.items(), key=lambda x: x[1]['total'], reverse=True)[:15]:
-        days_between = (data['last_date'] - data['first_date']).days + 1 if data['first_date'] and data['last_date'] else 1
-        frequency = f"Every {days_between // data['count']} days" if data['count'] > 1 else "Once"
-        
-        top_merchants.append({
-            'name': merchant,
-            'total': data['total'],
-            'count': data['count'],
-            'average': data['total'] / data['count'],
-            'category': data['category'],
-            'frequency': frequency
-        })
+    if merchant_totals:  # Only process if there are merchants
+        for merchant, data in sorted(merchant_totals.items(), key=lambda x: x[1]['total'], reverse=True)[:15]:
+            # Ensure dates exist
+            if data['first_date'] and data['last_date']:
+                days_between = (data['last_date'] - data['first_date']).days + 1
+                frequency = f"Every {days_between // data['count']} days" if data['count'] > 1 else "Once"
+            else:
+                frequency = "Once"
+            
+            top_merchants.append({
+                'name': str(merchant) if merchant else 'Unknown',
+                'total': data['total'],
+                'count': data['count'],
+                'average': data['total'] / data['count'] if data['count'] > 0 else 0,
+                'category': data['category'] or 'Uncategorized',
+                'frequency': frequency
+            })
     
     # Card usage comparison
     card_totals = defaultdict(lambda: {'total': 0, 'count': 0})
@@ -436,78 +387,15 @@ def analytics():
         card_totals[t.card]['total'] += t.amount
         card_totals[t.card]['count'] += 1
     
-    # Weekly spending pattern (day of week analysis)
-    day_of_week_spending = defaultdict(lambda: {'total': 0, 'count': 0})
-    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    for t in transactions:
-        day = day_names[t.date.weekday()]
-        day_of_week_spending[day]['total'] += t.amount
-        day_of_week_spending[day]['count'] += 1
-    
-    # Prepare day of week data
-    weekday_data = []
-    for day_name in day_names:
-        if day_name in day_of_week_spending:
-            weekday_data.append({
-                'day': day_name[:3],
-                'total': day_of_week_spending[day_name]['total'],
-                'count': day_of_week_spending[day_name]['count'],
-                'average': day_of_week_spending[day_name]['total'] / day_of_week_spending[day_name]['count']
-            })
-        else:
-            weekday_data.append({'day': day_name[:3], 'total': 0, 'count': 0, 'average': 0})
-    
-    # Enhanced statistics with insights
+    # Statistics
     stats = {
         'total_spent': total_spending,
         'transaction_count': len(transactions),
         'average_transaction': total_spending / len(transactions) if transactions else 0,
         'largest_transaction': max(transactions, key=lambda t: t.amount) if transactions else None,
-        'smallest_transaction': min(transactions, key=lambda t: t.amount) if transactions else None,
         'most_frequent_category': max(category_totals.items(), key=lambda x: x[1]['count'])[0] if category_totals else None,
-        'most_expensive_category': max(category_totals.items(), key=lambda x: x[1]['total'])[0] if category_totals else None,
-        'days_tracked': (end_date - start_date).days + 1,
-        'categories_used': len(category_totals),
-        'unique_merchants': len(merchant_totals)
+        'days_tracked': (end_date - start_date).days + 1
     }
-    
-    # Spending trends and insights
-    insights = []
-    
-    # Monthly trend insight
-    if len(monthly_data) >= 2:
-        recent_month = monthly_data[-1]['total']
-        previous_month = monthly_data[-2]['total']
-        if previous_month > 0:
-            change = ((recent_month - previous_month) / previous_month) * 100
-            if change > 20:
-                insights.append(f"📈 Spending increased {change:.0f}% from last month")
-            elif change < -20:
-                insights.append(f"📉 Spending decreased {abs(change):.0f}% from last month")
-    
-    # Category insights
-    if category_data:
-        top_category = category_data[0]
-        if top_category['percentage'] > 30:
-            insights.append(f"💸 {top_category['name']} accounts for {top_category['percentage']:.0f}% of spending")
-    
-    # Merchant loyalty insight
-    if top_merchants:
-        frequent_merchants = [m for m in top_merchants if m['count'] >= 5]
-        if frequent_merchants:
-            insights.append(f"🏪 You're a regular at {frequent_merchants[0]['name']} ({frequent_merchants[0]['count']} visits)")
-    
-    # Day of week insight
-    busiest_day = max(weekday_data, key=lambda x: x['total'])
-    if busiest_day['total'] > 0:
-        insights.append(f"📅 You spend the most on {busiest_day['day']}s")
-    
-    # Card preference insight
-    if len(card_totals) > 1:
-        preferred_card = max(card_totals.items(), key=lambda x: x[1]['total'])[0]
-        percentage = (card_totals[preferred_card]['total'] / total_spending) * 100
-        insights.append(f"💳 {preferred_card} is your preferred card ({percentage:.0f}% of spending)")
     
     return render_template(
         'financial/analytics.html',
@@ -515,13 +403,9 @@ def analytics():
         category_data=category_data,
         top_merchants=top_merchants,
         card_totals=dict(card_totals),
-        weekday_data=weekday_data,
         stats=stats,
-        insights=insights[:5],  # Limit to top 5 insights
         start_date=start_date,
         end_date=end_date,
-        card_filter=card_filter,
-        cards=CARDS,
         active='financial'
     )
 
@@ -708,10 +592,11 @@ def review_import():
         imported_count = 0
         errors = []
         
-        for trans_data in import_data['transactions']:
+        # FIXED: Use enumerate to match the template's loop.index0
+        for idx, trans_data in enumerate(import_data['transactions']):
             try:
-                # Get the potentially updated category from form
-                category_id = request.form.get(f"category_{trans_data['reference']}")
+                # FIXED: Get the category from form using index
+                category_id = request.form.get(f"category_{idx}")
                 
                 # Create transaction
                 transaction = Transaction(
@@ -720,7 +605,7 @@ def review_import():
                     merchant=trans_data['merchant'],
                     category_id=int(category_id) if category_id and category_id != '' else None,
                     card='Amex',
-                    notes=f"Ref: {trans_data['reference']}"
+                    notes=f"Ref: {trans_data.get('reference', '')}"  # FIXED: Use .get() for safety
                 )
                 
                 # Update category usage count
@@ -729,8 +614,9 @@ def review_import():
                     if category:
                         category.usage_count += 1
                 
-                # Check for merchant alias
-                create_merchant_alias_if_needed(trans_data['merchant'], category_id)
+                # Check for merchant alias - only if a category was selected
+                if category_id:
+                    create_merchant_alias_if_needed(trans_data['merchant'], category_id)
                 
                 db.session.add(transaction)
                 imported_count += 1

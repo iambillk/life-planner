@@ -666,8 +666,8 @@
                     <div class="category-name">{{ cat.name }}</div>
                     <div class="category-meta">
                         {{ cat.count }} transactions
-                        {% if cat.unique_merchants > 0 %}
-                        • {{ cat.unique_merchants }} merchants
+                        {% if cat.get('unique_merchants', 0) > 0 %}
+                        - {{ cat.unique_merchants }} merchants
                         {% endif %}
                     </div>
                 </div>

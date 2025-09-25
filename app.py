@@ -1,10 +1,14 @@
 # app.py - Updated with Real Estate Management
 """
 Life Management System - Application Factory
-Version: 1.3.1
-Updated: 2025-09-05
+Version: 1.3.2
+Updated: 2025-09-25
 
 CHANGELOG:
+v1.3.2 (2025-09-25)
+- Added Flask-Session support for filesystem sessions
+- Fixes large session cookie issue with Amex imports
+
 v1.3.1 (2025-09-05)
 - Register real estate blueprint without an extra url_prefix
   (the blueprint provides url_prefix="/property" itself)
@@ -18,11 +22,11 @@ v1.2.0 (Previous)
 """
 
 from flask import Flask, redirect, url_for
+from flask_session import Session  # ADD THIS LINE
 from config import Config
 from models.base import db
 from datetime import datetime
 import os
-
 
 def create_app():
     """Application factory pattern"""
@@ -30,8 +34,26 @@ def create_app():
     app.config.from_object(Config)
     app.jinja_env.globals.update(abs=abs)
     
+    # Initialize Flask-Session for filesystem sessions - ADD THIS LINE
+    Session(app)
+    
     # Initialize database
     db.init_app(app)
+    
+    # Create upload directories
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'equipment_profiles'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'maintenance_photos'), exist_ok=True)
+    
+    # ========== Real Estate upload directories ==========
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_profiles'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'property_maintenance'), exist_ok=True)
+
+    # In app.py, in the create_app() function where other directories are created, add:
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'personal_project_files'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'receipts'), exist_ok=True)
+    
+    # ... rest of your existing code continues here ...
     
     # Create upload directories
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

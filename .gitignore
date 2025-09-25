@@ -2,3 +2,5 @@
 *.pyc
 /.svn
 /static/vault_files
+*.db
+/flask_session
