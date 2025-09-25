@@ -60,7 +60,385 @@
         gap: 10px;
     }
 
-    /* Merchant Rules Table */
+    /* Add Category Form */
+    .add-category-form {
+        background: var(--panel);
+        padding: 20px;
+        margin: 20px;
+        border-radius: 10px;
+        display: none;
+    }
+
+    .add-category-form.show {
+        display: block;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 2fr 100px 100px 100px 100px;
+        gap: 10px;
+        align-items: center;
+    }
+
+    /* Emoji Picker Styles */
+    .icon-selector {
+        position: relative;
+        width: 100px;
+    }
+
+    .icon-display {
+        width: 100%;
+        height: 42px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .icon-display:hover {
+        border-color: var(--primary);
+        background: var(--panel);
+    }
+
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        top: 100%;  /* Changed from bottom: 100% to top: 100% */
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 10px;  /* Changed from margin-bottom to margin-top */
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);  /* Changed shadow direction */
+        z-index: 100;
+        width: 480px;  /* Made it even wider */
+        max-width: 90vw;
+        max-height: 400px;  /* Added max height */
+        overflow-y: auto;  /* Make the whole picker scrollable */
+    }
+
+    .emoji-picker.show {
+        display: block;
+    }
+
+    .emoji-tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
+        max-height: 80px;
+        overflow-y: auto;
+    }
+
+    .emoji-tab {
+        padding: 5px 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .emoji-tab:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .emoji-tab.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);  /* More columns to fit more */
+        gap: 5px;
+        max-height: 280px;  /* Slightly smaller to account for tabs */
+        overflow-y: auto;
+        padding: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) var(--panel);
+    }
+
+    .emoji-grid::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .emoji-grid::-webkit-scrollbar-track {
+        background: var(--panel);
+        border-radius: 4px;
+    }
+
+    .emoji-grid::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 4px;
+    }
+
+    .emoji-grid::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-700);
+    }
+
+    .emoji-option {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 20px;
+        transition: all 0.2s ease;
+    }
+
+    .emoji-option:hover {
+        background: var(--primary);
+        transform: scale(1.2);
+        z-index: 10;
+    }
+
+    .form-input {
+        padding: 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        color: var(--text);
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.2);
+    }
+
+    /* Categories Grid */
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .category-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border-color: var(--primary);
+    }
+
+    .category-icon-display {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .category-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .category-name {
+        color: var(--text);
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .category-stats {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .category-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 5px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: var(--primary);
+        color: white;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+
+    .badge.custom {
+        background: var(--success);
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .btn:hover {
+        background: var(--panel);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-success {
+        background: var(--success);
+        color: white;
+        border-color: var(--success);
+    }
+
+    .btn-success:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border-color: var(--danger);
+    }
+
+    .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-warning {
+        background: var(--warning);
+        color: white;
+        border-color: var(--warning);
+    }
+
+    .btn-warning:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    /* Edit Modal */
+    .edit-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .edit-modal.show {
+        display: flex;
+    }
+
+    .edit-modal-content {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+    }
+
+    .edit-modal-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .edit-modal-title {
+        color: var(--text);
+        font-size: 1.2rem;
+        margin: 0;
+    }
+
+    .edit-form-group {
+        margin-bottom: 20px;
+    }
+
+    .edit-form-label {
+        display: block;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .edit-form-input {
+        width: 100%;
+        padding: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--text);
+        border-radius: 6px;
+        font-size: 0.95rem;
+    }
+
+    .edit-form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--line);
+    }
+
+ /* Merchant Rules Table */
     .rules-table {
         width: 100%;
     }
@@ -212,46 +590,31 @@
         display: inline-block;
     }
 
-    /* Cleanup Section */
-    .cleanup-card {
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid var(--warning);
-        border-radius: 10px;
+    /* No rules message */
+    .no-rules {
+        padding: 40px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    /* Add Merchant Form */
+    .add-merchant-form {
+        background: var(--panel);
         padding: 20px;
         margin: 20px;
+        border-radius: 10px;
+        display: none;
     }
 
-    .cleanup-title {
-        color: var(--text);
-        font-weight: 600;
-        margin-bottom: 10px;
+    .add-merchant-form.show {
+        display: block;
     }
 
-    .cleanup-description {
-        color: var(--text-muted);
-        margin-bottom: 15px;
-    }
-
-    .btn {
-        padding: 10px 20px;
-        border-radius: 8px;
-        border: 1px solid var(--line);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        text-decoration: none;
-    }
-
-    .btn-warning {
-        background: var(--warning);
-        color: white;
-        border-color: var(--warning);
-    }
-
-    .btn-warning:hover {
-        filter: brightness(1.1);
+    .merchant-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 200px 100px 100px;
+        gap: 10px;
+        align-items: center;
     }
 
     /* Update Options */
@@ -281,76 +644,6 @@
         font-size: 0.9rem;
     }
 
-    /* No rules message */
-    .no-rules {
-        padding: 40px;
-        text-align: center;
-        color: var(--text-muted);
-    }
-
-    /* Categories Section */
-    .categories-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 15px;
-        padding: 20px;
-    }
-
-    .category-card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 15px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-    }
-
-    .category-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .category-icon-display {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        font-size: 20px;
-    }
-
-    .category-info {
-        flex: 1;
-    }
-
-    .category-name {
-        color: var(--text);
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-
-    .category-stats {
-        display: flex;
-        gap: 15px;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        background: var(--primary);
-        color: white;
-        border-radius: 12px;
-        font-size: 0.75rem;
-    }
-
-    .badge.custom {
-        background: var(--success);
-    }
 </style>
 {% endblock %}
 
@@ -368,6 +661,50 @@
                 <span>📂</span>
                 <span>Spending Categories</span>
             </h2>
+            <div class="section-actions">
+                <button onclick="toggleAddCategory()" class="btn btn-primary">
+                    ➕ Add Category
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Category Form -->
+        <div id="add-category-form" class="add-category-form">
+            <form method="POST" action="{{ url_for('financial.settings') }}">
+                <input type="hidden" name="action" value="add_category">
+                <div class="form-grid">
+                    <input type="text" name="name" placeholder="Category Name" required class="form-input">
+                    
+                    <!-- Emoji Icon Selector -->
+                    <div class="icon-selector">
+                        <input type="hidden" name="icon" id="icon-input" value="💰">
+                        <div class="icon-display" id="icon-display" onclick="toggleEmojiPicker()">💰</div>
+                        <div class="emoji-picker" id="emoji-picker">
+                            <div class="emoji-tabs">
+                                <div class="emoji-tab active" onclick="showEmojiTab('money', event)">Money</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('food', event)">Food</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('transport', event)">Transport</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('home', event)">Home</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('fun', event)">Fun</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('business', event)">Work</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('health', event)">Health</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('education', event)">Study</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('tech', event)">Tech</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('shopping', event)">Shop</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('nature', event)">Nature</div>
+                                <div class="emoji-tab" onclick="showEmojiTab('misc', event)">Misc</div>
+                            </div>
+                            <div class="emoji-grid" id="emoji-grid">
+                                <!-- Emojis will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="color" name="color" value="#6ea8ff" class="form-input" style="height: 42px;">
+                    <button type="submit" class="btn btn-success">Add</button>
+                    <button type="button" onclick="toggleAddCategory()" class="btn">Cancel</button>
+                </div>
+            </form>
         </div>
         
         <div class="categories-grid">
@@ -387,6 +724,21 @@
                         <span>{{ category_stats[category.id].count }} transactions</span>
                         <span>${{ "%.2f"|format(category_stats[category.id].total|default(0)) }}</span>
                     </div>
+                    <div class="category-actions">
+                        <button onclick="editCategory({{ category.id }}, '{{ category.name }}', '{{ category.icon }}', '{{ category.color }}')" class="btn btn-sm">
+                            ✏️ Edit
+                        </button>
+                        {% if category.is_custom %}
+                            <form method="POST" action="{{ url_for('financial.settings') }}" style="display: inline;">
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="category_id" value="{{ category.id }}">
+                                <button type="submit" class="btn btn-sm btn-danger" 
+                                        onclick="return confirm('Delete category {{ category.name }}? This cannot be undone.')">
+                                    🗑️ Delete
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -401,153 +753,321 @@
                 <span>Merchant Auto-Category Rules</span>
             </h2>
             <div class="section-actions">
+                <button onclick="toggleAddMerchant()" class="btn btn-primary">
+                    ➕ Add Rule
+                </button>
+                {% if aliases %}
                 <form method="POST" action="{{ url_for('financial.cleanup_merchant_aliases') }}" style="display: inline;">
                     <button type="submit" class="btn btn-warning" 
                             onclick="return confirm('This will clean up all merchant names. Continue?')">
-                        🧹 Run Cleanup
+                        🧹 Cleanup Names
                     </button>
                 </form>
+                {% endif %}
             </div>
         </div>
 
-        {% if aliases %}
+        <!-- Add Merchant Form -->
+        <div id="add-merchant-form" class="add-merchant-form">
+            <form method="POST" action="{{ url_for('financial.settings') }}">
+                <input type="hidden" name="action" value="add_merchant_alias">
+                <div class="merchant-form-grid">
+                    <input type="text" name="merchant" placeholder="Merchant Name (as it appears)" required class="form-input">
+                    <input type="text" name="canonical" placeholder="Display Name (optional)" class="form-input">
+                    <select name="default_category" required class="form-input">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.icon }} {{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-success">Add</button>
+                    <button type="button" onclick="toggleAddMerchant()" class="btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+
         <div class="rules-table">
-            <!-- Header -->
             <div class="rule-row header">
-                <div>Original Merchant</div>
+                <div>Original</div>
                 <div>Display Name</div>
                 <div>Category</div>
                 <div>Used</div>
                 <div>Actions</div>
             </div>
-
-            <!-- Rules -->
+            
             {% for alias in aliases %}
-            <form method="POST" action="{{ url_for('financial.edit_merchant_alias') }}" class="rule-form">
-                <input type="hidden" name="alias_id" value="{{ alias.id }}">
+            <div class="rule-row" id="rule-{{ alias.id }}">
+                <div class="rule-original">{{ alias.alias }}</div>
                 
-                <div class="rule-row" id="rule-{{ alias.id }}">
-                    <div class="rule-original">
-                        {{ alias.alias }}
-                    </div>
-                    
-                    <div class="rule-canonical">
-                        <span class="rule-canonical-text">{{ alias.canonical_name }}</span>
-                        <input type="text" 
-                               name="canonical_name" 
-                               value="{{ alias.canonical_name }}" 
-                               class="rule-canonical-input">
-                    </div>
-                    
-                    <div class="rule-category">
-                        <span class="rule-category-text">
-                            {% if alias.default_category_id %}
-                                {% for cat in categories %}
-                                    {% if cat.id == alias.default_category_id %}
-                                        {{ cat.icon }} {{ cat.name }}
-                                    {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                None
-                            {% endif %}
-                        </span>
-                        <select name="category_id" class="rule-category-select">
-                            <option value="">None</option>
-                            {% for category in categories %}
-                                <option value="{{ category.id }}" 
-                                        {% if alias.default_category_id == category.id %}selected{% endif %}>
-                                    {{ category.icon }} {{ category.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="rule-usage">
-                        <span class="usage-badge {% if alias.usage_count > 0 %}active{% endif %}">
-                            {{ alias.usage_count|default(0) }}
-                        </span>
-                    </div>
-                    
-                    <div class="rule-actions">
-                        <button type="button" onclick="editRule({{ alias.id }})" class="action-btn edit">
-                            ✏️ Edit
-                        </button>
-                        <button type="submit" class="action-btn save">
-                            💾 Save
-                        </button>
-                        <button type="button" onclick="cancelEdit({{ alias.id }})" class="action-btn cancel">
-                            Cancel
-                        </button>
-                        <button type="button" onclick="deleteRule({{ alias.id }})" class="action-btn delete">
-                            🗑️
-                        </button>
-                    </div>
-                    
-                    <div class="update-options">
-                        <input type="checkbox" 
-                               name="update_transactions" 
-                               value="true" 
-                               id="update-{{ alias.id }}"
-                               class="update-checkbox">
-                        <label for="update-{{ alias.id }}" class="update-label">
-                            Also update all transactions with this merchant name
-                        </label>
-                    </div>
+                <div class="rule-canonical">
+                    <span class="rule-canonical-text">{{ alias.canonical_name }}</span>
+                    <input type="text" 
+                           class="rule-canonical-input" 
+                           value="{{ alias.canonical_name }}"
+                           id="canonical-{{ alias.id }}">
                 </div>
-            </form>
+                
+                <div class="rule-category">
+                    <span class="rule-category-text">
+                        {% if alias.default_category_id %}
+                            {% for cat in categories %}
+                                {% if cat.id == alias.default_category_id %}
+                                    {{ cat.icon }} {{ cat.name }}
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            None
+                        {% endif %}
+                    </span>
+                    <select name="category_id" class="rule-category-select" id="category-{{ alias.id }}">
+                        <option value="">None</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" 
+                                    {% if alias.default_category_id == category.id %}selected{% endif %}>
+                                {{ category.icon }} {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="rule-usage">
+                    <span class="usage-badge {% if alias.usage_count > 0 %}active{% endif %}">
+                        {{ alias.usage_count|default(0) }}
+                    </span>
+                </div>
+                
+                <div class="rule-actions">
+                    <button type="button" onclick="editRule({{ alias.id }})" class="action-btn edit">Edit</button>
+                    <button type="button" onclick="saveRule({{ alias.id }})" class="action-btn save">Save</button>
+                    <button type="button" onclick="cancelEdit({{ alias.id }})" class="action-btn cancel">Cancel</button>
+                    <form method="POST" action="{{ url_for('financial.delete_merchant_alias', id=alias.id) }}" style="display: inline;">
+                        <button type="submit" class="action-btn delete">Delete</button>
+                    </form>
+                </div>
 
-            <!-- Hidden delete form -->
-            <form id="delete-{{ alias.id }}" 
-                  method="POST" 
-                  action="{{ url_for('financial.delete_merchant_alias', id=alias.id) }}" 
-                  style="display: none;">
-            </form>
+                <div class="update-options">
+                    <input type="checkbox" id="update-{{ alias.id }}" class="update-checkbox">
+                    <label for="update-{{ alias.id }}" class="update-label">
+                        Update all {{ alias.usage_count|default(0) }} existing transactions
+                    </label>
+                </div>
+            </div>
+            {% else %}
+            <div class="no-rules">
+                <p>No merchant rules configured yet.</p>
+                <p>Add rules to automatically categorize transactions from specific merchants.</p>
+            </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="no-rules">
-            <p>No merchant rules configured yet.</p>
-            <p>Rules are created automatically when you categorize transactions.</p>
-        </div>
-        {% endif %}
-
-        <!-- Cleanup Info -->
-        <div class="cleanup-card">
-            <div class="cleanup-title">🧹 Cleanup Function</div>
-            <div class="cleanup-description">
-                The cleanup function will automatically fix common merchant name issues:
-                <ul style="margin: 10px 0;">
-                    <li>Remove store numbers (#197, 000XFORD)</li>
-                    <li>Remove location suffixes (ORTONVILLE, CLARKSTON)</li>
-                    <li>Consolidate variations (MEIJER STORE → MEIJER)</li>
-                    <li>Update all affected transactions</li>
-                </ul>
-            </div>
-        </div>
     </div>
-
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Edit Category Modal -->
+<div id="edit-category-modal" class="edit-modal">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <h3 class="edit-modal-title">Edit Category</h3>
+        </div>
+        <form method="POST" action="{{ url_for('financial.settings') }}">
+            <input type="hidden" name="action" value="edit_category">
+            <input type="hidden" name="category_id" id="edit-category-id">
+            
+            <div class="edit-form-group">
+                <label class="edit-form-label">Name</label>
+                <input type="text" name="name" id="edit-category-name" required class="edit-form-input">
+            </div>
+            
+            <div class="edit-form-group">
+                <label class="edit-form-label">Icon</label>
+                <input type="text" name="icon" id="edit-category-icon" class="edit-form-input" maxlength="2">
+            </div>
+            
+            <div class="edit-form-group">
+                <label class="edit-form-label">Color</label>
+                <input type="color" name="color" id="edit-category-color" class="edit-form-input">
+            </div>
+            
+            <div class="edit-form-actions">
+                <button type="button" onclick="closeEditModal()" class="btn">Cancel</button>
+                <button type="submit" class="btn btn-success">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
+// Emoji collections for categories - EXPANDED SELECTION
+const emojiSets = {
+    money: ['💰', '💵', '💴', '💶', '💷', '💸', '💳', '🪙', '💎', '🏦', '💹', '📈', '📊', '🧾', '💼', '💱', '🏧', '💲', '🤑', '💁', '📉', '💯', '🔢', '🧮', '📋', '📑', '🗂️', '💍', '🪜', '📐', '⚖️', '🏪', '🏬', '🏭'],
+    
+    food: ['🍔', '🍕', '🍗', '🍖', '🥗', '🍱', '🍜', '🍝', '☕', '🍷', '🍺', '🥤', '🍰', '🍩', '🍪', '🍫', '🛒', '🥡', '🍴', '🥘', '🍟', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥔', '🍆', '🥕', '🌽', '🫘', '🍅', '🫒', '🥥', '🥑', '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧈', '🍠', '🫚', '🍿', '🧂', '🥫', '🍛', '🍲', '🍥', '🍣', '🍤', '🍙', '🍚', '🍘', '🦪', '🦞', '🦐', '🦑', '🦀', '🐙', '🦕', '🦖', '🍦', '🍧', '🍨', '🍬', '🍭', '🍮', '🍯', '🎂', '🧁', '🥧', '🍾', '🍹', '🍸', '🥃', '🫗', '🍵', '🧋', '🧃', '🧉', '🥛', '🍼', '🫖'],
+    
+    transport: ['🚗', '🚕', '🚌', '🚊', '✈️', '⛽', '🚲', '🛵', '🚁', '🚢', '🚆', '🚇', '🚈', '🛣️', '🅿️', '🚏', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🦯', '🦽', '🦼', '🩼', '🛴', '🛹', '🛼', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '🛤️', '🛫', '🛬', '🪂', '💺', '🚤', '🛥️', '🛳️', '⛴️', '🚀', '🛸', '🛰️', '⛵', '🚣', '🛶', '⚓', '🪝', '⛱️', '🏖️', '🗺️', '🧭', '🚦', '🚥', '🛑', '🚧', '⛔', '🛤️', '⛩️', '🗿'],
+    
+    home: ['🏠', '🏡', '🏘️', '🏢', '🛋️', '🛏️', '🚿', '🚽', '💡', '🔌', '🔧', '🔨', '🎨', '🧹', '🧺', '🪴', '🏚️', '🏗️', '🏭', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '⛪', '🕌', '🏛️', '🕍', '🛕', '⛩️', '🕋', '⛲', '⛺', '🏕️', '🪑', '🪜', '🪟', '🚪', '🛁', '🪠', '🚰', '🪥', '🪒', '🧻', '🪣', '🧼', '🪥', '🧽', '🧯', '🛒', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🪔', '🕯️', '🔋', '🔦', '💡', '🕰️', '⌛', '⏳', '📡', '🔭', '🔬', '🔩', '🪛', '🪚', '🔗', '⛓️', '🧰', '🧲', '🪜', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '💊', '🩹', '🩺', '🩻', '🩼', '🩽', '🩾', '🧿', '🪬', '🪭', '🪮', '🪯', '🪰', '🪱', '🪲', '🪳', '🪴', '🌱', '🌿', '☘️', '🍀', '🌾', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🏵️', '🌶️', '🌲', '🌳', '🌴', '🌵', '🎋', '🎍', '🪵', '🪨', '🪺', '🪹'],
+    
+    fun: ['🎮', '🎯', '🎪', '🎭', '🎬', '🎤', '🎧', '📚', '🎨', '⚽', '🏀', '🎾', '🏊', '🧘', '🎿', '🏖️', '🎢', '🎡', '🎰', '🎲', '🧩', '♟️', '🎯', '🎳', '🎮', '🕹️', '👾', '🎰', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🪡', '🧶', '🪢', '🏈', '🏉', '⚾', '🥎', '🎾', '🏐', '🏓', '🏸', '🥊', '🥋', '🥅', '⛳', '⛸️', '🎣', '🤿', '🎽', '🎿', '🛷', '🥌', '🏹', '🎯', '🪀', '🪁', '🎱', '🔮', '🪄', '🎮', '🕹️', '🎲', '♠️', '♥️', '♦️', '♣️', '🎵', '🎶', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🪈', '🎬', '🎞️', '📽️', '🎥', '📷', '📸', '📹', '📼', '🔍', '🔎', '🕯️', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '🎫', '🎟️', '🎪', '🤹', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸'],
+    
+    business: ['💼', '👔', '📊', '📈', '📉', '💹', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'],
+    
+    health: ['💊', '💉', '🩹', '🩺', '🩻', '🦷', '🦴', '👁️', '👃', '👂', '🦵', '🦶', '💪', '🧠', '🫀', '🫁', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🏥', '🚑', '🩼', '🩽', '🩾', '🦽', '🦼', '🩻', '💆', '🧘', '🏋️', '🤸', '⛹️', '🤾', '🚴', '🚵', '🤼', '🤽', '🤺', '🏊', '🧖', '🧗', '🛀', '🛌', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶'],
+    
+    education: ['📚', '📖', '📝', '✏️', '📏', '📐', '🖊️', '🖋️', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '🎓', '🏫', '🎒', '✂️', '📌', '📍', '📎', '🖇️', '🔬', '🔭', '📡', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '💾', '💿', '📀', '🎥', '🎞️', '📽️', '📹', '📷', '📸', '🔍', '🔎', '🕯️', '💡', '🔦', '📰', '🗞️', '📄', '📃', '📜', '🧾', '📋', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📂', '🗂️', '🗞️', '📰'],
+    
+    tech: ['💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💾', '💿', '📀', '📱', '☎️', '📞', '📟', '📠', '📡', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '🎬', '🔌', '🔋', '🪫', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '⚡', '🔌', '💡', '🔋', '🪫', '📲', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '🤖', '🦾', '🦿', '👽', '👾', '🛸', '🚀', '🛰️', '🌌', '⚙️', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧰', '🧲', '🔫'],
+    
+    shopping: ['🛍️', '🛒', '🏬', '🏪', '🏢', '🏭', '🏗️', '💳', '💰', '💵', '💴', '💶', '💷', '🪙', '💸', '🏷️', '🔖', '🎁', '🎀', '🎊', '🎉', '🎈', '📦', '📫', '📪', '📬', '📭', '🛏️', '🛋️', '🪑', '🚪', '🪟', '🖼️', '🪞', '🪟', '🛁', '🚿', '🚽', '🪠', '🧻', '🪣', '🧼', '🪥', '🧽', '🧹', '🧺', '👕', '👚', '👔', '🧥', '👗', '👖', '🩳', '👙', '🩱', '👘', '🥻', '🩴', '🥿', '👠', '👡', '👢', '👞', '👟', '🥾', '🧦', '🧤', '🧣', '🎩', '🧢', '👒', '🪖', '⛑️', '💄', '💍', '💎', '📿', '🥽', '🕶️', '👓', '🧳', '🎒', '👛', '👜', '💼', '👝', '🛍️', '🎁'],
+    
+    nature: ['🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🌾', '🌵', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌙', '🌎', '🌍', '🌏', '🪐', '💫', '⭐', '🌟', '✨', '⚡', '☄️', '💥', '🔥', '🌪️', '🌈', '☀️', '🌤️', '⛅', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '💧', '💦', '🌊', '🌫️', '🌁', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🪸', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🦭', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🦘', '🦫', '🦡', '🐿️', '🦔'],
+    
+    misc: ['⭐', '🌟', '✨', '💫', '🎆', '🎇', '🎄', '🎃', '🎊', '🎉', '🎈', '🪅', '🪆', '🎀', '🎁', '🏆', '🏅', '🥇', '🥈', '🥉', '⚽', '⚾', '🥎', '🏀', '🏐', '🏈', '🏉', '🎾', '🥏', '🎳', '🏏', '🏑', '🏒', '🥍', '🏓', '🏸', '⛔', '🚫', '🚳', '🚭', '🚯', '🚱', '🚷', '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔃', '🔄', '🔙', '🔚', '🔛', '🔜', '🔝', '✅', '❌', '❓', '❔', '❗', '❕', '⭕', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫']
+};
+
+let currentEmojiSet = 'money';
+
+function toggleAddCategory() {
+    const form = document.getElementById('add-category-form');
+    form.classList.toggle('show');
+    if (!form.classList.contains('show')) {
+        document.getElementById('emoji-picker').classList.remove('show');
+    }
+}
+
+function toggleAddMerchant() {
+    const form = document.getElementById('add-merchant-form');
+    form.classList.toggle('show');
+}
+
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker');
+    picker.classList.toggle('show');
+    if (picker.classList.contains('show')) {
+        // Pass a fake event object for the initial load
+        showEmojiTab('money', {target: document.querySelector('.emoji-tab.active')});
+    }
+}
+
+function showEmojiTab(category, event) {
+    currentEmojiSet = category;
+    
+    // Update active tab
+    document.querySelectorAll('.emoji-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+    
+    // Update emoji grid
+    const grid = document.getElementById('emoji-grid');
+    grid.innerHTML = '';
+    
+    // Make sure we have the emoji set
+    if (!emojiSets[category]) {
+        console.error('Emoji category not found:', category);
+        return;
+    }
+    
+    // Add all emojis from the selected category
+    emojiSets[category].forEach(emoji => {
+        const option = document.createElement('div');
+        option.className = 'emoji-option';
+        option.textContent = emoji;
+        option.onclick = () => selectEmoji(emoji);
+        grid.appendChild(option);
+    });
+    
+    console.log(`Loaded ${emojiSets[category].length} emojis for ${category}`);
+}
+
+function selectEmoji(emoji) {
+    document.getElementById('icon-input').value = emoji;
+    document.getElementById('icon-display').textContent = emoji;
+    document.getElementById('emoji-picker').classList.remove('show');
+}
+
+// Initialize emoji grid on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('emoji-grid');
+    if (grid) {
+        emojiSets.money.forEach(emoji => {
+            const option = document.createElement('div');
+            option.className = 'emoji-option';
+            option.textContent = emoji;
+            option.onclick = () => selectEmoji(emoji);
+            grid.appendChild(option);
+        });
+    }
+});
+
+function editCategory(id, name, icon, color) {
+    document.getElementById('edit-category-id').value = id;
+    document.getElementById('edit-category-name').value = name;
+    document.getElementById('edit-category-icon').value = icon;
+    document.getElementById('edit-category-color').value = color;
+    document.getElementById('edit-category-modal').classList.add('show');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-category-modal').classList.remove('show');
+}
+
 function editRule(id) {
-    document.getElementById('rule-' + id).classList.add('editing');
+    const row = document.getElementById('rule-' + id);
+    row.classList.add('editing');
 }
 
 function cancelEdit(id) {
-    document.getElementById('rule-' + id).classList.remove('editing');
-    // Reset form values
     const row = document.getElementById('rule-' + id);
-    const canonicalInput = row.querySelector('.rule-canonical-input');
-    const canonicalText = row.querySelector('.rule-canonical-text');
-    canonicalInput.value = canonicalText.textContent;
+    row.classList.remove('editing');
 }
 
-function deleteRule(id) {
-    if (confirm('Delete this merchant rule?')) {
-        document.getElementById('delete-' + id).submit();
+function saveRule(id) {
+    const canonical = document.getElementById('canonical-' + id).value;
+    const categoryId = document.getElementById('category-' + id).value;
+    const updateTransactions = document.getElementById('update-' + id).checked;
+    
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("financial.edit_merchant_alias") }}';
+    
+    const fields = {
+        'alias_id': id,
+        'canonical_name': canonical,
+        'category_id': categoryId,
+        'update_transactions': updateTransactions ? 'true' : 'false'
+    };
+    
+    for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
     }
+    
+    document.body.appendChild(form);
+    form.submit();
 }
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', function(event) {
+    const picker = document.getElementById('emoji-picker');
+    const display = document.getElementById('icon-display');
+    const modal = document.getElementById('edit-category-modal');
+    
+    if (picker && !picker.contains(event.target) && event.target !== display) {
+        picker.classList.remove('show');
+    }
+    
+    if (event.target == modal) {
+        closeEditModal();
+    }
+});
 </script>
 {% endblock %}
+
+
+
+
+

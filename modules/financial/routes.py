@@ -571,6 +571,35 @@ def settings():
                     db.session.add(category)
                     db.session.commit()
                     flash(f'Category "{name}" added', 'success')
+
+        # Add this to your settings route in financial/routes.py after the 'add_category' action:
+
+        elif action == 'edit_category':
+            # Edit category (both custom and system categories)
+            category_id = request.form.get('category_id')
+            name = request.form.get('name', '').strip()
+            icon = request.form.get('icon', '💰')
+            color = request.form.get('color', '#6ea8ff')
+            
+            if category_id and name:
+                category = SpendingCategory.query.get(int(category_id))
+                if category:
+                    # Check if new name conflicts with another category
+                    existing = SpendingCategory.query.filter(
+                        SpendingCategory.name == name,
+                        SpendingCategory.id != category.id
+                    ).first()
+                    
+                    if existing:
+                        flash(f'Category name "{name}" already exists', 'error')
+                    else:
+                        category.name = name
+                        category.icon = icon
+                        category.color = color
+                        db.session.commit()
+                        flash(f'Category "{name}" updated', 'success')
+                else:
+                    flash('Category not found', 'error')
                     
         elif action == 'delete_category':
             # Delete category (only if custom and no transactions)
@@ -644,8 +673,23 @@ def settings():
         } for stat in category_stats
     }
     
-    # Get merchant aliases
-    aliases = MerchantAlias.query.order_by(MerchantAlias.alias).all()
+    # Get merchant aliases with usage counts
+    aliases = []
+    alias_records = MerchantAlias.query.order_by(MerchantAlias.alias).all()
+    
+    for alias in alias_records:
+        # Count transactions that match this alias
+        usage_count = Transaction.query.filter(
+            db.or_(
+                Transaction.merchant == alias.alias,
+                Transaction.merchant == alias.canonical_name,
+                Transaction.merchant == alias.normalized_name
+            )
+        ).count()
+        
+        # Add usage_count as a property we can access in the template
+        alias.usage_count = usage_count
+        aliases.append(alias)
     
     return render_template(
         'financial/settings.html',
@@ -1219,135 +1263,6 @@ def bulk_action():
     return redirect(request.referrer or url_for('financial.dashboard'))
 
 # Add these routes to your financial/routes.py file
-
-# ==================== SETTINGS ====================
-
-@financial_bp.route('/settings', methods=['GET', 'POST'])
-def settings():
-    """Manage categories and merchant aliases"""
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'add_category':
-            # Add new custom category
-            name = request.form.get('name', '').strip()
-            icon = request.form.get('icon', '💰')
-            color = request.form.get('color', '#6ea8ff')
-            
-            if name:
-                # Check if category exists
-                existing = SpendingCategory.query.filter_by(name=name).first()
-                if existing:
-                    flash(f'Category "{name}" already exists', 'error')
-                else:
-                    category = SpendingCategory(
-                        name=name,
-                        icon=icon,
-                        color=color,
-                        is_custom=True
-                    )
-                    db.session.add(category)
-                    db.session.commit()
-                    flash(f'Category "{name}" added', 'success')
-                    
-        elif action == 'delete_category':
-            # Delete category (only if custom and no transactions)
-            category_id = request.form.get('category_id')
-            if category_id:
-                category = SpendingCategory.query.get(int(category_id))
-                if category:
-                    if category.is_custom:
-                        # Check if any transactions use this category
-                        transaction_count = Transaction.query.filter_by(category_id=category.id).count()
-                        if transaction_count > 0:
-                            flash(f'Cannot delete "{category.name}" - {transaction_count} transactions use this category', 'error')
-                        else:
-                            db.session.delete(category)
-                            db.session.commit()
-                            flash(f'Category "{category.name}" deleted', 'success')
-                    else:
-                        flash('Cannot delete predefined categories', 'error')
-                        
-        elif action == 'add_merchant_alias':
-            # Add merchant alias for auto-categorization
-            merchant = request.form.get('merchant', '').strip()
-            canonical = request.form.get('canonical', '').strip() or merchant
-            category_id = request.form.get('default_category')
-            
-            if merchant and category_id:
-                normalized = normalize_merchant_name(merchant)
-                # Check if alias exists for normalized name
-                existing = MerchantAlias.query.filter_by(normalized_name=normalized).first()
-                if existing:
-                    # Update existing
-                    existing.canonical_name = canonical
-                    existing.default_category_id = int(category_id)
-                    flash(f'Merchant alias "{merchant}" updated', 'success')
-                else:
-                    # Create new
-                    alias = MerchantAlias(
-                        alias=merchant,
-                        normalized_name=normalized,
-                        canonical_name=canonical,
-                        default_category_id=int(category_id)
-                    )
-                    db.session.add(alias)
-                    flash(f'Merchant alias "{merchant}" added', 'success')
-                db.session.commit()
-                
-        return redirect(url_for('financial.settings'))
-    
-    # GET request - show settings page
-    categories = SpendingCategory.query.order_by(
-        SpendingCategory.is_custom,
-        SpendingCategory.name
-    ).all()
-    
-    # Get category usage stats
-    category_stats = db.session.query(
-        SpendingCategory.id,
-        func.count(Transaction.id).label('transaction_count'),
-        func.sum(Transaction.amount).label('total_amount')
-    ).outerjoin(
-        Transaction
-    ).group_by(
-        SpendingCategory.id
-    ).all()
-    
-    # Convert to dict for easy lookup
-    stats_dict = {
-        stat[0]: {
-            'count': stat[1] or 0,
-            'total': stat[2] or 0
-        } for stat in category_stats
-    }
-    
-    # Get merchant aliases with usage counts
-    aliases = []
-    alias_records = MerchantAlias.query.order_by(MerchantAlias.alias).all()
-    
-    for alias in alias_records:
-        # Count transactions that match this alias
-        usage_count = Transaction.query.filter(
-            db.or_(
-                Transaction.merchant == alias.alias,
-                Transaction.merchant == alias.canonical_name,
-                Transaction.merchant == alias.normalized_name
-            )
-        ).count()
-        
-        # Add usage_count as a property we can access in the template
-        alias.usage_count = usage_count
-        aliases.append(alias)
-    
-    return render_template(
-        'financial/settings.html',
-        categories=categories,
-        category_stats=stats_dict,
-        aliases=aliases,
-        active='financial'
-    )
-
 
 # ==================== MERCHANT ALIAS MANAGEMENT ====================
 
