@@ -172,6 +172,9 @@
                 <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
                     <span class="icon">🏠</span><span>Home</span>
                 </a>
+				<a data-key="todo" href="{{ url_for('todo.unified') }}" class="nav-item {{ 'active' if active == 'todo' }}">
+					<span class="icon">✅</span><span>All Tasks</span>
+				</a>
             </nav>
 
             <!-- Customize controls -->

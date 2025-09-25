@@ -1,0 +1,1106 @@
+{% extends "base.html" %}
+
+{% block title %}Unified Tasks - All Your Work in One Place{% endblock %}
+
+{% block content %}
+<style>
+    /* Unified Task View Styles */
+    .unified-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        color: white;
+    }
+
+    .stats-bar {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1rem;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+
+    .filters-bar {
+        background: #2a2a2a;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .filter-label {
+        color: #aaa;
+        font-size: 0.9rem;
+    }
+
+    .filter-chips {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .chip {
+        padding: 0.25rem 0.75rem;
+        background: #3a3a3a;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .chip:hover {
+        background: #4a4a4a;
+    }
+
+    .chip.active {
+        background: #667eea;
+        border-color: #667eea;
+    }
+
+    /* Quick Add Bar */
+    .quick-add-bar {
+        background: #2a2a2a;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+
+    .quick-add-form {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .quick-add-input-group {
+        flex: 1;
+    }
+
+    .quick-add-input {
+        width: 100%;
+        background: #1e1e1e;
+        border: 2px solid #444;
+        padding: 0.75rem;
+        border-radius: 6px;
+        color: white;
+        font-size: 1rem;
+    }
+
+    .quick-add-input:focus {
+        border-color: #667eea;
+        outline: none;
+    }
+
+    .quick-add-help {
+        font-size: 0.75rem;
+        color: #888;
+        margin-top: 0.5rem;
+    }
+
+    .quick-add-options {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .quick-option {
+        padding: 0.25rem 0.5rem;
+        background: #333;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .quick-option:hover {
+        background: #444;
+    }
+
+    /* Bulk Operations Bar */
+    .bulk-operations {
+        background: #4a5568;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .bulk-operations.active {
+        display: flex;
+    }
+
+    .bulk-count {
+        font-weight: bold;
+    }
+
+    .bulk-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    /* Task Grid */
+    .task-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .priority-section {
+        background: #1e1e1e;
+        border-radius: 10px;
+        padding: 1rem;
+        border-left: 4px solid;
+    }
+
+    .priority-critical {
+        border-left-color: #ff4444;
+    }
+
+    .priority-high {
+        border-left-color: #ff8800;
+    }
+
+    .priority-medium {
+        border-left-color: #00ccff;
+    }
+
+    .priority-low {
+        border-left-color: #888;
+    }
+
+    .priority-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #333;
+    }
+
+    .priority-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .task-count {
+        background: #333;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+    }
+
+    .select-all-section {
+        padding: 0.15rem 0.5rem;
+        background: #444;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .tasks-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .task-card {
+        background: #2a2a2a;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .task-card:hover {
+        background: #333;
+        transform: translateX(5px);
+    }
+
+    .task-card.completed {
+        opacity: 0.6;
+    }
+
+    .task-card.completed .task-title {
+        text-decoration: line-through;
+        color: #888;
+    }
+
+    .task-card.selected {
+        background: #3a3a4a;
+        border: 1px solid #667eea;
+    }
+
+    /* Checkbox styles */
+    .task-select-checkbox {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #555;
+        border-radius: 3px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bulk-mode .task-select-checkbox {
+        display: flex;
+    }
+
+    .task-checkbox {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #666;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .task-card.completed .task-checkbox {
+        background: #4caf50;
+        border-color: #4caf50;
+    }
+
+    .task-checkbox:hover {
+        border-color: #888;
+    }
+
+    .task-content {
+        flex: 1;
+    }
+
+    .task-title {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .task-title.editing {
+        display: none;
+    }
+
+    .task-edit-input {
+        display: none;
+        width: 100%;
+        background: #1e1e1e;
+        border: 1px solid #667eea;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        color: white;
+    }
+
+    .task-edit-input.active {
+        display: block;
+    }
+
+    .task-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: #888;
+    }
+
+    .task-badge {
+        padding: 0.15rem 0.5rem;
+        background: #333;
+        border-radius: 10px;
+        font-size: 0.75rem;
+    }
+
+    .badge-tch {
+        background: #4a5568;
+    }
+
+    .badge-personal {
+        background: #2d3748;
+    }
+
+    .badge-todo {
+        background: #553c9a;
+    }
+
+    .badge-daily {
+        background: #2c5282;
+    }
+
+    .task-due {
+        color: #ff8800;
+    }
+
+    .task-due.overdue {
+        color: #ff4444;
+        font-weight: bold;
+    }
+
+    .task-actions {
+        display: none;
+        gap: 0.5rem;
+    }
+
+    .task-card:hover .task-actions {
+        display: flex;
+    }
+
+    .task-action {
+        padding: 0.25rem 0.5rem;
+        background: #444;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        border: none;
+        color: white;
+    }
+
+    .task-action:hover {
+        background: #555;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #888;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    /* View Toggle */
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .view-btn {
+        padding: 0.5rem 1rem;
+        background: #333;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .view-btn.active {
+        background: #667eea;
+    }
+
+    /* Search Box */
+    .search-box {
+        position: relative;
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+        background: #1e1e1e;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: white;
+    }
+
+    .search-clear {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 0.25rem;
+    }
+</style>
+
+<div class="unified-header">
+    <h1>🎯 Unified Task Command Center</h1>
+    <p>All your tasks from every project, in one powerful view</p>
+    
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-value">{{ total_tasks }}</span>
+            <span class="stat-label">Total Tasks</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ completed_tasks }}</span>
+            <span class="stat-label">Completed</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ overdue_tasks }}</span>
+            <span class="stat-label">Overdue</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ ((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0)|int }}%</span>
+            <span class="stat-label">Progress</span>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Bar -->
+<div class="quick-add-bar">
+    <form id="quick-add-form" class="quick-add-form">
+        <div class="quick-add-input-group">
+            <input type="text" 
+                   id="quick-add-input"
+                   class="quick-add-input" 
+                   placeholder="Quick add: 'Fix bug in login #tch @high tomorrow' or 'Buy groceries #personal'"
+                   autocomplete="off">
+            <div class="quick-add-help">
+                Use # for project type (#tch, #personal, #todo), @ for priority (@high, @critical), dates like 'tomorrow' or 'next week'
+            </div>
+            <div class="quick-add-options">
+                <span class="quick-option" onclick="insertQuickText('#tch ')">+TCH</span>
+                <span class="quick-option" onclick="insertQuickText('#personal ')">+Personal</span>
+                <span class="quick-option" onclick="insertQuickText('#todo ')">+Todo</span>
+                <span class="quick-option" onclick="insertQuickText('@high ')">High Priority</span>
+                <span class="quick-option" onclick="insertQuickText('@critical ')">Critical</span>
+                <span class="quick-option" onclick="insertQuickText('tomorrow')">Tomorrow</span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Task</button>
+    </form>
+</div>
+
+<!-- Bulk Operations Bar -->
+<div class="bulk-operations" id="bulk-operations">
+    <input type="checkbox" id="select-all-main" onchange="toggleSelectAll(this)">
+    <span class="bulk-count"><span id="selected-count">0</span> selected</span>
+    <div class="bulk-actions">
+        <button class="btn btn-sm" onclick="bulkComplete()">✓ Complete</button>
+        <button class="btn btn-sm" onclick="bulkSetPriority('high')">⚡ High Priority</button>
+        <button class="btn btn-sm" onclick="bulkSetPriority('critical')">🔥 Critical</button>
+        <button class="btn btn-sm" onclick="bulkDelete()" style="background: #dc3545;">🗑️ Delete</button>
+        <button class="btn btn-sm" onclick="exitBulkMode()">✕ Cancel</button>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="filters-bar">
+    <div class="filter-group">
+        <span class="filter-label">Source:</span>
+        <div class="filter-chips">
+            <div class="chip source-chip" data-source="all">All</div>
+            <div class="chip source-chip" data-source="tch">💼 TCH</div>
+            <div class="chip source-chip" data-source="personal">🏠 Personal</div>
+            <div class="chip source-chip" data-source="todo">📝 Todo</div>
+            <div class="chip source-chip" data-source="daily">📅 Daily</div>
+        </div>
+    </div>
+    
+    <div class="filter-group">
+        <span class="filter-label">Date:</span>
+        <div class="filter-chips">
+            <div class="chip date-chip" data-filter="all">All</div>
+            <div class="chip date-chip" data-filter="today">Today</div>
+            <div class="chip date-chip" data-filter="week">This Week</div>
+            <div class="chip date-chip" data-filter="overdue">Overdue</div>
+            <div class="chip date-chip" data-filter="no_date">No Date</div>
+        </div>
+    </div>
+    
+    <div class="filter-group">
+        <label>
+            <input type="checkbox" id="show-completed" {% if include_completed %}checked{% endif %}>
+            Show Completed
+        </label>
+    </div>
+
+    <div class="filter-group">
+        <div class="search-box">
+            <input type="text" 
+                   id="search-tasks" 
+                   class="search-input" 
+                   placeholder="Search tasks...">
+            <button class="search-clear" onclick="clearSearch()">✕</button>
+        </div>
+    </div>
+    
+    <div class="filter-group" style="margin-left: auto;">
+        <button class="btn btn-sm" onclick="enterBulkMode()">☑️ Select Multiple</button>
+        <a href="{{ url_for('todo.index') }}" class="btn btn-sm">📋 Todo Lists</a>
+        <a href="{{ url_for('projects.tch_index') }}" class="btn btn-sm">💼 TCH</a>
+        <a href="{{ url_for('persprojects.index') }}" class="btn btn-sm">🏠 Personal</a>
+    </div>
+</div>
+
+<!-- Task Grid -->
+<div class="task-grid" id="task-grid">
+    {% for priority in ['critical', 'high', 'medium', 'low'] %}
+        {% if tasks_by_priority[priority] %}
+        <div class="priority-section priority-{{ priority }}" data-priority="{{ priority }}">
+            <div class="priority-header">
+                <div class="priority-title">
+                    {% if priority == 'critical' %}
+                        🔴 Critical Priority
+                    {% elif priority == 'high' %}
+                        🟠 High Priority
+                    {% elif priority == 'medium' %}
+                        🔵 Medium Priority
+                    {% else %}
+                        ⚪ Low Priority
+                    {% endif %}
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div class="select-all-section" onclick="selectAllInSection('{{ priority }}')" style="display: none;">
+                        ☑️ Select All
+                    </div>
+                    <div class="task-count">{{ tasks_by_priority[priority]|length }} tasks</div>
+                </div>
+            </div>
+            
+            <div class="tasks-list">
+                {% for task in tasks_by_priority[priority] %}
+                <div class="task-card {% if task.completed %}completed{% endif %}" 
+                     data-task-id="{{ task.id }}"
+                     data-priority="{{ priority }}"
+                     data-source="{{ task.source }}"
+                     data-title="{{ task.title|lower }}">
+                    
+                    <div class="task-select-checkbox" onclick="toggleTaskSelection('{{ task.id }}', event)">
+                        <input type="checkbox" class="task-selector" data-task-id="{{ task.id }}">
+                    </div>
+                    
+                    <div class="task-checkbox" onclick="toggleTask('{{ task.id }}', {{ task.completed|lower }})">
+                        {% if task.completed %}✓{% endif %}
+                    </div>
+                    
+                    <div class="task-content">
+                        <div class="task-title" id="title-{{ task.id }}">{{ task.title }}</div>
+                        <input type="text" 
+                               class="task-edit-input" 
+                               id="edit-{{ task.id }}"
+                               value="{{ task.title }}"
+                               onblur="saveTaskEdit('{{ task.id }}')"
+                               onkeypress="handleEditKeypress(event, '{{ task.id }}')">
+                        
+                        <div class="task-meta">
+                            <span class="task-badge badge-{{ task.source }}">{{ task._get_source_badge() }}</span>
+                            {% if task.project_name %}
+                                <span>{{ task.project_name }}</span>
+                            {% endif %}
+                            {% if task.due_date %}
+                                {% set now = datetime.now().date() %}
+                                {% if task.due_date < now %}
+                                    <span class="task-due overdue">⚠️ Overdue {{ (now - task.due_date).days }} days</span>
+                                {% elif task.due_date == now %}
+                                    <span class="task-due">📅 Due Today</span>
+                                {% else %}
+                                    <span class="task-due">📅 Due {{ task.due_date.strftime('%b %d') }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="task-actions">
+                        {% if task.can_edit %}
+                        <button class="task-action" onclick="editTask('{{ task.id }}', event)">✏️</button>
+                        {% endif %}
+                        <button class="task-action" onclick="deleteTask('{{ task.id }}', event)">🗑️</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    
+    {% if total_tasks == 0 %}
+    <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <h3>All Clear!</h3>
+        <p>No tasks to display with the current filters.</p>
+        <p>Try adjusting your filters or create some new tasks.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// State management
+let bulkMode = false;
+let selectedTasks = new Set();
+let searchTerm = '';
+
+// Quick Add functionality
+document.getElementById('quick-add-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('quick-add-input');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    // Parse the quick add text
+    const parsed = parseQuickAdd(text);
+    
+    // Send to server
+    fetch('/todo/api/quick-add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(parsed)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            window.location.reload();
+        } else {
+            alert('Failed to add task: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to add task');
+    });
+});
+
+function parseQuickAdd(text) {
+    const result = {
+        title: text,
+        source: 'todo',  // default
+        priority: 'medium',  // default
+        due_date: null,
+        project_id: null
+    };
+    
+    // Extract source (#tch, #personal, #todo)
+    const sourceMatch = text.match(/#(tch|personal|todo)/i);
+    if (sourceMatch) {
+        result.source = sourceMatch[1].toLowerCase();
+        result.title = result.title.replace(sourceMatch[0], '').trim();
+    }
+    
+    // Extract priority (@low, @medium, @high, @critical)
+    const priorityMatch = text.match(/@(low|medium|high|critical)/i);
+    if (priorityMatch) {
+        result.priority = priorityMatch[1].toLowerCase();
+        result.title = result.title.replace(priorityMatch[0], '').trim();
+    }
+    
+    // Extract dates (tomorrow, next week, etc)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (text.includes('tomorrow')) {
+        result.due_date = tomorrow.toISOString().split('T')[0];
+        result.title = result.title.replace(/tomorrow/i, '').trim();
+    } else if (text.includes('next week')) {
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        result.due_date = nextWeek.toISOString().split('T')[0];
+        result.title = result.title.replace(/next week/i, '').trim();
+    }
+    
+    return result;
+}
+
+function insertQuickText(text) {
+    const input = document.getElementById('quick-add-input');
+    input.value += text;
+    input.focus();
+}
+
+// Bulk Operations
+function enterBulkMode() {
+    bulkMode = true;
+    document.getElementById('task-grid').classList.add('bulk-mode');
+    document.getElementById('bulk-operations').classList.add('active');
+    document.querySelectorAll('.select-all-section').forEach(el => {
+        el.style.display = 'block';
+    });
+}
+
+function exitBulkMode() {
+    bulkMode = false;
+    selectedTasks.clear();
+    document.getElementById('task-grid').classList.remove('bulk-mode');
+    document.getElementById('bulk-operations').classList.remove('active');
+    document.querySelectorAll('.select-all-section').forEach(el => {
+        el.style.display = 'none';
+    });
+    document.querySelectorAll('.task-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelectorAll('.task-selector').forEach(cb => {
+        cb.checked = false;
+    });
+    updateSelectedCount();
+}
+
+function toggleTaskSelection(taskId, event) {
+    event.stopPropagation();
+    const card = document.querySelector(`[data-task-id="${taskId}"]`);
+    const checkbox = card.querySelector('.task-selector');
+    
+    if (selectedTasks.has(taskId)) {
+        selectedTasks.delete(taskId);
+        card.classList.remove('selected');
+        checkbox.checked = false;
+    } else {
+        selectedTasks.add(taskId);
+        card.classList.add('selected');
+        checkbox.checked = true;
+    }
+    
+    updateSelectedCount();
+}
+
+function selectAllInSection(priority) {
+    const section = document.querySelector(`.priority-section[data-priority="${priority}"]`);
+    const cards = section.querySelectorAll('.task-card');
+    
+    cards.forEach(card => {
+        const taskId = card.dataset.taskId;
+        if (!selectedTasks.has(taskId)) {
+            selectedTasks.add(taskId);
+            card.classList.add('selected');
+            card.querySelector('.task-selector').checked = true;
+        }
+    });
+    
+    updateSelectedCount();
+}
+
+function toggleSelectAll(checkbox) {
+    if (checkbox.checked) {
+        document.querySelectorAll('.task-card').forEach(card => {
+            const taskId = card.dataset.taskId;
+            selectedTasks.add(taskId);
+            card.classList.add('selected');
+            card.querySelector('.task-selector').checked = true;
+        });
+    } else {
+        selectedTasks.clear();
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.classList.remove('selected');
+            card.querySelector('.task-selector').checked = false;
+        });
+    }
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    document.getElementById('selected-count').textContent = selectedTasks.size;
+}
+
+function bulkComplete() {
+    if (selectedTasks.size === 0) {
+        alert('No tasks selected');
+        return;
+    }
+    
+    if (!confirm(`Mark ${selectedTasks.size} tasks as complete?`)) return;
+    
+    fetch('/todo/api/bulk-complete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            task_ids: Array.from(selectedTasks)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Failed to complete tasks');
+        }
+    });
+}
+
+function bulkSetPriority(priority) {
+    if (selectedTasks.size === 0) {
+        alert('No tasks selected');
+        return;
+    }
+    
+    fetch('/todo/api/bulk-priority', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            task_ids: Array.from(selectedTasks),
+            priority: priority
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Failed to update priority');
+        }
+    });
+}
+
+function bulkDelete() {
+    if (selectedTasks.size === 0) {
+        alert('No tasks selected');
+        return;
+    }
+    
+    if (!confirm(`Delete ${selectedTasks.size} tasks? This cannot be undone.`)) return;
+    
+    fetch('/todo/api/bulk-delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            task_ids: Array.from(selectedTasks)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Failed to delete tasks');
+        }
+    });
+}
+
+// Inline editing
+function editTask(taskId, event) {
+    event.stopPropagation();
+    const titleEl = document.getElementById(`title-${taskId}`);
+    const editEl = document.getElementById(`edit-${taskId}`);
+    
+    titleEl.classList.add('editing');
+    editEl.classList.add('active');
+    editEl.focus();
+    editEl.select();
+}
+
+function saveTaskEdit(taskId) {
+    const titleEl = document.getElementById(`title-${taskId}`);
+    const editEl = document.getElementById(`edit-${taskId}`);
+    const newTitle = editEl.value.trim();
+    
+    if (!newTitle || newTitle === titleEl.textContent) {
+        titleEl.classList.remove('editing');
+        editEl.classList.remove('active');
+        return;
+    }
+    
+    fetch(`/todo/api/task/${taskId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: newTitle })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            titleEl.textContent = newTitle;
+            titleEl.classList.remove('editing');
+            editEl.classList.remove('active');
+        } else {
+            alert('Failed to update task');
+            editEl.value = titleEl.textContent;
+        }
+    });
+}
+
+function handleEditKeypress(event, taskId) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        saveTaskEdit(taskId);
+    } else if (event.key === 'Escape') {
+        const titleEl = document.getElementById(`title-${taskId}`);
+        const editEl = document.getElementById(`edit-${taskId}`);
+        editEl.value = titleEl.textContent;
+        titleEl.classList.remove('editing');
+        editEl.classList.remove('active');
+    }
+}
+
+function deleteTask(taskId, event) {
+    event.stopPropagation();
+    if (!confirm('Delete this task?')) return;
+    
+    fetch(`/todo/api/task/${taskId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const card = document.querySelector(`[data-task-id="${taskId}"]`);
+            card.style.transition = 'opacity 0.3s, transform 0.3s';
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(-20px)';
+            setTimeout(() => card.remove(), 300);
+        } else {
+            alert('Failed to delete task');
+        }
+    });
+}
+
+// Search functionality
+document.getElementById('search-tasks').addEventListener('input', function(e) {
+    searchTerm = e.target.value.toLowerCase();
+    filterTasks();
+});
+
+function clearSearch() {
+    document.getElementById('search-tasks').value = '';
+    searchTerm = '';
+    filterTasks();
+}
+
+function filterTasks() {
+    document.querySelectorAll('.task-card').forEach(card => {
+        const title = card.dataset.title;
+        const source = card.dataset.source;
+        
+        if (searchTerm && !title.includes(searchTerm) && !source.includes(searchTerm)) {
+            card.style.display = 'none';
+        } else {
+            card.style.display = 'flex';
+        }
+    });
+    
+    // Hide empty sections
+    document.querySelectorAll('.priority-section').forEach(section => {
+        const visibleTasks = section.querySelectorAll('.task-card:not([style*="display: none"])');
+        section.style.display = visibleTasks.length > 0 ? 'block' : 'none';
+    });
+}
+
+// Original functions from Phase 1
+function toggleTask(taskId, isCompleted) {
+    const endpoint = isCompleted ? 'uncomplete' : 'complete';
+    
+    fetch(`/todo/api/task/${taskId}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Failed to update task');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update task');
+    });
+}
+
+// Filter functionality (from Phase 1)
+document.addEventListener('DOMContentLoaded', function() {
+    // Source filter chips
+    const sourceChips = document.querySelectorAll('.source-chip');
+    const currentSources = {{ source_filter|tojson if source_filter else '[]' }};
+    
+    if (currentSources.length === 0) {
+        document.querySelector('.source-chip[data-source="all"]').classList.add('active');
+    } else {
+        currentSources.forEach(source => {
+            const chip = document.querySelector(`.source-chip[data-source="${source}"]`);
+            if (chip) chip.classList.add('active');
+        });
+    }
+    
+    sourceChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const source = this.dataset.source;
+            
+            if (source === 'all') {
+                window.location.href = updateURLParameter(window.location.href, 'source', null);
+            } else {
+                const url = new URL(window.location.href);
+                const sources = url.searchParams.getAll('source');
+                const index = sources.indexOf(source);
+                
+                if (index > -1) {
+                    sources.splice(index, 1);
+                } else {
+                    sources.push(source);
+                }
+                
+                url.searchParams.delete('source');
+                sources.forEach(s => url.searchParams.append('source', s));
+                window.location.href = url.toString();
+            }
+        });
+    });
+    
+    // Date filter chips
+    const dateChips = document.querySelectorAll('.date-chip');
+    const currentDateFilter = '{{ date_filter or "all" }}';
+    
+    document.querySelector(`.date-chip[data-filter="${currentDateFilter}"]`).classList.add('active');
+    
+    dateChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+            if (filter === 'all') {
+                window.location.href = updateURLParameter(window.location.href, 'date_filter', null);
+            } else {
+                window.location.href = updateURLParameter(window.location.href, 'date_filter', filter);
+            }
+        });
+    });
+    
+    document.getElementById('show-completed').addEventListener('change', function() {
+        window.location.href = updateURLParameter(window.location.href, 'completed', this.checked);
+    });
+});
+
+function updateURLParameter(url, param, value) {
+    const urlObj = new URL(url);
+    if (value === null || value === undefined || value === '') {
+        urlObj.searchParams.delete(param);
+    } else {
+        urlObj.searchParams.set(param, value);
+    }
+    return urlObj.toString();
+}
+</script>
+
+{% endblock %}

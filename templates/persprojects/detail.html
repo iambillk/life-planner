@@ -1,227 +1,194 @@
 {% extends "base.html" %}
-
 {% block title %}{{ project.name }} - Personal Project{% endblock %}
-{% block header %}{{ project.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
+  /* Personal Project Detail Styles */
   :root {
     --pd-bg: #0a0f1a;
-    --pd-surface: #0f1625;
-    --pd-surface-light: #141d30;
-    --pd-surface-hover: #1a2540;
-    --pd-border: #1f2a3d;
-    --pd-border-light: #2a3650;
-    --pd-text: #e6eaf2;
-    --pd-text-dim: #9fb0c8;
-    --pd-text-muted: #7a8ca5;
-    --pd-accent: #6ea8ff;
-    --pd-accent-glow: rgba(110, 168, 255, 0.15);
-    --pd-success: #22c55e;
-    --pd-success-bg: rgba(34, 197, 94, 0.1);
+    --pd-surface: #0f1823;
+    --pd-surface-light: #141f2e;
+    --pd-surface-hover: #1a2838;
+    --pd-border: rgba(255, 255, 255, 0.1);
+    --pd-border-light: rgba(255, 255, 255, 0.05);
+    --pd-text: #e2e8f0;
+    --pd-text-dim: #94a3b8;
+    --pd-text-muted: #64748b;
+    --pd-accent: #818cf8;
+    --pd-accent-glow: rgba(129, 140, 248, 0.15);
+    --pd-success: #10b981;
+    --pd-success-bg: rgba(16, 185, 129, 0.1);
     --pd-warning: #f59e0b;
     --pd-warning-bg: rgba(245, 158, 11, 0.1);
     --pd-danger: #ef4444;
     --pd-danger-bg: rgba(239, 68, 68, 0.1);
     --pd-priority-low: #6b7280;
-    --pd-priority-medium: #f59e0b;
-    --pd-priority-high: #ef4444;
+    --pd-priority-medium: #3b82f6;
+    --pd-priority-high: #f59e0b;
+    --pd-priority-critical: #ef4444;
   }
 
-  /* Container Layout */
+  body {
+    background: var(--pd-bg);
+  }
+
+  /* Layout */
   .project-detail-container {
     display: flex;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    max-width: 1600px;
-    margin: 0 auto;
-    height: calc(100vh - 100px);
+    min-height: 100vh;
+    background: var(--pd-bg);
   }
 
   /* Hero Header */
   .project-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-content {
     background: linear-gradient(135deg, var(--pd-surface) 0%, var(--pd-surface-light) 100%);
     border: 1px solid var(--pd-border);
     border-radius: 1rem;
     padding: 2rem;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .project-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--pd-accent), #a855f7, #ec4899);
-  }
-
-  .hero-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .hero-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
   }
 
   .project-title-section {
-    flex: 1;
+    margin-bottom: 1rem;
   }
 
   .project-name {
     font-size: 2rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--pd-text) 0%, var(--pd-accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.5rem;
+    color: var(--pd-text);
+    margin: 0 0 0.5rem 0;
   }
 
   .project-description {
     color: var(--pd-text-dim);
     font-size: 1.1rem;
-    line-height: 1.5;
+    margin: 0;
   }
 
-  /* Metadata Pills */
+  /* Metadata */
   .project-meta {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
     flex-wrap: wrap;
-    align-items: center;
+    margin: 1rem 0;
   }
 
   .meta-chip {
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 0.75rem;
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
     border-radius: 999px;
     font-size: 0.875rem;
-    font-weight: 600;
-    border: 1px solid var(--pd-border);
-    background: var(--pd-surface);
-  }
-
-  .status-planning { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
-  .status-active { background: linear-gradient(135deg, #22c55e, #10b981); color: white; }
-  .status-on_hold { background: linear-gradient(135deg, #f59e0b, #f97316); color: white; }
-  .status-completed { background: linear-gradient(135deg, #6b7280, #4b5563); color: white; }
-
-  .priority-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-  .priority-medium { background: rgba(245, 158, 11, 0.2); color: var(--pd-warning); }
-  .priority-high { background: rgba(239, 68, 68, 0.2); color: var(--pd-danger); }
-  .priority-critical { 
-    background: var(--pd-danger);
-    color: white;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+    color: var(--pd-text-dim);
   }
 
   .category-chip {
     background: var(--pd-accent-glow);
-    color: var(--pd-accent);
     border-color: var(--pd-accent);
+    color: var(--pd-accent);
   }
+
+  .status-planning { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+  .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  .status-on_hold { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .status-completed { background: rgba(129, 140, 248, 0.1); color: #818cf8; }
+
+  .priority-low { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+  .priority-medium { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+  .priority-high { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .priority-critical { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
   /* Progress Section */
   .progress-section {
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 0.75rem;
-    padding: 1rem;
+    margin-top: 1rem;
   }
 
   .progress-stats {
     display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
-
-  .progress-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .progress-stat-label {
-    color: var(--pd-text-muted);
+    gap: 1rem;
+    margin-bottom: 0.5rem;
     font-size: 0.875rem;
-  }
-
-  .progress-stat-value {
-    color: var(--pd-text);
-    font-weight: 600;
+    color: var(--pd-text-dim);
   }
 
   .progress-bar-container {
+    background: var(--pd-surface);
     height: 8px;
-    background: var(--pd-surface-light);
     border-radius: 999px;
     overflow: hidden;
     position: relative;
   }
 
   .progress-bar-fill {
+    background: linear-gradient(90deg, var(--pd-accent), #a78bfa);
     height: 100%;
-    background: linear-gradient(90deg, var(--pd-accent), #a855f7);
+    transition: width 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding-right: 0.5rem;
-    transition: width 0.3s ease;
   }
 
   .progress-percentage {
-    color: white;
     font-size: 0.7rem;
+    color: white;
     font-weight: 600;
+    margin-right: 0.25rem;
   }
 
-  /* Hero Actions */
+  /* Actions */
   .hero-actions {
     display: flex;
     gap: 0.75rem;
+    margin-top: 1rem;
   }
 
   .btn {
     padding: 0.5rem 1rem;
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
     border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    color: var(--pd-text);
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+
+  .btn:hover {
+    background: var(--pd-surface-hover);
+    transform: translateY(-1px);
   }
 
   .btn-primary {
     background: var(--pd-accent);
+    border-color: var(--pd-accent);
     color: white;
-    border: none;
   }
 
   .btn-primary:hover {
-    background: var(--pd-accent);
-    filter: brightness(1.1);
-    transform: translateY(-1px);
+    background: #6366f1;
   }
 
   .btn-sm {
     padding: 0.25rem 0.75rem;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--pd-text-dim);
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: all 0.2s;
+  }
+
+  .btn-icon:hover {
+    color: var(--pd-text);
   }
 
   /* Goals Bar */
@@ -318,7 +285,7 @@
     font-weight: 500;
   }
 
-  /* Main Content Area - Full Width */
+  /* Main Content Area */
   .project-content {
     flex: 1;
     padding: 1.5rem 2rem;
@@ -326,7 +293,7 @@
     max-width: none;
   }
 
-  /* Main Dashboard Grid - Optimized for Wide Screens */
+  /* Dashboard Grid */
   .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 400px;
@@ -334,7 +301,7 @@
     height: calc(100vh - 200px);
   }
 
-  /* Tasks Section - Primary Focus */
+  /* Tasks Section */
   .tasks-section {
     background: var(--pd-surface);
     border: 1px solid var(--pd-border);
@@ -375,29 +342,6 @@
     padding: 1rem;
     overflow-y: auto;
     min-height: 0;
-  }
-
-  /* Custom scrollbar */
-  .tasks-content::-webkit-scrollbar,
-  .sidebar-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .tasks-content::-webkit-scrollbar-track,
-  .sidebar-content::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-
-  .tasks-content::-webkit-scrollbar-thumb,
-  .sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 3px;
-  }
-
-  .tasks-content::-webkit-scrollbar-thumb:hover,
-  .sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
   }
 
   /* Task Items */
@@ -447,13 +391,6 @@
     margin-bottom: 0.25rem;
   }
 
-  .task-description {
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-    margin-bottom: 0.5rem;
-    line-height: 1.4;
-  }
-
   .task-meta {
     display: flex;
     gap: 0.75rem;
@@ -461,36 +398,17 @@
     flex-wrap: wrap;
   }
 
-  .task-priority {
+  .task-category {
     padding: 0.125rem 0.5rem;
+    background: var(--pd-surface);
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .task-priority.priority-low {
-    background: var(--pd-priority-low);
-    color: white;
-    opacity: 0.8;
-  }
-
-  .task-priority.priority-medium {
-    background: var(--pd-priority-medium);
-    color: white;
-  }
-
-  .task-priority.priority-high {
-    background: var(--pd-priority-high);
-    color: white;
-  }
-
-  .task-due {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
     color: var(--pd-text-dim);
+  }
+
+  .task-completed-date {
+    font-size: 0.75rem;
+    color: var(--pd-success);
   }
 
   .task-actions {
@@ -505,25 +423,15 @@
     opacity: 1;
   }
 
-  .btn-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    border: 1px solid var(--pd-border);
-    background: var(--pd-surface);
+  .task-action-btn {
+    background: transparent;
+    border: none;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    padding: 0.25rem;
   }
 
-  .btn-icon:hover {
-    background: var(--pd-accent-glow);
-    border-color: var(--pd-accent);
-  }
-
-  /* Sidebar Sections - EXACT SAME AS TCH */
+  /* Sidebar */
   .sidebar-column {
     display: flex;
     flex-direction: column;
@@ -537,71 +445,37 @@
     border: 1px solid var(--pd-border);
     border-radius: 1rem;
     overflow: hidden;
-    flex-shrink: 0;
-    height: 280px; /* Fixed height for all cards - SAME AS TCH */
     display: flex;
     flex-direction: column;
-  }
-
-  .sidebar-content {
-    padding: 1rem;
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-    min-height: 0; /* Important for flexbox scrolling */
+    max-height: calc((100vh - 250px) / 3);
   }
 
-  /* Styled scrollbar for all sidebar content */
-  .sidebar-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Visual scroll indicators for all sidebar sections */
   .sidebar-content {
-    /* Subtle shadow at top/bottom when scrollable */
-    background:
-      linear-gradient(var(--pd-surface) 10%, transparent 30%),
-      linear-gradient(transparent 70%, var(--pd-surface) 90%) 0 100%;
-    background-attachment: local, local;
-    background-size: 100% 30px, 100% 30px;
-    background-repeat: no-repeat;
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    min-height: 0;
   }
 
   /* Ideas */
   .idea-item {
     padding: 0.75rem;
     background: var(--pd-surface-light);
-    border-left: 3px solid var(--pd-accent);
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     margin-bottom: 0.75rem;
+    border: 1px solid var(--pd-border);
     transition: all 0.2s ease;
   }
 
   .idea-item:hover {
     background: var(--pd-surface-hover);
-    transform: translateX(2px);
   }
 
   .idea-content {
     font-size: 0.875rem;
     color: var(--pd-text);
     margin-bottom: 0.5rem;
-    line-height: 1.4;
   }
 
   .idea-status {
@@ -615,7 +489,7 @@
 
   .idea-status.status-new { background: var(--pd-accent-glow); color: var(--pd-accent); }
   .idea-status.status-considering { background: var(--pd-warning-bg); color: var(--pd-warning); }
-  .idea-status.status-planned { background: var(--pd-success-bg); color: var(--pd-success); }
+  .idea-status.status-implemented { background: var(--pd-success-bg); color: var(--pd-success); }
   .idea-status.status-rejected { background: var(--pd-danger-bg); color: var(--pd-danger); }
 
   /* Milestones */
@@ -627,10 +501,6 @@
     border: 1px solid var(--pd-border);
     position: relative;
     transition: all 0.2s ease;
-  }
-
-  .milestone-item:last-child {
-    margin-bottom: 0;
   }
 
   .milestone-item:hover {
@@ -848,7 +718,7 @@
 
         <!-- Metadata Row -->
         <div class="project-meta">
-          <span class="meta-chip category-chip">{{ project.category|replace('_', ' ')|title }}</span>
+          <span class="meta-chip category-chip">{{ project.category|replace('_', ' ')|title if project.category else 'Uncategorized' }}</span>
           
           <span class="meta-chip status-{{ project.status }}">
             {% if project.status == 'planning' %}📝 Planning
@@ -992,36 +862,29 @@
                    {% if task.completed %}checked{% endif %}>
             
             <div class="task-content">
-              <div class="task-title">{{ task.title }}</div>
-              {% if task.description %}
-              <div class="task-description">{{ task.description }}</div>
-              {% endif %}
+              <!-- FIX: PersonalTask uses 'content' not 'title' -->
+              <div class="task-title">{{ task.content }}</div>
               
               <div class="task-meta">
-                <span class="task-priority priority-{{ task.priority }}">
-                  {{ task.priority|title }}
-                </span>
-                {% if task.due_date %}
-                <span class="task-due">
-                  📅 {{ task.due_date.strftime('%b %d') }}
-                </span>
+                {% if task.category %}
+                <span class="task-category">{{ task.category }}</span>
+                {% endif %}
+                
+                {% if task.completed_at %}
+                <span class="task-completed-date">✓ {{ task.completed_at.strftime('%b %d') }}</span>
                 {% endif %}
               </div>
             </div>
             
             <div class="task-actions">
-              <button class="btn-icon" onclick="editTask({{ task.id }})" title="Edit task">
-                ✏️
-              </button>
-              <button class="btn-icon" onclick="deleteTask({{ task.id }})" title="Delete task">
-                🗑️
-              </button>
+              <button onclick="editTask({{ task.id }})" class="task-action-btn" title="Edit">✏️</button>
+              <button onclick="deleteTask({{ task.id }})" class="task-action-btn" title="Delete">🗑️</button>
             </div>
           </div>
           {% else %}
           <div class="empty-state">
-            <div class="empty-state-icon">📋</div>
-            <div class="empty-state-text">No tasks yet</div>
+            <div class="empty-state-icon">📝</div>
+            <div class="empty-state-text">No tasks yet. Add your first task to get started!</div>
           </div>
           {% endfor %}
         </div>
@@ -1037,7 +900,7 @@
               <span>Ideas</span>
             </h2>
             <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-idea-form')">➕</button>
+              <button class="btn btn-sm" onclick="openModal('add-idea-form')">+</button>
             </div>
           </div>
           
@@ -1046,22 +909,10 @@
             <div class="idea-item">
               <div class="idea-content">{{ idea.content }}</div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span class="idea-status status-{{ idea.status }}">
-                  {{ idea.status|replace('_', ' ')|title }}
-                </span>
+                <span class="idea-status status-{{ idea.status }}">{{ idea.status }}</span>
                 <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" 
-                     class="btn-icon" 
-                     title="Edit idea"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteIdea({{ idea.id }})" 
-                          title="Delete idea"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
+                  <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit">✏️</a>
+                  <button onclick="deleteIdea({{ idea.id }})" class="btn-icon" title="Delete">🗑️</button>
                 </div>
               </div>
             </div>
@@ -1082,7 +933,7 @@
               <span>Notes</span>
             </h2>
             <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-note-form')">➕</button>
+              <button class="btn btn-sm" onclick="openModal('add-note-form')">+</button>
             </div>
           </div>
           
@@ -1091,22 +942,12 @@
             <div class="note-item">
               <div class="note-content">{{ note.content }}</div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <span style="font-size: 0.75rem; color: var(--pd-text-muted);">
-                  {{ note.created_at.strftime('%b %d') }}
+                <span style="font-size: 0.7rem; color: var(--pd-text-muted);">
+                  {{ note.category }} · {{ note.created_at.strftime('%b %d') }}
                 </span>
                 <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" 
-                     class="btn-icon" 
-                     title="Edit note"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteNote({{ note.id }})" 
-                          title="Delete note"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
+                  <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" class="btn-icon" title="Edit">✏️</a>
+                  <button onclick="deleteNote({{ note.id }})" class="btn-icon" title="Delete">🗑️</button>
                 </div>
               </div>
             </div>
@@ -1127,7 +968,7 @@
               <span>Milestones</span>
             </h2>
             <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-milestone-form')">➕</button>
+              <button class="btn btn-sm" onclick="openModal('add-milestone-form')">+</button>
             </div>
           </div>
           
@@ -1153,13 +994,12 @@
                   <a href="{{ url_for('persprojects.edit_milestone', milestone_id=milestone.id) }}" 
                      class="btn-icon" 
                      title="Edit milestone"
-                     style="text-decoration: none; font-size: 0.875rem;">
+                     style="text-decoration: none;">
                     ✏️
                   </a>
                   <button class="btn-icon" 
                           onclick="deleteMilestone({{ milestone.id }})" 
-                          title="Delete milestone"
-                          style="font-size: 0.875rem;">
+                          title="Delete milestone">
                     🗑️
                   </button>
                 </div>
@@ -1179,7 +1019,7 @@
 </div>
 
 <!-- Modal Forms -->
-<!-- Add Task Modal -->
+<!-- Add Task Modal - FIXED -->
 <div id="add-task-form" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
@@ -1188,24 +1028,20 @@
     </div>
     <form method="POST" action="{{ url_for('persprojects.add_task', project_id=project.id) }}">
       <div class="form-group">
-        <label class="form-label">Title</label>
-        <input type="text" name="title" class="form-input" required>
+        <label class="form-label">Task Description</label>
+        <!-- FIX: PersonalTask expects 'content' not 'title' -->
+        <input type="text" name="content" class="form-input" placeholder="What needs to be done?" required>
       </div>
       <div class="form-group">
-        <label class="form-label">Description</label>
-        <textarea name="description" class="form-textarea"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Priority</label>
-        <select name="priority" class="form-select">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select">
+          <option value="">None</option>
+          <option value="planning">Planning</option>
+          <option value="research">Research</option>
+          <option value="development">Development</option>
+          <option value="testing">Testing</option>
+          <option value="other">Other</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Due Date</label>
-        <input type="date" name="due_date" class="form-input">
       </div>
       <button type="submit" class="btn btn-primary">Add Task</button>
     </form>
@@ -1229,7 +1065,7 @@
         <select name="status" class="form-select">
           <option value="new" selected>New</option>
           <option value="considering">Considering</option>
-          <option value="planned">Planned</option>
+          <option value="implemented">Implemented</option>
           <option value="rejected">Rejected</option>
         </select>
       </div>
@@ -1254,9 +1090,10 @@
         <label class="form-label">Category</label>
         <select name="category" class="form-select">
           <option value="general">General</option>
-          <option value="meeting">Meeting</option>
-          <option value="idea">Idea</option>
-          <option value="reminder">Reminder</option>
+          <option value="progress">Progress</option>
+          <option value="issue">Issue</option>
+          <option value="research">Research</option>
+          <option value="reference">Reference</option>
         </select>
       </div>
       <button type="submit" class="btn btn-primary">Add Note</button>
@@ -1344,7 +1181,7 @@ document.querySelectorAll('.task-checkbox').forEach(checkbox => {
   });
 });
 
-// Task management
+// Task management - FIXED ROUTES
 function editTask(taskId) {
   window.location.href = `/personal/task/${taskId}/edit`;
 }
@@ -1359,7 +1196,7 @@ function deleteTask(taskId) {
   }
 }
 
-// Ideas Management
+// Ideas Management - FIXED ROUTES
 function deleteIdea(ideaId) {
   if (confirm('Delete this idea?')) {
     const form = document.createElement('form');
@@ -1370,7 +1207,7 @@ function deleteIdea(ideaId) {
   }
 }
 
-// Milestones Management
+// Milestones Management - FIXED ROUTES
 function completeMilestone(milestoneId) {
   const form = document.createElement('form');
   form.method = 'POST';
@@ -1389,7 +1226,7 @@ function deleteMilestone(milestoneId) {
   }
 }
 
-// Notes Management
+// Notes Management - FIXED ROUTES
 function deleteNote(noteId) {
   if (confirm('Delete this note?')) {
     const form = document.createElement('form');
@@ -1400,4 +1237,5 @@ function deleteNote(noteId) {
   }
 }
 </script>
+
 {% endblock %}
