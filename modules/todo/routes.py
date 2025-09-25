@@ -607,3 +607,130 @@ def api_bulk_delete():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Add these Phase 3 routes to modules/todo/routes.py after Phase 2 routes
+
+# ==================== PHASE 3: ADVANCED INTEGRATION ROUTES ====================
+
+# Import the advanced integration modules at the top of routes.py
+# from .advanced_integration import (
+#     DependencyManager, RecurringTaskManager, TimeTracker,
+#     TemplateManager, MetadataManager
+# )
+
+# --- Dependency Routes ---
+
+@todo_bp.route('/api/dependencies/<task_id>')
+def api_get_dependencies(task_id):
+    """Get dependencies for a task"""
+    deps = DependencyManager.get_dependencies(task_id)
+    
+    # Enrich with task details
+    enriched = {
+        'prerequisites': [],
+        'dependents': [],
+        'can_complete': True
+    }
+    
+    # Get details for prerequisites
+    for prereq_id in deps['prerequisites']:
+        task = TaskAggregator.get_single_task(prereq_id)
+        if task:
+            enriched['prerequisites'].append({
+                'id': prereq_id,
+                'title': task.title,
+                'completed': task.completed
+            })
+            if not task.completed and prereq_id in deps['blocked_by']:
+                enriched['can_complete'] = False
+    
+    # Get details for dependents
+    for dep_id in deps['dependents']:
+        task = TaskAggregator.get_single_task(dep_id)
+        if task:
+            enriched['dependents'].append({
+                'id': dep_id,
+                'title': task.title,
+                'completed': task.completed
+            })
+    
+    return jsonify(enriched)
+
+
+@todo_bp.route('/api/dependencies/add', methods=['POST'])
+def api_add_dependency():
+    """Add a dependency between tasks"""
+    data = request.get_json()
+    dependent_id = data.get('dependent_id')
+    prerequisite_id = data.get('prerequisite_id')
+    dep_type = data.get('type', 'blocks')
+    
+    if not dependent_id or not prerequisite_id:
+        return jsonify({'success': False, 'message': 'Both task IDs required'}), 400
+    
+    if dependent_id == prerequisite_id:
+        return jsonify({'success': False, 'message': 'Task cannot depend on itself'}), 400
+    
+    success = DependencyManager.add_dependency(dependent_id, prerequisite_id, dep_type)
+    
+    if success:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Dependency already exists or error occurred'}), 400
+
+
+@todo_bp.route('/api/dependencies/remove', methods=['POST'])
+def api_remove_dependency():
+    """Remove a dependency between tasks"""
+    data = request.get_json()
+    dependent_id = data.get('dependent_id')
+    prerequisite_id = data.get('prerequisite_id')
+    
+    if not dependent_id or not prerequisite_id:
+        return jsonify({'success': False, 'message': 'Both task IDs required'}), 400
+    
+    success = DependencyManager.remove_dependency(dependent_id, prerequisite_id)
+    
+    return jsonify({'success': success})
+
+
+# --- Time Tracking Routes ---
+
+@todo_bp.route('/api/time/start', methods=['POST'])
+def api_start_timer():
+    """Start time tracking for a task"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    task_title = data.get('task_title', 'Task')
+    
+    if not task_id:
+        return jsonify({'success': False, 'message': 'Task ID required'}), 400
+    
+    log = TimeTracker.start_timer(task_id, task_title)
+    
+    return jsonify({
+        'success': True,
+        'start_time': log.start_time.isoformat(),
+        'log_id': log.id
+    })
+
+
+@todo_bp.route('/api/time/stop', methods=['POST'])
+def api_stop_timer():
+    """Stop time tracking for a task"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    
+    if not task_id:
+        return jsonify({'success': False, 'message': 'Task ID required'}), 400
+    
+    log = TimeTracker.stop_timer(task_id)
+    
+    if log:
+        return jsonify({
+            'success': True,
+            'duration_minutes': log.duration_minutes,
+            'total_minutes': TimeTracker.get_total_time(task_id)
+        })
+    else:
+        return jsonify({'success': False, 'message': 'No active timer found'}), 404
