@@ -4,3 +4,4 @@
 /static/vault_files
 *.db
 /flask_session
+*.db
