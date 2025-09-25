@@ -1,269 +1,284 @@
+<!-- templates/financial/dashboard.html - Updated with Import Link -->
 {% extends "base.html" %}
-{% block title %}Spending Tracker{% endblock %}
+{% block title %}Spending Tracker - Financial{% endblock %}
 {% block header %}Spending Tracker{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ========= Page-scoped CSS (dark theme) ======================================= */
+    /* ======= Financial Dashboard Dark Theme ======= */
     :root {
         --fin-bg: var(--bg, #0b0f1a);
         --fin-panel: var(--panel, #121a2a);
         --fin-card: var(--card, #0f1625);
-        --fin-sub: #0c1322;
         --fin-line: var(--line, #1f2a3d);
+        --fin-sub: rgba(255, 255, 255, .02);
+        
         --fin-text: var(--text, #e6eaf2);
         --fin-muted: var(--text-muted, #9fb0c8);
+        
         --fin-primary: var(--primary, #6ea8ff);
         --fin-primary-700: var(--primary-700, #3f7fe6);
         --fin-success: var(--success, #22c55e);
         --fin-warn: var(--warning, #f59e0b);
         --fin-danger: var(--danger, #ef4444);
-        --fin-info: #38bdf8;
-
+        
         --fin-radius: var(--radius, 14px);
         --fin-radius-sm: var(--radius-sm, 10px);
-        --fin-shadow: 0 6px 18px rgba(0,0,0,.35);
+        --fin-shadow: 0 4px 14px rgba(0, 0, 0, .4);
     }
-
-    .financial-dashboard { 
+    
+    .financial-dashboard {
         display: grid; 
-        gap: 16px; 
-        padding: 16px; 
+        gap: 20px; 
+        padding: 20px; 
         max-width: 1400px; 
-        margin: 0 auto; 
+        margin: 0 auto;
     }
-
-    /* ======= Page Header ======= */
+    
+    /* Page Header */
     .page-header {
         display: flex; 
-        align-items: center; 
         justify-content: space-between; 
-        gap: 12px;
+        align-items: center; 
+        gap: 15px; 
+        flex-wrap: wrap;
+        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius); 
         padding: 14px 16px;
-        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-        border: 1px solid var(--fin-line); 
-        border-radius: var(--fin-radius);
         box-shadow: var(--fin-shadow);
     }
     
-    .page-header h1 { 
+    .page-header h1 {
         margin: 0; 
         font-size: 1.15rem; 
-        letter-spacing: .2px; 
-        font-weight: 650;
+        font-weight: 650; 
         display: flex; 
         align-items: center; 
-        gap: 8px;
+        gap: 10px;
     }
     
-    .page-actions { 
+    .page-actions {
         display: flex; 
-        gap: 10px; 
+        gap: 8px; 
         align-items: center; 
-        flex-wrap: wrap; 
+        flex-wrap: wrap;
     }
     
     .btn {
         display: inline-flex; 
         align-items: center; 
-        gap: 8px;
+        gap: 6px;
         padding: 8px 12px; 
         border-radius: 12px; 
         border: 1px solid var(--fin-line);
         background: var(--fin-card); 
         color: var(--fin-text); 
         text-decoration: none;
-        transition: transform .1s ease, border-color .2s ease, background .2s ease;
-        font-size: .95rem; 
-        cursor: pointer;
+        transition: all .2s ease; 
+        cursor: pointer; 
+        font-size: .9rem;
     }
     
-    .btn:hover { 
+    .btn:hover {
         border-color: var(--fin-primary); 
-        transform: translateY(-1px); 
+        transform: translateY(-1px);
     }
     
-    .btn-primary { 
-        background: rgba(110,168,255,.18); 
-        border-color: rgba(110,168,255,.45); 
+    .btn-primary {
+        background: rgba(110, 168, 255, .18); 
+        border-color: rgba(110, 168, 255, .45);
     }
     
-    .btn-primary:hover { 
-        background: rgba(110,168,255,.25); 
+    .btn-primary:hover {
+        background: rgba(110, 168, 255, .25);
     }
     
-    .btn-success { 
-        background: rgba(34,197,94,.18); 
-        border-color: rgba(34,197,94,.45); 
+    .btn-import {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.1));
+        border-color: rgba(34, 197, 94, 0.4);
+        color: var(--fin-success);
     }
     
-    .btn-warn { 
-        background: rgba(245,158,11,.18); 
-        border-color: rgba(245,158,11,.45); 
+    .btn-import:hover {
+        background: rgba(34, 197, 94, 0.2);
+        border-color: var(--fin-success);
     }
     
-    .btn-sm { 
+    .btn-sm {
         padding: 6px 10px; 
-        border-radius: 10px; 
-        font-size: .85rem; 
+        font-size: .85rem;
     }
-
-    /* ======= Stats Summary Bar ======= */
+    
+    /* Stats Bar */
     .stats-bar {
         display: grid; 
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-        gap: 12px;
+        gap: 15px;
     }
     
     .stat-card {
         background: var(--fin-card); 
         border: 1px solid var(--fin-line);
         border-radius: var(--fin-radius); 
-        padding: 12px 14px;
-        box-shadow: var(--fin-shadow);
+        padding: 18px;
         display: flex; 
-        align-items: center; 
-        gap: 12px;
+        gap: 15px; 
+        align-items: center;
+        transition: all .2s ease;
+    }
+    
+    .stat-card:hover {
+        border-color: var(--fin-primary); 
+        transform: translateY(-2px);
     }
     
     .stat-icon {
-        width: 40px; 
-        height: 40px; 
-        border-radius: 10px;
+        width: 48px; 
+        height: 48px;
         display: flex; 
         align-items: center; 
         justify-content: center;
-        font-size: 20px;
+        background: var(--fin-panel); 
+        border-radius: 12px;
+        font-size: 24px;
     }
     
-    .stat-icon.primary { background: rgba(110,168,255,.18); }
-    .stat-icon.success { background: rgba(34,197,94,.18); }
-    .stat-icon.warn { background: rgba(245,158,11,.18); }
-    .stat-icon.info { background: rgba(56,189,248,.18); }
+    .stat-icon.primary {
+        background: rgba(110, 168, 255, .1); 
+        color: var(--fin-primary);
+    }
     
-    .stat-content { flex: 1; }
+    .stat-icon.success {
+        background: rgba(34, 197, 94, .1); 
+        color: var(--fin-success);
+    }
+    
+    .stat-icon.warning {
+        background: rgba(245, 158, 11, .1); 
+        color: var(--fin-warn);
+    }
+    
+    .stat-content {
+        flex: 1;
+    }
     
     .stat-label {
-        font-size: .75rem; 
         color: var(--fin-muted); 
+        font-size: .8rem; 
         text-transform: uppercase;
         letter-spacing: .5px; 
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     
     .stat-value {
-        font-size: 1.25rem; 
+        font-size: 1.4rem; 
         font-weight: 700; 
         color: var(--fin-text);
-        display: flex; 
-        align-items: baseline; 
-        gap: 6px;
+        line-height: 1;
     }
     
     .stat-change {
         font-size: .75rem; 
         color: var(--fin-muted);
-        font-weight: 400;
+        font-weight: 400; 
+        margin-left: 8px;
     }
-
-    /* ======= Search/Filter Bar ======= */
-    .search-bar {
+    
+    /* Categories section */
+    .categories-section {
         background: var(--fin-card); 
         border: 1px solid var(--fin-line);
         border-radius: var(--fin-radius); 
-        padding: 14px 16px;
-        box-shadow: var(--fin-shadow);
-    }
-    
-    .search-form {
-        display: flex; 
-        gap: 10px; 
-        align-items: center; 
-        flex-wrap: wrap;
-    }
-    
-    .search-input {
-        flex: 1; 
-        min-width: 200px;
-        padding: 8px 12px; 
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line); 
-        border-radius: 10px;
-        color: var(--fin-text); 
-        font-size: .95rem;
-    }
-    
-    .search-input:focus {
-        outline: none; 
-        border-color: var(--fin-primary);
-        box-shadow: 0 0 0 3px rgba(110,168,255,.1);
-    }
-
-    /* ======= Category Chips ======= */
-    .category-chips {
-        display: flex; 
-        gap: 8px; 
-        flex-wrap: wrap;
-        padding: 12px; 
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line); 
-        border-radius: var(--fin-radius);
-        box-shadow: var(--fin-shadow);
-    }
-    
-    .chip {
-        padding: 6px 12px; 
-        border-radius: 999px; 
-        font-size: .85rem;
-        background: var(--fin-panel); 
-        color: var(--fin-muted); 
-        cursor: pointer;
-        border: 1px solid transparent; 
-        transition: all .2s;
-        display: inline-flex; 
-        align-items: center; 
-        gap: 6px;
-    }
-    
-    .chip:hover { 
-        border-color: var(--fin-primary); 
-        color: var(--fin-text); 
-    }
-    
-    .chip.active {
-        background: rgba(110,168,255,.18); 
-        color: var(--fin-primary);
-        border-color: rgba(110,168,255,.45);
-    }
-    
-    .chip .amount {
-        padding: 1px 6px; 
-        background: rgba(255,255,255,.1); 
-        border-radius: 999px;
-        font-size: .75rem; 
-        font-weight: 700;
-    }
-
-    /* ======= Transactions Grid ======= */
-    .transactions-section {
-        background: var(--fin-card); 
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius); 
-        padding: 16px;
-        box-shadow: var(--fin-shadow);
+        padding: 20px;
     }
     
     .section-header {
         display: flex; 
-        align-items: center; 
-        justify-content: space-between;
-        margin-bottom: 14px; 
-        padding-bottom: 10px; 
-        border-bottom: 1px dashed var(--fin-line);
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 20px; 
+        padding-bottom: 12px; 
+        border-bottom: 1px solid var(--fin-line);
     }
     
     .section-title {
-        font-size: 1.05rem; 
+        font-size: 1.1rem; 
+        font-weight: 700; 
+        color: var(--fin-text);
+        margin: 0; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+    }
+    
+    .categories-grid {
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .category-card {
+        background: var(--fin-panel); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius-sm); 
+        padding: 12px;
+        display: flex; 
+        flex-direction: column; 
+        align-items: center;
+        transition: all .2s ease; 
+        cursor: pointer;
+    }
+    
+    .category-card:hover {
+        background: #1f2a3d; 
+        border-color: var(--fin-primary);
+        transform: translateY(-2px);
+    }
+    
+    .category-icon {
+        font-size: 28px; 
+        margin-bottom: 6px;
+    }
+    
+    .category-name {
+        font-size: .85rem; 
+        color: var(--fin-text); 
+        margin-bottom: 4px;
+        text-align: center;
+    }
+    
+    .category-amount {
+        font-size: 1rem; 
+        font-weight: 700; 
+        color: var(--fin-primary);
+    }
+    
+    .category-count {
+        font-size: .7rem; 
+        color: var(--fin-muted);
+        margin-top: 2px;
+    }
+    
+    /* Transactions section */
+    .transactions-section {
+        background: var(--fin-card); 
+        border: 1px solid var(--fin-line);
+        border-radius: var(--fin-radius); 
+        padding: 20px;
+    }
+    
+    .section-header {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 20px; 
+        padding-bottom: 12px; 
+        border-bottom: 1px solid var(--fin-line);
+    }
+    
+    .section-title {
+        font-size: 1.1rem; 
         font-weight: 700; 
         color: var(--fin-text);
         margin: 0; 
@@ -416,7 +431,7 @@
 {% block content %}
 <div class="financial-dashboard">
 
-    <!-- ======= Page Header ======= -->
+    <!-- ======= Page Header with Import Link and Settings ======= -->
     <div class="page-header">
         <h1>
             <span>💳</span> Spending Tracker
@@ -425,11 +440,17 @@
             <a href="{{ url_for('financial.add_transaction') }}" class="btn btn-primary">
                 <span>➕</span> Add Transaction
             </a>
+            <a href="{{ url_for('financial.import_amex') }}" class="btn btn-import">
+                <span>📥</span> Import Amex CSV
+            </a>
             <a href="{{ url_for('financial.analytics') }}" class="btn">
                 <span>📊</span> Analytics
             </a>
             <a href="{{ url_for('financial.search') }}" class="btn">
                 <span>🔍</span> Search
+            </a>
+            <a href="{{ url_for('financial.settings') }}" class="btn">
+                <span>⚙️</span> Settings
             </a>
         </div>
     </div>
@@ -451,67 +472,38 @@
             <div class="stat-icon success">📊</div>
             <div class="stat-content">
                 <div class="stat-label">Daily Average</div>
-                <div class="stat-value">
-                    ${{ "%.2f"|format(daily_average) }}
-                    <span class="stat-change">per day</span>
-                </div>
+                <div class="stat-value">${{ "%.2f"|format(daily_average) }}</div>
             </div>
         </div>
 
         <div class="stat-card">
-            <div class="stat-icon warn">🧾</div>
+            <div class="stat-icon warning">🧾</div>
             <div class="stat-content">
                 <div class="stat-label">Transactions</div>
-                <div class="stat-value">
-                    {{ month_transactions|length }}
-                    <span class="stat-change">this month</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon info">💰</div>
-            <div class="stat-content">
-                <div class="stat-label">Top Category</div>
-                <div class="stat-value">
-                    {% if category_spending %}
-                        {{ category_spending[0].icon }} {{ category_spending[0].name[:12] }}
-                    {% else %}
-                        None
-                    {% endif %}
-                </div>
+                <div class="stat-value">{{ month_transactions|length }}</div>
             </div>
         </div>
     </div>
 
-    <!-- ======= Quick Search Bar ======= -->
-    <div class="search-bar">
-        <form method="GET" action="{{ url_for('financial.search') }}" class="search-form">
-            <input type="text" 
-                   name="q" 
-                   placeholder="Quick search transactions..." 
-                   class="search-input">
-            <button type="submit" class="btn btn-sm">Search</button>
-        </form>
-    </div>
-
-    <!-- ======= Category Chips (if spending this month) ======= -->
+    <!-- ======= Categories Spending ======= -->
     {% if category_spending %}
-    <div class="category-chips">
-        <span class="chip active">
-            All Categories
-        </span>
-        {% for cat in category_spending[:8] %}
-        <a href="{{ url_for('financial.search', category=cat.name) }}" class="chip">
-            <span>{{ cat.icon }} {{ cat.name }}</span>
-            <span class="amount">${{ "%.0f"|format(cat.total) }}</span>
-        </a>
-        {% endfor %}
-        {% if category_spending|length > 8 %}
-        <a href="{{ url_for('financial.analytics') }}" class="chip">
-            More...
-        </a>
-        {% endif %}
+    <div class="categories-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>📂</span> This Month by Category
+            </h2>
+        </div>
+
+        <div class="categories-grid">
+            {% for category in category_spending[:8] %}
+            <div class="category-card">
+                <div class="category-icon">{{ category.icon }}</div>
+                <div class="category-name">{{ category.name }}</div>
+                <div class="category-amount">${{ "%.2f"|format(category.total) }}</div>
+                <div class="category-count">{{ category.count }} transactions</div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 

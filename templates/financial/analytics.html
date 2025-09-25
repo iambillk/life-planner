@@ -1,23 +1,22 @@
+<!-- templates/financial/analytics.html - ENHANCED VERSION -->
 {% extends "base.html" %}
-{% block title %}Spending Analytics{% endblock %}
+{% block title %}Analytics - Financial{% endblock %}
 {% block header %}Spending Analytics{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ==================== ANALYTICS STYLES ==================== */
     :root {
-        --fin-bg: var(--bg, #0b0f1a);
-        --fin-card: var(--card, #121a2a);
-        --fin-panel: var(--panel, #1a2234);
-        --fin-line: var(--line, #1f2a3d);
-        --fin-text: var(--text, #e6eaf2);
-        --fin-muted: var(--text-muted, #9fb0c8);
-        --fin-primary: var(--primary, #6ea8ff);
-        --fin-success: #22c55e;
-        --fin-warning: #f59e0b;
-        --fin-danger: #ef4444;
-        --fin-radius: 14px;
-        --fin-radius-sm: 10px;
+        --an-bg: var(--bg, #0b0f1a);
+        --an-panel: var(--panel, #121a2a);
+        --an-card: var(--card, #0f1625);
+        --an-line: var(--line, #1f2a3d);
+        --an-text: var(--text, #e6eaf2);
+        --an-muted: var(--text-muted, #9fb0c8);
+        --an-primary: var(--primary, #6ea8ff);
+        --an-success: var(--success, #22c55e);
+        --an-warning: var(--warning, #f59e0b);
+        --an-danger: var(--danger, #ef4444);
+        --an-radius: var(--radius, 14px);
     }
 
     .analytics-container {
@@ -28,46 +27,135 @@
         gap: 20px;
     }
 
-    /* ==================== DATE FILTER ==================== */
-    .filter-bar {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
-        padding: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
+    /* Header with filters */
+    .analytics-header {
+        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border: 1px solid var(--an-line);
+        border-radius: var(--an-radius);
+        padding: 20px;
     }
 
-    .filter-form {
+    .header-title {
         display: flex;
-        gap: 10px;
         align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .header-title h1 {
+        margin: 0;
+        font-size: 1.4rem;
+        color: var(--an-text);
+    }
+
+    /* Filters */
+    .filters {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .filter-label {
+        color: var(--an-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .filter-input {
         padding: 8px 12px;
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        color: var(--fin-text);
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 8px;
+        color: var(--an-text);
     }
 
-    /* ==================== STATS CARDS ==================== */
+    .filter-input:focus {
+        outline: none;
+        border-color: var(--an-primary);
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: 1px solid var(--an-line);
+        background: var(--an-card);
+        color: var(--an-text);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+        border-color: var(--an-primary);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: var(--an-primary);
+        color: white;
+        border-color: var(--an-primary);
+    }
+
+    /* Insights Section */
+    .insights-section {
+        background: linear-gradient(135deg, var(--an-card), var(--an-panel));
+        border: 1px solid var(--an-primary);
+        border-radius: var(--an-radius);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .insights-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        color: var(--an-text);
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .insights-grid {
+        display: grid;
+        gap: 10px;
+    }
+
+    .insight-item {
+        padding: 10px;
+        background: var(--an-card);
+        border: 1px solid var(--an-line);
+        border-radius: 8px;
+        color: var(--an-text);
+        font-size: 0.95rem;
+    }
+
+    /* Stats Grid */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
+        margin-bottom: 20px;
     }
 
     .stat-card {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
+        background: var(--an-card);
+        border: 1px solid var(--an-line);
+        border-radius: var(--an-radius);
         padding: 20px;
         text-align: center;
+        transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+        border-color: var(--an-primary);
+        transform: translateY(-2px);
     }
 
     .stat-icon {
@@ -76,51 +164,226 @@
     }
 
     .stat-label {
-        color: var(--fin-muted);
-        font-size: 0.875rem;
+        color: var(--an-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         margin-bottom: 8px;
     }
 
     .stat-value {
-        font-size: 1.75rem;
+        font-size: 1.8rem;
         font-weight: 700;
-        color: var(--fin-text);
+        color: var(--an-text);
     }
 
     .stat-subtext {
-        font-size: 0.875rem;
-        color: var(--fin-muted);
+        font-size: 0.85rem;
+        color: var(--an-muted);
         margin-top: 5px;
     }
 
-    /* ==================== CHARTS SECTION ==================== */
+    /* Chart Cards */
     .chart-card {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
-        padding: 20px;
-    }
-
-    .chart-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--fin-text);
+        background: var(--an-card);
+        border: 1px solid var(--an-line);
+        border-radius: var(--an-radius);
+        padding: 25px;
         margin-bottom: 20px;
     }
 
-    /* Monthly Trend Chart */
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .chart-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--an-text);
+    }
+
+    .chart-legend {
+        display: flex;
+        gap: 15px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--an-muted);
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    /* Monthly Chart */
     .monthly-chart {
+        height: 250px;
         display: flex;
         align-items: flex-end;
-        justify-content: space-around;
-        height: 250px;
+        justify-content: space-between;
         padding: 20px 10px 10px;
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        background: var(--fin-panel);
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 10px;
+        position: relative;
     }
 
     .month-bar {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        margin: 0 4px;
+        position: relative;
+    }
+
+    .month-bar-wrapper {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        height: 200px;
+        position: relative;
+    }
+
+    .month-bar-fill {
+        width: 100%;
+        background: linear-gradient(to top, var(--an-primary), #8bb4ff);
+        border-radius: 4px 4px 0 0;
+        transition: all 0.3s ease;
+        min-height: 2px;
+    }
+
+    .month-bar:hover .month-bar-fill {
+        filter: brightness(1.2);
+    }
+
+    .month-tooltip {
+        position: absolute;
+        top: -35px;
+        background: var(--an-card);
+        border: 1px solid var(--an-primary);
+        border-radius: 6px;
+        padding: 5px 8px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .month-bar:hover .month-tooltip {
+        opacity: 1;
+    }
+
+    .month-label {
+        margin-top: 10px;
+        font-size: 0.75rem;
+        color: var(--an-muted);
+    }
+
+    /* Category Breakdown */
+    .category-grid {
+        display: grid;
+        gap: 12px;
+    }
+
+    .category-item {
+        display: grid;
+        grid-template-columns: 45px 180px 1fr 100px 60px;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 15px;
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .category-item:hover {
+        border-color: var(--an-primary);
+        transform: translateX(4px);
+    }
+
+    .category-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 1.5rem;
+    }
+
+    .category-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .category-name {
+        font-weight: 600;
+        color: var(--an-text);
+    }
+
+    .category-meta {
+        font-size: 0.8rem;
+        color: var(--an-muted);
+    }
+
+    .category-bar-wrapper {
+        height: 24px;
+        background: var(--an-card);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .category-bar {
+        height: 100%;
+        border-radius: 12px;
+        transition: width 0.5s ease;
+    }
+
+    .category-amount {
+        text-align: right;
+        font-weight: 700;
+        color: var(--an-text);
+    }
+
+    .category-percent {
+        text-align: right;
+        color: var(--an-muted);
+        font-size: 0.85rem;
+    }
+
+    /* Weekday Pattern */
+    .weekday-chart {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        height: 150px;
+        padding: 20px 10px 10px;
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 10px;
+    }
+
+    .weekday-bar {
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -130,209 +393,125 @@
         position: relative;
     }
 
-    .month-bar-fill {
+    .weekday-fill {
         width: 100%;
-        background: linear-gradient(to top, var(--fin-primary), #8bb4ff);
+        background: linear-gradient(to top, var(--an-success), #4ade80);
         border-radius: 4px 4px 0 0;
         transition: all 0.3s ease;
-        position: relative;
-        min-height: 5px;
+        min-height: 2px;
     }
 
-    .month-bar:hover .month-bar-fill {
-        background: linear-gradient(to top, #5a94eb, #a5c5ff);
-    }
-
-    .month-amount {
-        position: absolute;
-        top: -25px;
-        font-size: 0.875rem;
+    .weekday-label {
+        margin-top: 8px;
+        font-size: 0.8rem;
+        color: var(--an-muted);
         font-weight: 600;
-        color: var(--fin-text);
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
 
-    .month-bar:hover .month-amount {
-        opacity: 1;
-    }
-
-    .month-label {
-        margin-top: 10px;
-        font-size: 0.75rem;
-        color: var(--fin-muted);
-        text-align: center;
-    }
-
-    /* Category Breakdown */
-    .category-breakdown {
-        display: grid;
-        gap: 12px;
-    }
-
-    .category-row {
-        display: grid;
-        grid-template-columns: 40px 150px 1fr auto auto;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        transition: all 0.3s ease;
-    }
-
-    .category-row:hover {
-        background: #1f2a3d;
-        border-color: var(--fin-primary);
-    }
-
-    .category-icon {
-        font-size: 1.5rem;
-        text-align: center;
-    }
-
-    .category-name {
-        font-weight: 600;
-        color: var(--fin-text);
-    }
-
-    .category-bar-wrapper {
-        height: 20px;
-        background: var(--fin-card);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .category-bar {
-        height: 100%;
-        border-radius: 10px;
-        transition: width 0.5s ease;
-    }
-
-    .category-amount {
-        font-weight: 700;
-        color: var(--fin-text);
-        text-align: right;
-        min-width: 80px;
-    }
-
-    .category-percent {
-        color: var(--fin-muted);
-        font-size: 0.875rem;
-        text-align: right;
-        min-width: 50px;
-    }
-
-    /* Top Merchants */
+    /* Merchants Grid */
     .merchants-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 12px;
     }
 
     .merchant-card {
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        padding: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.3s ease;
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 10px;
+        padding: 15px;
+        transition: all 0.2s ease;
     }
 
     .merchant-card:hover {
-        background: #1f2a3d;
-        border-color: var(--fin-primary);
-        transform: translateX(5px);
+        border-color: var(--an-primary);
+        transform: translateY(-2px);
+    }
+
+    .merchant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 10px;
     }
 
     .merchant-name {
         font-weight: 600;
-        color: var(--fin-text);
-        margin-bottom: 4px;
-    }
-
-    .merchant-visits {
-        font-size: 0.75rem;
-        color: var(--fin-muted);
+        color: var(--an-text);
+        font-size: 0.95rem;
     }
 
     .merchant-amount {
         font-weight: 700;
-        color: var(--fin-primary);
+        color: var(--an-primary);
+        font-size: 1.1rem;
     }
 
-    /* Card Usage */
-    .card-usage {
+    .merchant-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        font-size: 0.8rem;
+        color: var(--an-muted);
+    }
+
+    .merchant-stat {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Card Comparison */
+    .card-comparison {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
     }
 
     .card-stat {
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
+        background: var(--an-panel);
+        border: 1px solid var(--an-line);
+        border-radius: 12px;
         padding: 20px;
         text-align: center;
     }
 
+    .card-logo {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
     .card-name {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--fin-text);
+        font-weight: 600;
+        color: var(--an-text);
         margin-bottom: 10px;
     }
 
     .card-total {
         font-size: 1.5rem;
         font-weight: 700;
-        color: var(--fin-primary);
+        color: var(--an-primary);
         margin-bottom: 5px;
     }
 
     .card-count {
-        color: var(--fin-muted);
-        font-size: 0.875rem;
-    }
-
-    /* Back to Dashboard */
-    .btn-back {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        background: var(--fin-panel);
-        color: var(--fin-text);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        text-decoration: none;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .btn-back:hover {
-        background: var(--fin-card);
-        border-color: var(--fin-primary);
-        transform: translateX(-5px);
+        font-size: 0.85rem;
+        color: var(--an-muted);
     }
 
     /* Responsive */
     @media (max-width: 768px) {
-        .category-row {
-            grid-template-columns: 1fr;
-            text-align: center;
-        }
-
-        .monthly-chart {
-            height: 200px;
-        }
-
         .stats-grid {
             grid-template-columns: 1fr 1fr;
+        }
+        
+        .category-item {
+            grid-template-columns: 40px 1fr;
+        }
+        
+        .category-amount,
+        .category-percent {
+            grid-column: 2;
         }
     }
 </style>
@@ -340,22 +519,56 @@
 
 {% block content %}
 <div class="analytics-container">
-
-    <!-- DATE FILTER -->
-    <div class="filter-bar">
-        <a href="{{ url_for('financial.dashboard') }}" class="btn-back">
-            ← Back to Dashboard
-        </a>
-        <form method="GET" class="filter-form">
-            <label style="color: var(--fin-text);">From:</label>
-            <input type="date" name="start_date" value="{{ start_date }}" class="filter-input">
-            <label style="color: var(--fin-text);">To:</label>
-            <input type="date" name="end_date" value="{{ end_date }}" class="filter-input">
-            <button type="submit" class="btn-back">🔍 Update</button>
+    <!-- Header with Filters -->
+    <div class="analytics-header">
+        <div class="header-title">
+            <span style="font-size: 32px;">📊</span>
+            <h1>Spending Analytics</h1>
+        </div>
+        
+        <form method="GET" action="{{ url_for('financial.analytics') }}" class="filters">
+            <div class="filter-group">
+                <label class="filter-label">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Card</label>
+                <select name="card" class="filter-input">
+                    <option value="all" {% if card_filter == 'all' %}selected{% endif %}>All Cards</option>
+                    {% for card in cards %}
+                    <option value="{{ card }}" {% if card_filter == card %}selected{% endif %}>{{ card }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            
+            <a href="{{ url_for('financial.dashboard') }}" class="btn">← Dashboard</a>
         </form>
     </div>
 
-    <!-- STATS OVERVIEW -->
+    <!-- Insights Section -->
+    {% if insights %}
+    <div class="insights-section">
+        <div class="insights-title">
+            <span>💡</span>
+            <span>Key Insights</span>
+        </div>
+        <div class="insights-grid">
+            {% for insight in insights %}
+            <div class="insight-item">{{ insight }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats Overview -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon">💰</div>
@@ -363,42 +576,69 @@
             <div class="stat-value">${{ "%.2f"|format(stats.total_spent) }}</div>
             <div class="stat-subtext">{{ stats.days_tracked }} days</div>
         </div>
-
+        
         <div class="stat-card">
             <div class="stat-icon">🧾</div>
             <div class="stat-label">Transactions</div>
             <div class="stat-value">{{ stats.transaction_count }}</div>
             <div class="stat-subtext">${{ "%.2f"|format(stats.average_transaction) }} avg</div>
         </div>
-
+        
         <div class="stat-card">
             <div class="stat-icon">📊</div>
             <div class="stat-label">Daily Average</div>
             <div class="stat-value">${{ "%.2f"|format(stats.total_spent / stats.days_tracked if stats.days_tracked > 0 else 0) }}</div>
             <div class="stat-subtext">Per day</div>
         </div>
-
+        
+        <div class="stat-card">
+            <div class="stat-icon">📂</div>
+            <div class="stat-label">Categories</div>
+            <div class="stat-value">{{ stats.categories_used }}</div>
+            <div class="stat-subtext">{{ stats.unique_merchants }} merchants</div>
+        </div>
+        
         {% if stats.largest_transaction %}
         <div class="stat-card">
             <div class="stat-icon">🏆</div>
             <div class="stat-label">Largest Purchase</div>
             <div class="stat-value">${{ "%.2f"|format(stats.largest_transaction.amount) }}</div>
-            <div class="stat-subtext">{{ stats.largest_transaction.merchant[:20] }}</div>
+            <div class="stat-subtext">{{ stats.largest_transaction.merchant[:18] }}</div>
         </div>
         {% endif %}
     </div>
 
-    <!-- MONTHLY TREND -->
+    <!-- Monthly Trend Chart -->
     {% if monthly_data %}
     <div class="chart-card">
-        <h2 class="chart-title">📈 Monthly Spending Trend</h2>
+        <div class="chart-header">
+            <h2 class="chart-title">
+                <span>📈</span>
+                <span>Monthly Spending Trend</span>
+            </h2>
+            {% if card_filter == 'all' %}
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--an-primary);"></div>
+                    <span>Total</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
         <div class="monthly-chart">
             {% set max_amount = monthly_data|map(attribute='total')|max|default(1) %}
             {% for month in monthly_data %}
             <div class="month-bar">
-                <span class="month-amount">${{ "%.0f"|format(month.total) }}</span>
-                <div class="month-bar-fill" 
-                     style="height: {{ (month.total / max_amount * 100) if max_amount > 0 else 0 }}%;">
+                <div class="month-bar-wrapper">
+                    <div class="month-tooltip">
+                        ${{ "%.2f"|format(month.total) }}
+                        <br>
+                        <span style="color: var(--an-muted);">{{ month.count }} trans</span>
+                    </div>
+                    <div class="month-bar-fill" 
+                         style="height: {{ (month.total / max_amount * 100) if max_amount > 0 else 0 }}%;">
+                    </div>
                 </div>
                 <div class="month-label">{{ month.month }}</div>
             </div>
@@ -407,20 +647,37 @@
     </div>
     {% endif %}
 
-    <!-- CATEGORY BREAKDOWN -->
+    <!-- Category Breakdown -->
     {% if category_data %}
     <div class="chart-card">
-        <h2 class="chart-title">📂 Category Breakdown</h2>
-        <div class="category-breakdown">
-            {% for cat in category_data[:10] %}
-            <div class="category-row">
-                <div class="category-icon">{{ cat.icon }}</div>
-                <div class="category-name">{{ cat.name }}</div>
+        <h2 class="chart-title">
+            <span>📂</span>
+            <span>Category Breakdown</span>
+        </h2>
+        
+        <div class="category-grid">
+            {% for cat in category_data[:12] %}
+            <div class="category-item">
+                <div class="category-icon" style="background: {{ cat.color }}20;">
+                    {{ cat.icon }}
+                </div>
+                
+                <div class="category-info">
+                    <div class="category-name">{{ cat.name }}</div>
+                    <div class="category-meta">
+                        {{ cat.count }} transactions
+                        {% if cat.unique_merchants > 0 %}
+                        • {{ cat.unique_merchants }} merchants
+                        {% endif %}
+                    </div>
+                </div>
+                
                 <div class="category-bar-wrapper">
                     <div class="category-bar" 
                          style="width: {{ cat.percentage }}%; background: {{ cat.color }};">
                     </div>
                 </div>
+                
                 <div class="category-amount">${{ "%.2f"|format(cat.total) }}</div>
                 <div class="category-percent">{{ "%.1f"|format(cat.percentage) }}%</div>
             </div>
@@ -429,39 +686,57 @@
     </div>
     {% endif %}
 
-    <!-- TOP MERCHANTS -->
-    {% if top_merchants %}
+    <!-- Weekday Pattern -->
+    {% if weekday_data %}
     <div class="chart-card">
-        <h2 class="chart-title">🏪 Top Merchants</h2>
-        <div class="merchants-grid">
-            {% for merchant, data in top_merchants %}
-            <div class="merchant-card">
-                <div>
-                    <div class="merchant-name">{{ merchant[:30] }}</div>
-                    <div class="merchant-visits">{{ data.count }} visits</div>
+        <h2 class="chart-title">
+            <span>📅</span>
+            <span>Weekly Spending Pattern</span>
+        </h2>
+        
+        <div class="weekday-chart">
+            {% set max_weekday = weekday_data|map(attribute='total')|max|default(1) %}
+            {% for day in weekday_data %}
+            <div class="weekday-bar">
+                <div class="weekday-fill" 
+                     style="height: {{ (day.total / max_weekday * 100) if max_weekday > 0 else 0 }}%;"
+                     title="${{ "%.2f"|format(day.total) }}">
                 </div>
-                <div class="merchant-amount">${{ "%.2f"|format(data.total) }}</div>
+                <div class="weekday-label">{{ day.day }}</div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- CARD USAGE -->
-    {% if card_totals %}
+    <!-- Top Merchants -->
+    {% if top_merchants %}
     <div class="chart-card">
-        <h2 class="chart-title">💳 Card Usage</h2>
-        <div class="card-usage">
-            {% for card, data in card_totals.items() %}
-            <div class="card-stat">
-                <div class="card-name">{{ card }}</div>
-                <div class="card-total">${{ "%.2f"|format(data.total) }}</div>
-                <div class="card-count">{{ data.count }} transactions</div>
-                <div style="margin-top: 10px;">
-                    <div style="height: 4px; background: var(--fin-line); border-radius: 2px; overflow: hidden;">
-                        <div style="height: 100%; width: {{ (data.total / stats.total_spent * 100) if stats.total_spent > 0 else 0 }}%; 
-                                    background: var(--fin-primary); border-radius: 2px;">
-                        </div>
+        <h2 class="chart-title">
+            <span>🏪</span>
+            <span>Top Merchants</span>
+        </h2>
+        
+        <div class="merchants-grid">
+            {% for merchant in top_merchants[:12] %}
+            <div class="merchant-card">
+                <div class="merchant-header">
+                    <div class="merchant-name">{{ merchant.name[:30] }}</div>
+                    <div class="merchant-amount">${{ "%.2f"|format(merchant.total) }}</div>
+                </div>
+                
+                <div class="merchant-details">
+                    <div class="merchant-stat">
+                        <span>🛒</span> {{ merchant.count }} visits
+                    </div>
+                    <div class="merchant-stat">
+                        <span>📊</span> ${{ "%.2f"|format(merchant.average) }} avg
+                    </div>
+                    <div class="merchant-stat">
+                        <span>📂</span> {{ merchant.category }}
+                    </div>
+                    <div class="merchant-stat">
+                        <span>⏰</span> {{ merchant.frequency }}
                     </div>
                 </div>
             </div>
@@ -470,5 +745,25 @@
     </div>
     {% endif %}
 
+    <!-- Card Usage Comparison -->
+    {% if card_totals and card_filter == 'all' %}
+    <div class="chart-card">
+        <h2 class="chart-title">
+            <span>💳</span>
+            <span>Card Usage Comparison</span>
+        </h2>
+        
+        <div class="card-comparison">
+            {% for card_name, card_data in card_totals.items() %}
+            <div class="card-stat">
+                <div class="card-logo">💳</div>
+                <div class="card-name">{{ card_name }}</div>
+                <div class="card-total">${{ "%.2f"|format(card_data.total) }}</div>
+                <div class="card-count">{{ card_data.count }} transactions</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -4,12 +4,14 @@ Financial Tracking Routes
 All routes for spending tracking and analytics
 """
 
-from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from datetime import datetime, date, timedelta
 from sqlalchemy import func, extract
 from collections import defaultdict
 import os
 import calendar
+import csv
+import io
 
 from models.base import db
 from models.financial import Transaction, SpendingCategory, MerchantAlias
@@ -272,80 +274,161 @@ def delete_transaction(id):
     return redirect(url_for('financial.dashboard'))
 
 
+# Updated analytics route for modules/financial/routes.py
+# Replace the existing analytics route with this improved version
+
 # ==================== ANALYTICS ====================
 
 @financial_bp.route('/analytics')
 def analytics():
-    """Spending analytics and insights"""
+    """Spending analytics and insights - UPDATED VERSION"""
+    
     # Date range selector (default to last 6 months)
     end_date = date.today()
     start_date = request.args.get('start_date')
+    end_date_param = request.args.get('end_date')
+    
+    if end_date_param:
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+    
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     else:
         start_date = end_date - timedelta(days=180)
     
-    # Get all transactions in range
-    transactions = Transaction.query.filter(
+    # Card filter
+    card_filter = request.args.get('card', 'all')
+    
+    # Build query
+    query = Transaction.query.filter(
         Transaction.date >= start_date,
         Transaction.date <= end_date
-    ).order_by(Transaction.date).all()
+    )
     
-    # Monthly spending trend
+    # Apply card filter
+    if card_filter != 'all':
+        query = query.filter_by(card=card_filter)
+    
+    transactions = query.order_by(Transaction.date).all()
+    
+    # Monthly spending trend - with proper month filling
     monthly_spending = defaultdict(float)
     monthly_transactions = defaultdict(int)
+    monthly_by_card = defaultdict(lambda: defaultdict(float))
+    
     for t in transactions:
         month_key = t.date.strftime('%Y-%m')
         monthly_spending[month_key] += t.amount
         monthly_transactions[month_key] += 1
+        monthly_by_card[month_key][t.card] += t.amount
     
-    # Sort by month
+    # Fill in missing months with zeros
     monthly_data = []
-    for month_key in sorted(monthly_spending.keys()):
-        year, month = month_key.split('-')
-        month_name = calendar.month_name[int(month)][:3] + ' ' + year[2:]
+    current_date = start_date.replace(day=1)
+    while current_date <= end_date:
+        month_key = current_date.strftime('%Y-%m')
+        month_name = current_date.strftime('%b %y')
+        
         monthly_data.append({
             'month': month_name,
-            'total': monthly_spending[month_key],
-            'count': monthly_transactions[month_key],
-            'average': monthly_spending[month_key] / monthly_transactions[month_key]
+            'month_key': month_key,
+            'total': monthly_spending.get(month_key, 0),
+            'count': monthly_transactions.get(month_key, 0),
+            'average': monthly_spending.get(month_key, 0) / monthly_transactions.get(month_key, 1) if monthly_transactions.get(month_key) else 0,
+            'amex': monthly_by_card[month_key].get('Amex', 0),
+            'other': monthly_by_card[month_key].get('Other', 0)
         })
+        
+        # Move to next month
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
     
-    # Category breakdown
-    category_totals = defaultdict(lambda: {'total': 0, 'count': 0, 'icon': '💰', 'color': '#6ea8ff'})
+    # Category breakdown with better handling of uncategorized
+    category_totals = defaultdict(lambda: {
+        'total': 0, 
+        'count': 0, 
+        'icon': '📌', 
+        'color': '#94a3b8',
+        'merchants': set()  # Track unique merchants per category
+    })
+    
+    uncategorized_total = 0
+    uncategorized_count = 0
+    
     for t in transactions:
         if t.category:
             category_totals[t.category.name]['total'] += t.amount
             category_totals[t.category.name]['count'] += 1
             category_totals[t.category.name]['icon'] = t.category.icon
             category_totals[t.category.name]['color'] = t.category.color
+            category_totals[t.category.name]['merchants'].add(t.merchant)
+        else:
+            uncategorized_total += t.amount
+            uncategorized_count += 1
     
-    # Sort categories by total
+    # Add uncategorized if any
+    if uncategorized_count > 0:
+        category_totals['Uncategorized'] = {
+            'total': uncategorized_total,
+            'count': uncategorized_count,
+            'icon': '❓',
+            'color': '#6b7280',
+            'merchants': set()
+        }
+    
+    # Sort categories by total and prepare data
     category_data = []
     total_spending = sum(t.amount for t in transactions)
+    
     for cat_name, cat_info in sorted(category_totals.items(), key=lambda x: x[1]['total'], reverse=True):
         percentage = (cat_info['total'] / total_spending * 100) if total_spending > 0 else 0
         category_data.append({
             'name': cat_name,
             'total': cat_info['total'],
             'count': cat_info['count'],
-            'average': cat_info['total'] / cat_info['count'],
+            'average': cat_info['total'] / cat_info['count'] if cat_info['count'] > 0 else 0,
             'percentage': percentage,
             'icon': cat_info['icon'],
-            'color': cat_info['color']
+            'color': cat_info['color'],
+            'unique_merchants': len(cat_info['merchants'])
         })
     
-    # Top merchants
-    merchant_totals = defaultdict(lambda: {'total': 0, 'count': 0})
+    # Top merchants with better grouping
+    merchant_totals = defaultdict(lambda: {
+        'total': 0, 
+        'count': 0, 
+        'category': None,
+        'first_date': None,
+        'last_date': None
+    })
+    
     for t in transactions:
         merchant_totals[t.merchant]['total'] += t.amount
         merchant_totals[t.merchant]['count'] += 1
+        merchant_totals[t.merchant]['category'] = t.category.name if t.category else 'Uncategorized'
+        
+        # Track first and last visit
+        if not merchant_totals[t.merchant]['first_date'] or t.date < merchant_totals[t.merchant]['first_date']:
+            merchant_totals[t.merchant]['first_date'] = t.date
+        if not merchant_totals[t.merchant]['last_date'] or t.date > merchant_totals[t.merchant]['last_date']:
+            merchant_totals[t.merchant]['last_date'] = t.date
     
-    top_merchants = sorted(
-        merchant_totals.items(),
-        key=lambda x: x[1]['total'],
-        reverse=True
-    )[:15]
+    # Enhanced top merchants data
+    top_merchants = []
+    for merchant, data in sorted(merchant_totals.items(), key=lambda x: x[1]['total'], reverse=True)[:15]:
+        days_between = (data['last_date'] - data['first_date']).days + 1 if data['first_date'] and data['last_date'] else 1
+        frequency = f"Every {days_between // data['count']} days" if data['count'] > 1 else "Once"
+        
+        top_merchants.append({
+            'name': merchant,
+            'total': data['total'],
+            'count': data['count'],
+            'average': data['total'] / data['count'],
+            'category': data['category'],
+            'frequency': frequency
+        })
     
     # Card usage comparison
     card_totals = defaultdict(lambda: {'total': 0, 'count': 0})
@@ -353,15 +436,78 @@ def analytics():
         card_totals[t.card]['total'] += t.amount
         card_totals[t.card]['count'] += 1
     
-    # Statistics
+    # Weekly spending pattern (day of week analysis)
+    day_of_week_spending = defaultdict(lambda: {'total': 0, 'count': 0})
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for t in transactions:
+        day = day_names[t.date.weekday()]
+        day_of_week_spending[day]['total'] += t.amount
+        day_of_week_spending[day]['count'] += 1
+    
+    # Prepare day of week data
+    weekday_data = []
+    for day_name in day_names:
+        if day_name in day_of_week_spending:
+            weekday_data.append({
+                'day': day_name[:3],
+                'total': day_of_week_spending[day_name]['total'],
+                'count': day_of_week_spending[day_name]['count'],
+                'average': day_of_week_spending[day_name]['total'] / day_of_week_spending[day_name]['count']
+            })
+        else:
+            weekday_data.append({'day': day_name[:3], 'total': 0, 'count': 0, 'average': 0})
+    
+    # Enhanced statistics with insights
     stats = {
         'total_spent': total_spending,
         'transaction_count': len(transactions),
         'average_transaction': total_spending / len(transactions) if transactions else 0,
         'largest_transaction': max(transactions, key=lambda t: t.amount) if transactions else None,
+        'smallest_transaction': min(transactions, key=lambda t: t.amount) if transactions else None,
         'most_frequent_category': max(category_totals.items(), key=lambda x: x[1]['count'])[0] if category_totals else None,
-        'days_tracked': (end_date - start_date).days + 1
+        'most_expensive_category': max(category_totals.items(), key=lambda x: x[1]['total'])[0] if category_totals else None,
+        'days_tracked': (end_date - start_date).days + 1,
+        'categories_used': len(category_totals),
+        'unique_merchants': len(merchant_totals)
     }
+    
+    # Spending trends and insights
+    insights = []
+    
+    # Monthly trend insight
+    if len(monthly_data) >= 2:
+        recent_month = monthly_data[-1]['total']
+        previous_month = monthly_data[-2]['total']
+        if previous_month > 0:
+            change = ((recent_month - previous_month) / previous_month) * 100
+            if change > 20:
+                insights.append(f"📈 Spending increased {change:.0f}% from last month")
+            elif change < -20:
+                insights.append(f"📉 Spending decreased {abs(change):.0f}% from last month")
+    
+    # Category insights
+    if category_data:
+        top_category = category_data[0]
+        if top_category['percentage'] > 30:
+            insights.append(f"💸 {top_category['name']} accounts for {top_category['percentage']:.0f}% of spending")
+    
+    # Merchant loyalty insight
+    if top_merchants:
+        frequent_merchants = [m for m in top_merchants if m['count'] >= 5]
+        if frequent_merchants:
+            insights.append(f"🏪 You're a regular at {frequent_merchants[0]['name']} ({frequent_merchants[0]['count']} visits)")
+    
+    # Day of week insight
+    busiest_day = max(weekday_data, key=lambda x: x['total'])
+    if busiest_day['total'] > 0:
+        insights.append(f"📅 You spend the most on {busiest_day['day']}s")
+    
+    # Card preference insight
+    if len(card_totals) > 1:
+        preferred_card = max(card_totals.items(), key=lambda x: x[1]['total'])[0]
+        percentage = (card_totals[preferred_card]['total'] / total_spending) * 100
+        insights.append(f"💳 {preferred_card} is your preferred card ({percentage:.0f}% of spending)")
     
     return render_template(
         'financial/analytics.html',
@@ -369,9 +515,13 @@ def analytics():
         category_data=category_data,
         top_merchants=top_merchants,
         card_totals=dict(card_totals),
+        weekday_data=weekday_data,
         stats=stats,
+        insights=insights[:5],  # Limit to top 5 insights
         start_date=start_date,
         end_date=end_date,
+        card_filter=card_filter,
+        cards=CARDS,
         active='financial'
     )
 
@@ -442,3 +592,376 @@ def suggest_category():
                     return jsonify({'category_id': category.id, 'category_name': category.name})
     
     return jsonify({'category_id': None})
+
+# ==================== AMEX CSV IMPORT ====================
+
+@financial_bp.route('/import', methods=['GET', 'POST'])
+def import_amex():
+    """Import transactions from American Express CSV"""
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'csv_file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        file = request.files['csv_file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        if not file.filename.lower().endswith('.csv'):
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        try:
+            # Read CSV file
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            
+            # Parse and prepare transactions
+            transactions_to_import = []
+            skipped_transactions = []
+            category_mappings = {}
+            
+            for row in csv_input:
+                # Skip payment/credit transactions
+                amount = float(row['Amount'])
+                if amount < 0:
+                    skipped_transactions.append({
+                        'date': row['Date'],
+                        'description': row['Description'],
+                        'amount': amount,
+                        'reason': 'Payment/Credit'
+                    })
+                    continue
+                
+                # Parse date (MM/DD/YYYY format)
+                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y').date()
+                
+                # Clean up merchant name
+                merchant = row['Description'].strip()
+                
+                # Check for existing transaction (duplicate detection)
+                existing = Transaction.query.filter_by(
+                    date=date_obj,
+                    amount=amount,
+                    merchant=merchant,
+                    card='Amex'
+                ).first()
+                
+                if existing:
+                    skipped_transactions.append({
+                        'date': row['Date'],
+                        'description': merchant,
+                        'amount': amount,
+                        'reason': 'Already imported'
+                    })
+                    continue
+                
+                # Map Amex category to our categories
+                amex_category = row.get('Category', '')
+                suggested_category = map_amex_category(amex_category, merchant)
+                
+                transactions_to_import.append({
+                    'date': date_obj,
+                    'date_str': row['Date'],
+                    'amount': amount,
+                    'merchant': merchant,
+                    'amex_category': amex_category,
+                    'suggested_category_id': suggested_category['id'],
+                    'suggested_category_name': suggested_category['name'],
+                    'address': row.get('Address', ''),
+                    'city_state': row.get('City/State', ''),
+                    'reference': row.get('Reference', '').strip("'")
+                })
+            
+            # Store in session for review
+            session['amex_import_data'] = {
+                'transactions': transactions_to_import,
+                'skipped': skipped_transactions,
+                'total_count': len(transactions_to_import),
+                'total_amount': sum(t['amount'] for t in transactions_to_import),
+                'skipped_count': len(skipped_transactions)
+            }
+            
+            return redirect(url_for('financial.review_import'))
+            
+        except Exception as e:
+            flash(f'Error processing CSV file: {str(e)}', 'error')
+            return redirect(url_for('financial.import_amex'))
+    
+    # GET request - show upload form
+    return render_template('financial/import_amex.html', active='financial')
+
+
+@financial_bp.route('/import/review', methods=['GET', 'POST'])
+def review_import():
+    """Review and confirm Amex transactions before importing"""
+    import_data = session.get('amex_import_data')
+    
+    if not import_data:
+        flash('No import data found. Please upload a CSV file first.', 'error')
+        return redirect(url_for('financial.import_amex'))
+    
+    if request.method == 'POST':
+        # Process confirmed import
+        imported_count = 0
+        errors = []
+        
+        for trans_data in import_data['transactions']:
+            try:
+                # Get the potentially updated category from form
+                category_id = request.form.get(f"category_{trans_data['reference']}")
+                
+                # Create transaction
+                transaction = Transaction(
+                    date=trans_data['date'],
+                    amount=trans_data['amount'],
+                    merchant=trans_data['merchant'],
+                    category_id=int(category_id) if category_id and category_id != '' else None,
+                    card='Amex',
+                    notes=f"Ref: {trans_data['reference']}"
+                )
+                
+                # Update category usage count
+                if transaction.category_id:
+                    category = SpendingCategory.query.get(transaction.category_id)
+                    if category:
+                        category.usage_count += 1
+                
+                # Check for merchant alias
+                create_merchant_alias_if_needed(trans_data['merchant'], category_id)
+                
+                db.session.add(transaction)
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"{trans_data['date_str']} - {trans_data['merchant']}: {str(e)}")
+        
+        try:
+            db.session.commit()
+            
+            # Clear session data
+            session.pop('amex_import_data', None)
+            
+            if errors:
+                flash(f'Imported {imported_count} transactions with {len(errors)} errors', 'warning')
+                for error in errors[:5]:  # Show first 5 errors
+                    flash(f'Error: {error}', 'error')
+            else:
+                flash(f'Successfully imported {imported_count} transactions!', 'success')
+            
+            return redirect(url_for('financial.dashboard'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Database error: {str(e)}', 'error')
+            return redirect(url_for('financial.review_import'))
+    
+    # GET request - show review page
+    categories = SpendingCategory.query.order_by(
+        SpendingCategory.is_custom,
+        SpendingCategory.usage_count.desc(),
+        SpendingCategory.name
+    ).all()
+    
+    return render_template(
+        'financial/review_import.html',
+        import_data=import_data,
+        categories=categories,
+        active='financial'
+    )
+
+
+@financial_bp.route('/import/cancel')
+def cancel_import():
+    """Cancel the import process"""
+    session.pop('amex_import_data', None)
+    flash('Import cancelled', 'info')
+    return redirect(url_for('financial.import_amex'))
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+def map_amex_category(amex_category, merchant):
+    """Map American Express categories to our spending categories"""
+    
+    # Import the mapping from constants
+    from .constants import AMEX_CATEGORY_MAP
+    
+    # First check merchant alias
+    merchant_lower = merchant.lower()
+    alias = MerchantAlias.query.filter(
+        db.func.lower(MerchantAlias.alias) == merchant_lower
+    ).first()
+    
+    if alias and alias.default_category_id:
+        category = SpendingCategory.query.get(alias.default_category_id)
+        if category:
+            return {'id': category.id, 'name': category.name}
+    
+    # Then check merchant patterns
+    for cat_name, patterns in MERCHANT_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in merchant_lower:
+                category = SpendingCategory.query.filter_by(name=cat_name).first()
+                if category:
+                    return {'id': category.id, 'name': category.name}
+    
+    # Finally use Amex category mapping
+    our_category_name = AMEX_CATEGORY_MAP.get(amex_category, 'Other')
+    category = SpendingCategory.query.filter_by(name=our_category_name).first()
+    
+    if category:
+        return {'id': category.id, 'name': category.name}
+    
+    # Default to 'Other'
+    other_category = SpendingCategory.query.filter_by(name='Other').first()
+    if other_category:
+        return {'id': other_category.id, 'name': 'Other'}
+    
+    return {'id': None, 'name': 'Uncategorized'}
+
+
+def create_merchant_alias_if_needed(merchant, category_id):
+    """Create a merchant alias for future auto-categorization"""
+    if not category_id:
+        return
+    
+    merchant_clean = merchant.strip()
+    
+    # Check if alias already exists
+    existing = MerchantAlias.query.filter_by(alias=merchant_clean).first()
+    if not existing:
+        # Create new alias
+        alias = MerchantAlias(
+            alias=merchant_clean,
+            canonical_name=merchant_clean,
+            default_category_id=int(category_id)
+        )
+        db.session.add(alias)
+# Add this route to modules/financial/routes.py
+
+# ==================== SETTINGS & CATEGORY MANAGEMENT ====================
+
+@financial_bp.route('/settings', methods=['GET', 'POST'])
+def settings():
+    """Financial settings and category management"""
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'add_category':
+            # Add new category
+            name = request.form.get('name', '').strip()
+            icon = request.form.get('icon', '💰')
+            color = request.form.get('color', '#6ea8ff')
+            
+            if name:
+                # Check if already exists
+                existing = SpendingCategory.query.filter_by(name=name).first()
+                if existing:
+                    flash(f'Category "{name}" already exists', 'error')
+                else:
+                    new_category = SpendingCategory(
+                        name=name,
+                        icon=icon,
+                        color=color,
+                        is_custom=True
+                    )
+                    db.session.add(new_category)
+                    db.session.commit()
+                    flash(f'Category "{name}" added successfully!', 'success')
+            else:
+                flash('Category name is required', 'error')
+                
+        elif action == 'update_category':
+            # Update existing category
+            category_id = request.form.get('category_id')
+            if category_id:
+                category = SpendingCategory.query.get(int(category_id))
+                if category:
+                    category.icon = request.form.get(f'icon_{category_id}', category.icon)
+                    category.color = request.form.get(f'color_{category_id}', category.color)
+                    db.session.commit()
+                    flash(f'Category "{category.name}" updated!', 'success')
+                    
+        elif action == 'delete_category':
+            # Delete category (only if custom and no transactions)
+            category_id = request.form.get('category_id')
+            if category_id:
+                category = SpendingCategory.query.get(int(category_id))
+                if category:
+                    if category.is_custom:
+                        # Check if any transactions use this category
+                        transaction_count = Transaction.query.filter_by(category_id=category.id).count()
+                        if transaction_count > 0:
+                            flash(f'Cannot delete "{category.name}" - {transaction_count} transactions use this category', 'error')
+                        else:
+                            db.session.delete(category)
+                            db.session.commit()
+                            flash(f'Category "{category.name}" deleted', 'success')
+                    else:
+                        flash('Cannot delete predefined categories', 'error')
+                        
+        elif action == 'add_merchant_alias':
+            # Add merchant alias for auto-categorization
+            merchant = request.form.get('merchant', '').strip()
+            canonical = request.form.get('canonical', '').strip() or merchant
+            category_id = request.form.get('default_category')
+            
+            if merchant and category_id:
+                # Check if alias exists
+                existing = MerchantAlias.query.filter_by(alias=merchant).first()
+                if existing:
+                    # Update existing
+                    existing.canonical_name = canonical
+                    existing.default_category_id = int(category_id)
+                    flash(f'Merchant alias "{merchant}" updated', 'success')
+                else:
+                    # Create new
+                    alias = MerchantAlias(
+                        alias=merchant,
+                        canonical_name=canonical,
+                        default_category_id=int(category_id)
+                    )
+                    db.session.add(alias)
+                    flash(f'Merchant alias "{merchant}" added', 'success')
+                db.session.commit()
+                
+        return redirect(url_for('financial.settings'))
+    
+    # GET request - show settings page
+    categories = SpendingCategory.query.order_by(
+        SpendingCategory.is_custom,
+        SpendingCategory.name
+    ).all()
+    
+    # Get category usage stats
+    category_stats = db.session.query(
+        SpendingCategory.id,
+        func.count(Transaction.id).label('transaction_count'),
+        func.sum(Transaction.amount).label('total_amount')
+    ).outerjoin(
+        Transaction
+    ).group_by(
+        SpendingCategory.id
+    ).all()
+    
+    # Convert to dict for easy lookup
+    stats_dict = {
+        stat[0]: {
+            'count': stat[1] or 0,
+            'total': stat[2] or 0
+        } for stat in category_stats
+    }
+    
+    # Get merchant aliases
+    aliases = MerchantAlias.query.order_by(MerchantAlias.alias).all()
+    
+    return render_template(
+        'financial/settings.html',
+        categories=categories,
+        category_stats=stats_dict,
+        aliases=aliases,
+        active='financial'
+    )

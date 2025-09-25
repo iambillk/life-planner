@@ -1,0 +1,449 @@
+<!-- templates/financial/import_amex.html -->
+{% extends "base.html" %}
+{% block title %}Import Amex CSV - Financial{% endblock %}
+{% block header %}Import American Express Transactions{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --imp-bg: var(--bg, #0b0f1a);
+        --imp-panel: var(--panel, #121a2a);
+        --imp-card: var(--card, #0f1625);
+        --imp-line: var(--line, #1f2a3d);
+        --imp-text: var(--text, #e6eaf2);
+        --imp-muted: var(--text-muted, #9fb0c8);
+        --imp-primary: var(--primary, #6ea8ff);
+        --imp-success: var(--success, #22c55e);
+        --imp-warning: var(--warning, #f59e0b);
+        --imp-danger: var(--danger, #ef4444);
+        --imp-radius: var(--radius, 14px);
+    }
+
+    .import-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .import-card {
+        background: var(--imp-card);
+        border: 1px solid var(--imp-line);
+        border-radius: var(--imp-radius);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+
+    .import-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--imp-line);
+    }
+
+    .import-icon {
+        font-size: 48px;
+        opacity: 0.8;
+    }
+
+    .import-title {
+        flex: 1;
+    }
+
+    .import-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: var(--imp-text);
+    }
+
+    .import-subtitle {
+        color: var(--imp-muted);
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+
+    /* Upload Form */
+    .upload-area {
+        border: 2px dashed var(--imp-line);
+        border-radius: var(--imp-radius);
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+
+    .upload-area:hover {
+        border-color: var(--imp-primary);
+        background: rgba(110, 168, 255, 0.05);
+    }
+
+    .upload-area.dragover {
+        border-color: var(--imp-primary);
+        background: rgba(110, 168, 255, 0.1);
+    }
+
+    .upload-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    .upload-text {
+        color: var(--imp-text);
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .upload-hint {
+        color: var(--imp-muted);
+        font-size: 0.9rem;
+    }
+
+    .file-input-wrapper {
+        margin: 20px 0;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-input-label {
+        display: inline-block;
+        padding: 10px 20px;
+        background: var(--imp-primary);
+        color: white;
+        border-radius: var(--imp-radius);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .file-input-label:hover {
+        background: var(--primary-700);
+        transform: translateY(-1px);
+    }
+
+    .selected-file {
+        margin-top: 15px;
+        padding: 10px;
+        background: var(--imp-panel);
+        border: 1px solid var(--imp-line);
+        border-radius: 8px;
+        display: none;
+    }
+
+    .selected-file.show {
+        display: block;
+    }
+
+    .file-name {
+        color: var(--imp-text);
+        font-weight: 600;
+    }
+
+    .file-size {
+        color: var(--imp-muted);
+        font-size: 0.9rem;
+    }
+
+    /* Instructions */
+    .instructions-card {
+        background: var(--imp-panel);
+        border: 1px solid var(--imp-line);
+        border-radius: var(--imp-radius);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .instructions-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        color: var(--imp-text);
+        font-weight: 600;
+    }
+
+    .instructions-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .instructions-list li {
+        padding: 8px 0;
+        color: var(--imp-muted);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .instructions-list li::before {
+        content: "✓";
+        color: var(--imp-success);
+        font-weight: bold;
+        margin-top: 2px;
+    }
+
+    /* Features */
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .feature-item {
+        background: var(--imp-panel);
+        border: 1px solid var(--imp-line);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .feature-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .feature-title {
+        color: var(--imp-text);
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .feature-desc {
+        color: var(--imp-muted);
+        font-size: 0.85rem;
+    }
+
+    /* Actions */
+    .form-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: var(--imp-radius);
+        border: 1px solid var(--imp-line);
+        background: var(--imp-card);
+        color: var(--imp-text);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn:hover {
+        border-color: var(--imp-primary);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: var(--imp-primary);
+        color: white;
+        border-color: var(--imp-primary);
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-700);
+    }
+
+    .btn-secondary {
+        background: transparent;
+        border-color: var(--imp-muted);
+        color: var(--imp-muted);
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--imp-text);
+        color: var(--imp-text);
+    }
+
+    /* Sample format */
+    .sample-format {
+        background: var(--imp-panel);
+        border: 1px solid var(--imp-line);
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: var(--imp-muted);
+        overflow-x: auto;
+    }
+
+    .sample-header {
+        color: var(--imp-text);
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <!-- Main Import Card -->
+    <div class="import-card">
+        <div class="import-header">
+            <div class="import-icon">💳</div>
+            <div class="import-title">
+                <h2>Import American Express Transactions</h2>
+                <div class="import-subtitle">Upload your Amex CSV statement to quickly import transactions</div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('financial.import_amex') }}" enctype="multipart/form-data" id="importForm">
+            <!-- Upload Area -->
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drag and drop your CSV file here</div>
+                <div class="upload-hint">or click to browse</div>
+                
+                <div class="file-input-wrapper">
+                    <input type="file" 
+                           name="csv_file" 
+                           id="csvFile" 
+                           class="file-input" 
+                           accept=".csv" 
+                           required>
+                    <label for="csvFile" class="file-input-label">
+                        <span>📂</span> Choose CSV File
+                    </label>
+                </div>
+
+                <div class="selected-file" id="selectedFile">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions-card">
+                <div class="instructions-header">
+                    <span>📋</span> How to export your Amex CSV:
+                </div>
+                <ul class="instructions-list">
+                    <li>Log in to your American Express account</li>
+                    <li>Go to "Statements & Activity" → "View Activity"</li>
+                    <li>Select your date range (up to 12 months)</li>
+                    <li>Click "Download" and choose "CSV" format</li>
+                    <li>Upload the downloaded file here</li>
+                </ul>
+            </div>
+
+            <!-- Features -->
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🔄</div>
+                    <div class="feature-title">Smart Detection</div>
+                    <div class="feature-desc">Automatically skips duplicates & payments</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🏷️</div>
+                    <div class="feature-title">Auto-Categorize</div>
+                    <div class="feature-desc">Maps transactions to categories</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">👁️</div>
+                    <div class="feature-title">Review First</div>
+                    <div class="feature-desc">Check before importing</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🧠</div>
+                    <div class="feature-title">Learn Patterns</div>
+                    <div class="feature-desc">Remembers merchant categories</div>
+                </div>
+            </div>
+
+            <!-- Sample Format -->
+            <div class="sample-format">
+                <div class="sample-header">Expected CSV format:</div>
+                Date, Description, Amount, Extended Details, Appears On Your Statement As, Address, City/State, Zip Code, Country, Reference, Category
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="importBtn" disabled>
+                    <span>📥</span> Import Transactions
+                </button>
+                <a href="{{ url_for('financial.dashboard') }}" class="btn btn-secondary">
+                    <span>←</span> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('csvFile');
+    const selectedFile = document.getElementById('selectedFile');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const importBtn = document.getElementById('importBtn');
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            displayFile(file);
+        }
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('click', function(e) {
+        if (e.target !== fileInput && !e.target.closest('.file-input-label')) {
+            fileInput.click();
+        }
+    });
+
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                fileInput.files = files;
+                displayFile(file);
+            } else {
+                alert('Please upload a CSV file');
+            }
+        }
+    });
+
+    function displayFile(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        selectedFile.classList.add('show');
+        importBtn.disabled = false;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}
