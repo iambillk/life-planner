@@ -5,3 +5,5 @@
 *.db
 /flask_session
 *.db
+instance/planner.db
+/instance
