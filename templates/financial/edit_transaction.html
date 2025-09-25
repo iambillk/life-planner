@@ -1,188 +1,519 @@
+<!-- templates/financial/edit_transaction.html -->
 {% extends "base.html" %}
-{% block title %}Edit Transaction{% endblock %}
+{% block title %}Edit Transaction - Financial{% endblock %}
 {% block header %}Edit Transaction{% endblock %}
 
 {% block extra_css %}
-<!-- Reuse the same styles from add_transaction.html -->
 <style>
-    /* Copy all the styles from add_transaction.html here */
-    /* (Same exact styles - I won't repeat them to save space) */
-    :root {
-        --fin-bg: var(--bg, #0b0f1a);
-        --fin-card: var(--card, #121a2a);
-        --fin-panel: var(--panel, #1a2234);
-        --fin-line: var(--line, #1f2a3d);
-        --fin-text: var(--text, #e6eaf2);
-        --fin-muted: var(--text-muted, #9fb0c8);
-        --fin-primary: var(--primary, #6ea8ff);
-        --fin-danger: #ef4444;
-        --fin-radius: 14px;
-        --fin-radius-sm: 10px;
-    }
-
-    /* Include all the form styles from add_transaction.html */
-    .form-container {
-        max-width: 600px;
+    .edit-container {
+        max-width: 800px;
         margin: 0 auto;
         padding: 20px;
     }
 
+    .btn-back {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-back:hover {
+        background: var(--panel);
+        transform: translateX(-3px);
+    }
+
+    /* Form Card */
     .form-card {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
         padding: 30px;
     }
 
-    /* ... rest of the styles from add_transaction ... */
-
-    .btn-danger {
-        background: var(--fin-danger);
-        color: white;
+    .form-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--line);
     }
 
-    .btn-danger:hover {
-        background: #dc2626;
+    .form-icon {
+        font-size: 32px;
     }
 
-    .current-receipt {
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        padding: 10px;
+    .form-title {
+        margin: 0;
+        color: var(--text);
+        font-size: 1.4rem;
+    }
+
+    .form-subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    /* Form Groups */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-row.single {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: var(--danger);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        padding: 12px 14px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+        font-family: inherit;
+    }
+
+    /* Current Values Info */
+    .current-info {
+        background: var(--panel);
+        border-left: 4px solid var(--primary);
+        padding: 15px;
+        margin-bottom: 25px;
+        border-radius: 8px;
+    }
+
+    .current-info-title {
+        color: var(--text);
+        font-weight: 600;
         margin-bottom: 10px;
+    }
+
+    .current-values {
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .current-value {
+        display: flex;
+        gap: 8px;
+    }
+
+    .current-value-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .current-value-text {
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    /* Bulk Update Option */
+    .bulk-update-card {
+        background: rgba(110, 168, 255, 0.05);
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+
+    .bulk-update-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .bulk-update-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .bulk-update-text {
+        flex: 1;
+    }
+
+    .bulk-update-count {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .bulk-update-note {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 5px;
+    }
+
+    /* File Upload */
+    .file-input-wrapper {
+        position: relative;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-input-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .file-input-label:hover {
+        border-color: var(--primary);
+        background: var(--card);
+    }
+
+    .file-input-icon {
+        font-size: 20px;
+    }
+
+    .file-input-text {
+        color: var(--text-muted);
+    }
+
+    .current-photo {
+        margin-top: 10px;
+        padding: 10px;
+        background: var(--panel);
+        border-radius: 8px;
         display: flex;
         align-items: center;
         gap: 10px;
     }
 
-    .current-receipt img {
-        max-width: 60px;
-        max-height: 60px;
-        border-radius: 4px;
+    .current-photo-icon {
+        color: var(--success);
+    }
+
+    .current-photo-name {
+        color: var(--text);
+        font-size: 0.9rem;
+    }
+
+    /* Form Actions */
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 4px 12px rgba(110, 168, 255, 0.3);
+    }
+
+    .btn-danger {
+        background: var(--danger);
+        color: white;
+        border-color: var(--danger);
+        margin-left: auto;
+    }
+
+    .btn-danger:hover {
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .current-values {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .form-actions {
+            flex-wrap: wrap;
+        }
+        
+        .btn-danger {
+            margin-left: 0;
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-container">
-    <form method="POST" enctype="multipart/form-data" class="form-card">
-        <h1 class="form-title">✏️ Edit Transaction</h1>
+<div class="edit-container">
+    
+    <a href="{{ url_for('financial.dashboard') }}" class="btn-back">
+        ← Back to Dashboard
+    </a>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label" for="date">Date</label>
-                <input type="date" 
-                       id="date" 
-                       name="date" 
-                       class="form-input" 
-                       value="{{ transaction.date }}" 
-                       required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="amount">Amount</label>
-                <input type="number" 
-                       id="amount" 
-                       name="amount" 
-                       class="form-input" 
-                       step="0.01" 
-                       value="{{ transaction.amount }}"
-                       required>
+    <div class="form-card">
+        <!-- Form Header -->
+        <div class="form-header">
+            <div class="form-icon">✏️</div>
+            <div>
+                <h1 class="form-title">Edit Transaction</h1>
+                <div class="form-subtitle">Update transaction details</div>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label" for="merchant">Merchant</label>
-            <input type="text" 
-                   id="merchant" 
-                   name="merchant" 
-                   class="form-input" 
-                   value="{{ transaction.merchant }}"
-                   required>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label" for="category_id">Category</label>
-                <select id="category_id" name="category_id" class="form-select">
-                    <option value="">-- Select Category --</option>
-                    {% for category in categories %}
-                        <option value="{{ category.id }}" 
-                                {% if transaction.category_id == category.id %}selected{% endif %}>
-                            {{ category.icon }} {{ category.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="card">Card</label>
-                <select id="card" name="card" class="form-select" required>
-                    {% for card in cards %}
-                        <option value="{{ card }}" 
-                                {% if transaction.card == card %}selected{% endif %}>
-                            {{ card }}
-                        </option>
-                    {% endfor %}
-                </select>
+        <!-- Current Transaction Info -->
+        <div class="current-info">
+            <div class="current-info-title">Current Transaction</div>
+            <div class="current-values">
+                <div class="current-value">
+                    <span class="current-value-label">Date:</span>
+                    <span class="current-value-text">{{ transaction.date.strftime('%B %d, %Y') }}</span>
+                </div>
+                <div class="current-value">
+                    <span class="current-value-label">Merchant:</span>
+                    <span class="current-value-text">{{ transaction.merchant }}</span>
+                </div>
+                <div class="current-value">
+                    <span class="current-value-label">Amount:</span>
+                    <span class="current-value-text">${{ "%.2f"|format(transaction.amount) }}</span>
+                </div>
+                {% if transaction.category %}
+                <div class="current-value">
+                    <span class="current-value-label">Category:</span>
+                    <span class="current-value-text">
+                        {{ transaction.category.icon }} {{ transaction.category.name }}
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label" for="notes">Notes</label>
-            <textarea id="notes" 
-                      name="notes" 
-                      class="form-textarea" 
-                      rows="2">{{ transaction.notes or '' }}</textarea>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Receipt Photo</label>
-            {% if transaction.receipt_photo %}
-            <div class="current-receipt">
-                <img src="{{ url_for('static', filename='uploads/receipts/' + transaction.receipt_photo) }}" 
-                     alt="Current receipt">
-                <span>Current receipt attached</span>
+        <!-- Edit Form -->
+        <form method="POST" enctype="multipart/form-data">
+            <!-- Date and Amount -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label required">Date</label>
+                    <input type="date" 
+                           name="date" 
+                           value="{{ transaction.date.strftime('%Y-%m-%d') }}" 
+                           required 
+                           class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label required">Amount</label>
+                    <input type="number" 
+                           name="amount" 
+                           value="{{ transaction.amount }}" 
+                           step="0.01" 
+                           min="0" 
+                           required 
+                           class="form-input">
+                </div>
             </div>
-            {% endif %}
-            <div class="file-input-wrapper">
-                <input type="file" 
-                       name="receipt_photo" 
-                       class="file-input" 
-                       accept="image/*"
-                       onchange="updateFileName(this)">
-                <label class="file-input-label">
-                    <span id="file-name">📸 Upload new receipt</span>
+
+            <!-- Merchant -->
+            <div class="form-row single">
+                <div class="form-group">
+                    <label class="form-label required">Merchant</label>
+                    <input type="text" 
+                           name="merchant" 
+                           value="{{ transaction.merchant }}" 
+                           required 
+                           maxlength="100"
+                           class="form-input">
+                </div>
+            </div>
+
+            <!-- Category and Card -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category_id" class="form-select">
+                        <option value="">-- Uncategorized --</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" 
+                                    {% if transaction.category_id == category.id %}selected{% endif %}>
+                                {{ category.icon }} {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label required">Card</label>
+                    <select name="card" required class="form-select">
+                        {% for card in cards %}
+                            <option value="{{ card }}" 
+                                    {% if transaction.card == card %}selected{% endif %}>
+                                {{ card }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-row single">
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" 
+                              placeholder="Optional notes about this transaction..."
+                              class="form-textarea">{{ transaction.notes or '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Receipt Photo -->
+            <div class="form-row single">
+                <div class="form-group">
+                    <label class="form-label">Receipt Photo</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" 
+                               name="receipt_photo" 
+                               id="receipt_photo"
+                               accept="image/*"
+                               class="file-input">
+                        <label for="receipt_photo" class="file-input-label">
+                            <span class="file-input-icon">📷</span>
+                            <span class="file-input-text">Choose new receipt photo...</span>
+                        </label>
+                        {% if transaction.receipt_photo %}
+                        <div class="current-photo">
+                            <span class="current-photo-icon">✅</span>
+                            <span class="current-photo-name">Current photo: {{ transaction.receipt_photo }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Update Option -->
+            {% if same_merchant_count > 0 %}
+            <div class="bulk-update-card">
+                <label class="bulk-update-label">
+                    <input type="checkbox" 
+                           name="update_all_matching" 
+                           id="update_all_matching"
+                           class="bulk-update-checkbox">
+                    <div class="bulk-update-text">
+                        Update all <span class="bulk-update-count">{{ same_merchant_count }}</span> other 
+                        "{{ transaction.merchant }}" transactions to use the same category
+                        <div class="bulk-update-note">
+                            This will change the category for all transactions from this merchant
+                        </div>
+                    </div>
                 </label>
             </div>
-        </div>
+            {% endif %}
 
-        <div class="form-buttons">
-            <button type="submit" class="btn btn-primary">
-                💾 Save Changes
-            </button>
-            <a href="{{ url_for('financial.dashboard') }}" class="btn btn-secondary">
-                ❌ Cancel
-            </a>
-        </div>
-    </form>
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    💾 Save Changes
+                </button>
+                
+                <a href="{{ url_for('financial.dashboard') }}" class="btn">
+                    Cancel
+                </a>
+                
+                <button type="button" 
+                        onclick="if(confirm('Are you sure you want to delete this transaction?')) { document.getElementById('deleteForm').submit(); }"
+                        class="btn btn-danger">
+                    🗑️ Delete
+                </button>
+            </div>
+        </form>
 
-    <!-- Delete button separate from main form -->
-    <form method="POST" 
-          action="{{ url_for('financial.delete_transaction', id=transaction.id) }}" 
-          style="margin-top: 20px;"
-          onsubmit="return confirm('Are you sure you want to delete this transaction?');">
-        <button type="submit" class="btn btn-danger" style="width: 100%;">
-            🗑️ Delete Transaction
-        </button>
-    </form>
+        <!-- Hidden Delete Form -->
+        <form id="deleteForm" method="POST" action="{{ url_for('financial.delete_transaction', id=transaction.id) }}" style="display: none;">
+        </form>
+    </div>
+
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-function updateFileName(input) {
-    const fileName = input.files[0]?.name || '📸 Upload new receipt';
-    document.getElementById('file-name').textContent = fileName;
-}
+    // Update file input label when file is selected
+    document.getElementById('receipt_photo')?.addEventListener('change', function(e) {
+        const fileName = e.target.files[0]?.name || 'Choose new receipt photo...';
+        const label = document.querySelector('.file-input-text');
+        if (label) {
+            label.textContent = fileName;
+        }
+    });
 </script>
 {% endblock %}

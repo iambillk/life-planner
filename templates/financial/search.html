@@ -1,113 +1,116 @@
+<!-- templates/financial/search.html -->
 {% extends "base.html" %}
-{% block title %}Search Transactions{% endblock %}
+{% block title %}Search Transactions - Financial{% endblock %}
 {% block header %}Search Transactions{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ==================== SEARCH STYLES ==================== */
-    :root {
-        --fin-bg: var(--bg, #0b0f1a);
-        --fin-card: var(--card, #121a2a);
-        --fin-panel: var(--panel, #1a2234);
-        --fin-line: var(--line, #1f2a3d);
-        --fin-text: var(--text, #e6eaf2);
-        --fin-muted: var(--text-muted, #9fb0c8);
-        --fin-primary: var(--primary, #6ea8ff);
-        --fin-radius: 14px;
-        --fin-radius-sm: 10px;
-    }
-
     .search-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
     }
 
+    .btn-back {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-back:hover {
+        background: var(--panel);
+        transform: translateX(-3px);
+    }
+
     /* Search Form */
     .search-card {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
-        padding: 20px;
-        margin-bottom: 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 25px;
+        margin-bottom: 25px;
     }
 
     .search-form {
-        display: grid;
-        grid-template-columns: 1fr auto auto auto auto;
-        gap: 10px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
         align-items: end;
     }
 
     .search-group {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 8px;
+        flex: 1;
+        min-width: 150px;
     }
 
     .search-label {
-        color: var(--fin-text);
-        font-size: 0.875rem;
-        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .search-input,
     .search-select {
-        padding: 10px;
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        color: var(--fin-text);
-        font-size: 1rem;
+        padding: 10px 12px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.95rem;
     }
 
     .search-input:focus,
     .search-select:focus {
         outline: none;
-        border-color: var(--fin-primary);
-        box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.1);
+        border-color: var(--primary);
     }
 
     .search-btn {
         padding: 10px 20px;
-        background: var(--fin-primary);
+        background: var(--primary);
         color: white;
         border: none;
-        border-radius: var(--fin-radius-sm);
-        font-weight: 600;
+        border-radius: 10px;
         cursor: pointer;
+        font-weight: 600;
         transition: all 0.3s ease;
     }
 
     .search-btn:hover {
-        background: #5a94eb;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(110, 168, 255, 0.3);
     }
 
     .clear-btn {
         padding: 10px 20px;
-        background: var(--fin-panel);
-        color: var(--fin-text);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 10px;
         text-decoration: none;
-        font-weight: 600;
         transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
     }
 
     .clear-btn:hover {
-        background: var(--fin-card);
-        border-color: var(--fin-primary);
+        background: var(--panel);
     }
 
     /* Results Summary */
     .results-summary {
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
-        padding: 15px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 15px 20px;
         margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
@@ -115,152 +118,234 @@
     }
 
     .results-info {
-        color: var(--fin-text);
-        font-weight: 600;
+        color: var(--text);
+        font-size: 1.1rem;
     }
 
     .results-total {
-        font-size: 1.25rem;
-        color: var(--fin-primary);
+        color: var(--primary);
+        font-size: 1.3rem;
         font-weight: 700;
     }
 
-    /* Results List */
+    /* Results Card */
     .results-card {
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius);
-        padding: 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .results-header {
+        background: var(--panel);
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .select-all-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        cursor: pointer;
+        user-select: none;
     }
 
     .result-item {
-        display: grid;
-        grid-template-columns: 100px 1fr auto auto auto 120px;
+        display: flex;
         align-items: center;
-        gap: 15px;
-        padding: 15px;
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        margin-bottom: 10px;
-        transition: all 0.3s ease;
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(31, 42, 61, 0.5);
+        transition: background 0.2s ease;
     }
 
     .result-item:hover {
-        background: #1f2a3d;
-        border-color: var(--fin-primary);
-        transform: translateX(5px);
+        background: rgba(110, 168, 255, 0.05);
+    }
+
+    .checkbox-column {
+        width: 30px;
+        margin-right: 15px;
+    }
+
+    .transaction-checkbox,
+    .select-all-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .result-content {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 100px 1fr 150px 80px 100px 50px;
+        gap: 15px;
+        align-items: center;
     }
 
     .result-date {
-        color: var(--fin-muted);
-        font-size: 0.875rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
     }
 
     .result-merchant {
-        font-weight: 600;
-        color: var(--fin-text);
+        color: var(--text);
+        font-weight: 500;
     }
 
     .result-notes {
-        font-size: 0.875rem;
-        color: var(--fin-muted);
-        margin-top: 4px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 3px;
     }
 
     .result-category {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 10px;
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
-        border-radius: 20px;
-        font-size: 0.875rem;
-        color: var(--fin-muted);
+        color: var(--text-muted);
+        font-size: 0.9rem;
     }
 
     .result-card {
-        padding: 4px 10px;
-        background: var(--fin-panel);
-        border: 1px solid var(--fin-line);
-        border-radius: 8px;
-        font-size: 0.825rem;
-        color: var(--fin-muted);
+        color: var(--text-muted);
+        font-size: 0.9rem;
     }
 
     .result-amount {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--fin-text);
+        color: var(--text);
+        font-weight: 600;
         text-align: right;
     }
 
     .result-actions {
         display: flex;
-        gap: 5px;
+        gap: 8px;
+        justify-content: center;
     }
 
     .action-btn {
-        padding: 4px 8px;
-        background: var(--fin-card);
-        border: 1px solid var(--fin-line);
+        padding: 5px 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
         border-radius: 6px;
-        color: var(--fin-muted);
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
+        color: var(--text);
         text-decoration: none;
+        transition: all 0.2s ease;
     }
 
     .action-btn:hover {
-        color: var(--fin-primary);
-        border-color: var(--fin-primary);
+        background: var(--primary);
+        color: white;
     }
 
+    /* No Results */
     .no-results {
-        text-align: center;
         padding: 60px 20px;
-        color: var(--fin-muted);
+        text-align: center;
+        color: var(--text-muted);
     }
 
     .no-results-icon {
-        font-size: 3rem;
-        margin-bottom: 15px;
+        font-size: 48px;
+        margin-bottom: 20px;
         opacity: 0.5;
     }
 
-    /* Back button */
-    .btn-back {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        background: var(--fin-panel);
-        color: var(--fin-text);
-        border: 1px solid var(--fin-line);
-        border-radius: var(--fin-radius-sm);
-        text-decoration: none;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        margin-bottom: 20px;
+    .no-results h3 {
+        color: var(--text);
+        margin: 0 0 10px 0;
     }
 
-    .btn-back:hover {
-        background: var(--fin-card);
-        border-color: var(--fin-primary);
-        transform: translateX(-5px);
+    /* Bulk Actions Bar */
+    .bulk-actions-bar {
+        position: sticky;
+        bottom: 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px 14px 0 0;
+        padding: 15px 20px;
+        margin-top: 20px;
+        display: none;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        z-index: 100;
+    }
+
+    .bulk-actions-bar.active {
+        display: flex;
+    }
+
+    .selection-info {
+        color: var(--text);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .selection-info span {
+        color: var(--primary);
+    }
+
+    .bulk-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-left: auto;
+    }
+
+    .filter-input {
+        padding: 8px 12px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.9rem;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+        background: var(--panel);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
     /* Responsive */
     @media (max-width: 768px) {
-        .search-form {
-            grid-template-columns: 1fr;
-        }
-
-        .result-item {
+        .result-content {
             grid-template-columns: 1fr;
             gap: 8px;
+        }
+        
+        .search-form {
+            flex-direction: column;
+        }
+        
+        .search-group {
+            width: 100%;
         }
     }
 </style>
@@ -329,50 +414,181 @@
     {% endif %}
 
     <!-- RESULTS LIST -->
-    <div class="results-card">
-        {% if transactions %}
+    <form id="bulkForm" method="POST" action="{{ url_for('financial.bulk_action') }}">
+        <div class="results-card">
+            {% if transactions %}
+            <div class="results-header">
+                <label class="select-all-label">
+                    <input type="checkbox" id="selectAll" class="select-all-checkbox">
+                    <span>Select All</span>
+                </label>
+            </div>
+            
             {% for transaction in transactions %}
             <div class="result-item">
-                <div class="result-date">
-                    {{ transaction.date.strftime('%b %d, %Y') }}
+                <div class="checkbox-column">
+                    <input type="checkbox" 
+                           name="transaction_ids" 
+                           value="{{ transaction.id }}" 
+                           class="transaction-checkbox">
                 </div>
-                <div>
-                    <div class="result-merchant">{{ transaction.merchant }}</div>
-                    {% if transaction.notes %}
-                        <div class="result-notes">{{ transaction.notes }}</div>
-                    {% endif %}
-                </div>
-                <div class="result-category">
-                    {% if transaction.category %}
-                        <span>{{ transaction.category.icon }}</span>
-                        <span>{{ transaction.category.name }}</span>
-                    {% else %}
-                        <span>📌</span>
-                        <span>Uncategorized</span>
-                    {% endif %}
-                </div>
-                <div class="result-card">
-                    {{ transaction.card }}
-                </div>
-                <div class="result-amount">
-                    ${{ "%.2f"|format(transaction.amount) }}
-                </div>
-                <div class="result-actions">
-                    <a href="{{ url_for('financial.edit_transaction', id=transaction.id) }}" 
-                       class="action-btn">
-                        ✏️
-                    </a>
+                
+                <div class="result-content">
+                    <div class="result-date">
+                        {{ transaction.date.strftime('%b %d, %Y') }}
+                    </div>
+                    <div>
+                        <div class="result-merchant">{{ transaction.merchant }}</div>
+                        {% if transaction.notes %}
+                            <div class="result-notes">{{ transaction.notes }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="result-category">
+                        {% if transaction.category %}
+                            <span>{{ transaction.category.icon }}</span>
+                            <span>{{ transaction.category.name }}</span>
+                        {% else %}
+                            <span>📌</span>
+                            <span>Uncategorized</span>
+                        {% endif %}
+                    </div>
+                    <div class="result-card">
+                        {{ transaction.card }}
+                    </div>
+                    <div class="result-amount">
+                        ${{ "%.2f"|format(transaction.amount) }}
+                    </div>
+                    <div class="result-actions">
+                        <a href="{{ url_for('financial.edit_transaction', id=transaction.id) }}" 
+                           class="action-btn">
+                            ✏️
+                        </a>
+                    </div>
                 </div>
             </div>
             {% endfor %}
-        {% else %}
+            {% else %}
             <div class="no-results">
                 <div class="no-results-icon">🔍</div>
                 <h3>No transactions found</h3>
                 <p>Try adjusting your search criteria</p>
             </div>
-        {% endif %}
-    </div>
+            {% endif %}
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="bulk-actions-bar" id="bulkActionsBar">
+            <div class="selection-info">
+                <span id="selectedCount">0</span> transactions selected
+            </div>
+            
+            <div class="bulk-controls">
+                <select name="bulk_action" id="bulkActionSelect" class="filter-input">
+                    <option value="">Choose action...</option>
+                    <option value="change_category">Change Category</option>
+                    <option value="change_card">Change Card</option>
+                    <option value="delete">Delete</option>
+                </select>
+                
+                <!-- Category selector (hidden by default) -->
+                <select name="new_category_id" id="categorySelect" class="filter-input" style="display:none;">
+                    <option value="">Select category...</option>
+                    <option value="none">-- Remove Category --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}">
+                            {{ category.icon }} {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Card selector (hidden by default) -->
+                <select name="new_card" id="cardSelect" class="filter-input" style="display:none;">
+                    <option value="">Select card...</option>
+                    {% for card in cards %}
+                        <option value="{{ card }}">{{ card }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit" class="btn btn-primary" id="applyBtn" disabled>
+                    Apply
+                </button>
+                
+                <button type="button" class="btn" onclick="cancelSelection()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </form>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Track selected items
+    function updateSelectionCount() {
+        const checked = document.querySelectorAll('.transaction-checkbox:checked');
+        const count = checked.length;
+        const bar = document.getElementById('bulkActionsBar');
+        const countSpan = document.getElementById('selectedCount');
+        const applyBtn = document.getElementById('applyBtn');
+        
+        countSpan.textContent = count;
+        
+        if (count > 0) {
+            bar.classList.add('active');
+            applyBtn.disabled = false;
+        } else {
+            bar.classList.remove('active');
+            applyBtn.disabled = true;
+        }
+    }
+    
+    // Select all checkbox
+    document.getElementById('selectAll')?.addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('.transaction-checkbox');
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+        updateSelectionCount();
+    });
+    
+    // Individual checkboxes
+    document.querySelectorAll('.transaction-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectionCount);
+    });
+    
+    // Handle action selection
+    document.getElementById('bulkActionSelect')?.addEventListener('change', function(e) {
+        const categorySelect = document.getElementById('categorySelect');
+        const cardSelect = document.getElementById('cardSelect');
+        
+        // Hide all selectors first
+        categorySelect.style.display = 'none';
+        cardSelect.style.display = 'none';
+        
+        // Show relevant selector
+        if (e.target.value === 'change_category') {
+            categorySelect.style.display = 'block';
+        } else if (e.target.value === 'change_card') {
+            cardSelect.style.display = 'block';
+        }
+    });
+    
+    // Cancel selection
+    function cancelSelection() {
+        document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        updateSelectionCount();
+    }
+    
+    // Confirm before delete
+    document.getElementById('bulkForm')?.addEventListener('submit', function(e) {
+        const action = document.getElementById('bulkActionSelect').value;
+        if (action === 'delete') {
+            const count = document.querySelectorAll('.transaction-checkbox:checked').length;
+            if (!confirm(`Are you sure you want to delete ${count} transactions?`)) {
+                e.preventDefault();
+            }
+        }
+    });
+</script>
 {% endblock %}

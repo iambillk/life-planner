@@ -5,250 +5,321 @@
 
 {% block extra_css %}
 <style>
-    :root {
-        --set-bg: var(--bg, #0b0f1a);
-        --set-panel: var(--panel, #121a2a);
-        --set-card: var(--card, #0f1625);
-        --set-line: var(--line, #1f2a3d);
-        --set-text: var(--text, #e6eaf2);
-        --set-muted: var(--text-muted, #9fb0c8);
-        --set-primary: var(--primary, #6ea8ff);
-        --set-success: var(--success, #22c55e);
-        --set-warning: var(--warning, #f59e0b);
-        --set-danger: var(--danger, #ef4444);
-        --set-radius: var(--radius, 14px);
-    }
-
     .settings-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
     }
 
-    /* Header with navigation */
-    .settings-header {
-        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-        border: 1px solid var(--set-line);
-        border-radius: var(--set-radius);
-        padding: 20px;
-        margin-bottom: 25px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .btn-back {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        text-decoration: none;
+        transition: all 0.3s ease;
     }
 
-    .settings-title {
+    .btn-back:hover {
+        background: var(--panel);
+        transform: translateX(-3px);
+    }
+
+    /* Section Cards */
+    .settings-section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        margin-bottom: 25px;
+        overflow: hidden;
+    }
+
+    .section-header {
+        background: var(--panel);
+        padding: 20px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .section-title {
         display: flex;
         align-items: center;
         gap: 12px;
-    }
-
-    .settings-title h1 {
         margin: 0;
-        font-size: 1.4rem;
-        color: var(--set-text);
+        color: var(--text);
+        font-size: 1.2rem;
     }
 
-    .nav-buttons {
+    .section-actions {
         display: flex;
         gap: 10px;
     }
 
-    .btn {
-        padding: 8px 16px;
-        border-radius: 10px;
-        border: 1px solid var(--set-line);
-        background: var(--set-card);
-        color: var(--set-text);
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.9rem;
+    /* Merchant Rules Table */
+    .rules-table {
+        width: 100%;
     }
 
-    .btn:hover {
-        border-color: var(--set-primary);
-        transform: translateY(-1px);
-    }
-
-    .btn-primary {
-        background: var(--set-primary);
-        color: white;
-        border-color: var(--set-primary);
-    }
-
-    .btn-danger {
-        background: transparent;
-        color: var(--set-danger);
-        border-color: var(--set-danger);
-    }
-
-    .btn-danger:hover {
-        background: rgba(239, 68, 68, 0.1);
-    }
-
-    /* Tabs */
-    .settings-tabs {
-        display: flex;
-        gap: 5px;
-        margin-bottom: 25px;
-        background: var(--set-card);
-        border: 1px solid var(--set-line);
-        border-radius: var(--set-radius);
-        padding: 5px;
-    }
-
-    .tab-btn {
-        flex: 1;
-        padding: 12px;
-        background: transparent;
-        border: none;
-        color: var(--set-muted);
-        cursor: pointer;
-        border-radius: 10px;
-        transition: all 0.2s ease;
-        font-size: 0.95rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-    }
-
-    .tab-btn:hover {
-        background: var(--set-panel);
-    }
-
-    .tab-btn.active {
-        background: var(--set-primary);
-        color: white;
-    }
-
-    /* Tab Content */
-    .tab-content {
-        display: none;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    /* Add Category Section */
-    .add-category-card {
-        background: var(--set-card);
-        border: 1px solid var(--set-line);
-        border-radius: var(--set-radius);
-        padding: 25px;
-        margin-bottom: 25px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--set-text);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .form-row {
+    .rule-row {
         display: grid;
-        grid-template-columns: 2fr 100px 100px auto;
+        grid-template-columns: 2fr 2fr 150px 100px 120px;
         gap: 15px;
-        align-items: end;
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(31, 42, 61, 0.5);
+        align-items: center;
+        transition: background 0.2s ease;
     }
 
-    .form-group {
-        display: flex;
-        flex-direction: column;
+    .rule-row:hover {
+        background: rgba(110, 168, 255, 0.05);
     }
 
-    .form-label {
-        color: var(--set-muted);
+    .rule-row.header {
+        background: var(--panel);
+        font-weight: 600;
+        color: var(--text-muted);
         font-size: 0.85rem;
-        margin-bottom: 8px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
-    .form-input {
-        background: var(--set-panel);
-        border: 1px solid var(--set-line);
-        color: var(--set-text);
-        padding: 10px 12px;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        transition: all 0.2s ease;
+    .rule-original {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        word-break: break-all;
     }
 
-    .form-input:focus {
-        outline: none;
-        border-color: var(--set-primary);
-        box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.2);
+    .rule-canonical {
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
-    /* Icon Picker */
-    .icon-picker {
-        background: var(--set-panel);
-        border: 1px solid var(--set-line);
-        padding: 8px;
-        border-radius: 8px;
-        font-size: 1.5rem;
-        width: 60px;
+    .rule-canonical-text {
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    .rule-canonical-input {
+        flex: 1;
+        padding: 6px 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        display: none;
+    }
+
+    .rule-row.editing .rule-canonical-text {
+        display: none;
+    }
+
+    .rule-row.editing .rule-canonical-input {
+        display: block;
+    }
+
+    .rule-category {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text);
+    }
+
+    .rule-category-select {
+        width: 100%;
+        padding: 6px 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        display: none;
+    }
+
+    .rule-row.editing .rule-category-text {
+        display: none;
+    }
+
+    .rule-row.editing .rule-category-select {
+        display: block;
+    }
+
+    .rule-usage {
         text-align: center;
+        color: var(--text-muted);
+    }
+
+    .usage-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background: var(--panel);
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+
+    .usage-badge.active {
+        background: var(--success);
+        color: white;
+    }
+
+    .rule-actions {
+        display: flex;
+        gap: 5px;
+        justify-content: flex-end;
+    }
+
+    .action-btn {
+        padding: 6px 12px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
         cursor: pointer;
+        font-size: 0.85rem;
         transition: all 0.2s ease;
     }
 
-    .icon-picker:hover {
-        border-color: var(--set-primary);
+    .action-btn:hover {
+        background: var(--primary);
+        color: white;
     }
 
-    /* Color Picker */
-    .color-picker {
-        width: 60px;
-        height: 42px;
+    .action-btn.save {
+        background: var(--success);
+        color: white;
+        display: none;
+    }
+
+    .action-btn.cancel {
+        display: none;
+    }
+
+    .action-btn.delete:hover {
+        background: var(--danger);
+    }
+
+    .rule-row.editing .action-btn.edit,
+    .rule-row.editing .action-btn.delete {
+        display: none;
+    }
+
+    .rule-row.editing .action-btn.save,
+    .rule-row.editing .action-btn.cancel {
+        display: inline-block;
+    }
+
+    /* Cleanup Section */
+    .cleanup-card {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid var(--warning);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px;
+    }
+
+    .cleanup-title {
+        color: var(--text);
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .cleanup-description {
+        color: var(--text-muted);
+        margin-bottom: 15px;
+    }
+
+    .btn {
+        padding: 10px 20px;
         border-radius: 8px;
-        border: 1px solid var(--set-line);
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
         cursor: pointer;
-        padding: 4px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        text-decoration: none;
     }
 
-    /* Categories Grid */
+    .btn-warning {
+        background: var(--warning);
+        color: white;
+        border-color: var(--warning);
+    }
+
+    .btn-warning:hover {
+        filter: brightness(1.1);
+    }
+
+    /* Update Options */
+    .update-options {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        padding: 10px;
+        background: var(--panel);
+        border-radius: 6px;
+        display: none;
+    }
+
+    .rule-row.editing .update-options {
+        display: flex;
+        grid-column: 1 / -1;
+    }
+
+    .update-checkbox {
+        width: 18px;
+        height: 18px;
+    }
+
+    .update-label {
+        color: var(--text);
+        font-size: 0.9rem;
+    }
+
+    /* No rules message */
+    .no-rules {
+        padding: 40px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    /* Categories Section */
     .categories-grid {
         display: grid;
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        padding: 20px;
     }
 
-    .category-item {
-        background: var(--set-card);
-        border: 1px solid var(--set-line);
-        border-radius: var(--set-radius);
-        padding: 20px;
-        display: grid;
-        grid-template-columns: auto 1fr auto auto;
-        gap: 20px;
+    .category-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 15px;
+        display: flex;
         align-items: center;
+        gap: 12px;
         transition: all 0.2s ease;
     }
 
-    .category-item:hover {
-        border-color: var(--set-primary);
-        transform: translateX(4px);
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    .category-icon {
-        width: 50px;
-        height: 50px;
+    .category-icon-display {
+        width: 40px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--set-panel);
-        border-radius: 12px;
-        font-size: 24px;
+        border-radius: 8px;
+        font-size: 20px;
     }
 
     .category-info {
@@ -256,9 +327,8 @@
     }
 
     .category-name {
-        font-size: 1.1rem;
+        color: var(--text);
         font-weight: 600;
-        color: var(--set-text);
         margin-bottom: 5px;
     }
 
@@ -266,420 +336,218 @@
         display: flex;
         gap: 15px;
         font-size: 0.85rem;
-        color: var(--set-muted);
+        color: var(--text-muted);
     }
 
-    .category-type {
-        padding: 3px 8px;
-        background: var(--set-panel);
-        border: 1px solid var(--set-line);
-        border-radius: 6px;
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: var(--primary);
+        color: white;
+        border-radius: 12px;
         font-size: 0.75rem;
-        text-transform: uppercase;
-        color: var(--set-muted);
     }
 
-    .category-type.predefined {
-        border-color: var(--set-primary);
-        color: var(--set-primary);
-    }
-
-    .category-type.custom {
-        border-color: var(--set-success);
-        color: var(--set-success);
-    }
-
-    .category-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    /* Merchant Aliases Section */
-    .aliases-grid {
-        display: grid;
-        gap: 12px;
-    }
-
-    .alias-item {
-        background: var(--set-panel);
-        border: 1px solid var(--set-line);
-        border-radius: 10px;
-        padding: 12px 16px;
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 15px;
-        align-items: center;
-    }
-
-    .alias-merchant {
-        font-weight: 500;
-        color: var(--set-text);
-    }
-
-    .alias-arrow {
-        color: var(--set-muted);
-    }
-
-    .alias-category {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        background: var(--set-card);
-        border: 1px solid var(--set-line);
-        border-radius: 8px;
-        font-size: 0.85rem;
-    }
-
-    /* Icon Suggestions */
-    .icon-suggestions {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
-
-    .icon-option {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--set-panel);
-        border: 1px solid var(--set-line);
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1.2rem;
-        transition: all 0.2s ease;
-    }
-
-    .icon-option:hover {
-        border-color: var(--set-primary);
-        transform: scale(1.1);
-    }
-
-    /* Color Presets */
-    .color-presets {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
-
-    .color-option {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        border: 2px solid var(--set-line);
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .color-option:hover {
-        border-color: var(--set-text);
-        transform: scale(1.1);
-    }
-
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: var(--set-muted);
-    }
-
-    .empty-icon {
-        font-size: 48px;
-        opacity: 0.5;
-        margin-bottom: 10px;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-
-        .category-item {
-            grid-template-columns: auto 1fr;
-        }
-
-        .category-actions {
-            grid-column: span 2;
-        }
+    .badge.custom {
+        background: var(--success);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="settings-container">
-    <!-- Header -->
-    <div class="settings-header">
-        <div class="settings-title">
-            <span style="font-size: 32px;">⚙️</span>
-            <h1>Financial Settings</h1>
-        </div>
-        <div class="nav-buttons">
-            <a href="{{ url_for('financial.dashboard') }}" class="btn">
-                <span>←</span> Back to Dashboard
-            </a>
-        </div>
-    </div>
+    
+    <a href="{{ url_for('financial.dashboard') }}" class="btn-back">
+        ← Back to Dashboard
+    </a>
 
-    <!-- Tabs -->
-    <div class="settings-tabs">
-        <button class="tab-btn active" onclick="showTab('categories')">
-            <span>📂</span> Categories
-        </button>
-        <button class="tab-btn" onclick="showTab('merchants')">
-            <span>🏪</span> Merchant Rules
-        </button>
-    </div>
-
-    <!-- Categories Tab -->
-    <div id="categories-tab" class="tab-content active">
-        <!-- Add New Category -->
-        <div class="add-category-card">
-            <h2 class="card-title">
-                <span>➕</span> Add New Category
+    <!-- Categories Section -->
+    <div class="settings-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>📂</span>
+                <span>Spending Categories</span>
             </h2>
-            
-            <form method="POST" action="{{ url_for('financial.settings') }}">
-                <input type="hidden" name="action" value="add_category">
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Category Name</label>
-                        <input type="text" name="name" class="form-input" 
-                               placeholder="e.g., Coffee, Electronics, etc." required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Icon</label>
-                        <input type="text" name="icon" class="icon-picker" 
-                               value="💰" maxlength="2" id="iconPicker">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Color</label>
-                        <input type="color" name="color" class="color-picker" 
-                               value="#6ea8ff" id="colorPicker">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">
-                        Add Category
-                    </button>
+        </div>
+        
+        <div class="categories-grid">
+            {% for category in categories %}
+            <div class="category-card">
+                <div class="category-icon-display" style="background: {{ category.color }}20;">
+                    {{ category.icon }}
                 </div>
-            </form>
-            
-            <!-- Icon Suggestions -->
-            <div class="icon-suggestions">
-                <div class="icon-option" onclick="setIcon('💰')">💰</div>
-                <div class="icon-option" onclick="setIcon('🛒')">🛒</div>
-                <div class="icon-option" onclick="setIcon('🍽️')">🍽️</div>
-                <div class="icon-option" onclick="setIcon('☕')">☕</div>
-                <div class="icon-option" onclick="setIcon('🍔')">🍔</div>
-                <div class="icon-option" onclick="setIcon('⛽')">⛽</div>
-                <div class="icon-option" onclick="setIcon('🚗')">🚗</div>
-                <div class="icon-option" onclick="setIcon('💊')">💊</div>
-                <div class="icon-option" onclick="setIcon('🏠')">🏠</div>
-                <div class="icon-option" onclick="setIcon('📱')">📱</div>
-                <div class="icon-option" onclick="setIcon('💻')">💻</div>
-                <div class="icon-option" onclick="setIcon('👕')">👕</div>
-                <div class="icon-option" onclick="setIcon('🎮')">🎮</div>
-                <div class="icon-option" onclick="setIcon('📚')">📚</div>
-                <div class="icon-option" onclick="setIcon('🐕')">🐕</div>
-                <div class="icon-option" onclick="setIcon('🎬')">🎬</div>
-                <div class="icon-option" onclick="setIcon('✈️')">✈️</div>
-                <div class="icon-option" onclick="setIcon('🎁')">🎁</div>
-                <div class="icon-option" onclick="setIcon('💪')">💪</div>
-                <div class="icon-option" onclick="setIcon('🎨')">🎨</div>
-            </div>
-            
-            <!-- Color Presets -->
-            <div class="color-presets">
-                <div class="color-option" style="background: #22c55e;" onclick="setColor('#22c55e')"></div>
-                <div class="color-option" style="background: #f59e0b;" onclick="setColor('#f59e0b')"></div>
-                <div class="color-option" style="background: #ef4444;" onclick="setColor('#ef4444')"></div>
-                <div class="color-option" style="background: #8b5cf6;" onclick="setColor('#8b5cf6')"></div>
-                <div class="color-option" style="background: #06b6d4;" onclick="setColor('#06b6d4')"></div>
-                <div class="color-option" style="background: #ec4899;" onclick="setColor('#ec4899')"></div>
-                <div class="color-option" style="background: #14b8a6;" onclick="setColor('#14b8a6')"></div>
-                <div class="color-option" style="background: #6366f1;" onclick="setColor('#6366f1')"></div>
-                <div class="color-option" style="background: #84cc16;" onclick="setColor('#84cc16')"></div>
-                <div class="color-option" style="background: #a855f7;" onclick="setColor('#a855f7')"></div>
-            </div>
-        </div>
-
-        <!-- Existing Categories -->
-        <div class="add-category-card">
-            <h2 class="card-title">
-                <span>📂</span> Existing Categories
-            </h2>
-            
-            <div class="categories-grid">
-                {% for category in categories %}
-                <div class="category-item">
-                    <div class="category-icon" style="background: {{ category.color }}20;">
-                        {{ category.icon }}
-                    </div>
-                    
-                    <div class="category-info">
-                        <div class="category-name">{{ category.name }}</div>
-                        <div class="category-stats">
-                            <span>📊 {{ category_stats.get(category.id, {}).get('count', 0) }} transactions</span>
-                            <span>💰 ${{ "%.2f"|format(category_stats.get(category.id, {}).get('total', 0)) }}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="category-type {% if category.is_custom %}custom{% else %}predefined{% endif %}">
-                        {% if category.is_custom %}Custom{% else %}System{% endif %}
-                    </div>
-                    
-                    <div class="category-actions">
-                        {% if category.is_custom and category_stats.get(category.id, {}).get('count', 0) == 0 %}
-                        <form method="POST" action="{{ url_for('financial.settings') }}" 
-                              style="display: inline;"
-                              onsubmit="return confirm('Delete category {{ category.name }}?');">
-                            <input type="hidden" name="action" value="delete_category">
-                            <input type="hidden" name="category_id" value="{{ category.id }}">
-                            <button type="submit" class="btn btn-danger" style="padding: 6px 10px;">
-                                🗑️
-                            </button>
-                        </form>
+                <div class="category-info">
+                    <div class="category-name">
+                        {{ category.name }}
+                        {% if category.is_custom %}
+                            <span class="badge custom">Custom</span>
                         {% endif %}
                     </div>
+                    <div class="category-stats">
+                        <span>{{ category_stats[category.id].count }} transactions</span>
+                        <span>${{ "%.2f"|format(category_stats[category.id].total|default(0)) }}</span>
+                    </div>
                 </div>
-                {% endfor %}
             </div>
+            {% endfor %}
         </div>
     </div>
 
-    <!-- Merchant Rules Tab -->
-    <div id="merchants-tab" class="tab-content">
-        <!-- Add Merchant Rule -->
-        <div class="add-category-card">
-            <h2 class="card-title">
-                <span>➕</span> Add Merchant Auto-Category Rule
+    <!-- Merchant Auto-Category Rules -->
+    <div class="settings-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>🏪</span>
+                <span>Merchant Auto-Category Rules</span>
             </h2>
-            
-            <form method="POST" action="{{ url_for('financial.settings') }}">
-                <input type="hidden" name="action" value="add_merchant_alias">
+            <div class="section-actions">
+                <form method="POST" action="{{ url_for('financial.cleanup_merchant_aliases') }}" style="display: inline;">
+                    <button type="submit" class="btn btn-warning" 
+                            onclick="return confirm('This will clean up all merchant names. Continue?')">
+                        🧹 Run Cleanup
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if aliases %}
+        <div class="rules-table">
+            <!-- Header -->
+            <div class="rule-row header">
+                <div>Original Merchant</div>
+                <div>Display Name</div>
+                <div>Category</div>
+                <div>Used</div>
+                <div>Actions</div>
+            </div>
+
+            <!-- Rules -->
+            {% for alias in aliases %}
+            <form method="POST" action="{{ url_for('financial.edit_merchant_alias') }}" class="rule-form">
+                <input type="hidden" name="alias_id" value="{{ alias.id }}">
                 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Merchant Name (as appears on statement)</label>
-                        <input type="text" name="merchant" class="form-input" 
-                               placeholder="e.g., STARBUCKS #12345" required>
+                <div class="rule-row" id="rule-{{ alias.id }}">
+                    <div class="rule-original">
+                        {{ alias.alias }}
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">Display Name (optional)</label>
-                        <input type="text" name="canonical" class="form-input" 
-                               placeholder="e.g., Starbucks">
+                    <div class="rule-canonical">
+                        <span class="rule-canonical-text">{{ alias.canonical_name }}</span>
+                        <input type="text" 
+                               name="canonical_name" 
+                               value="{{ alias.canonical_name }}" 
+                               class="rule-canonical-input">
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">Auto-Category</label>
-                        <select name="default_category" class="form-input" required>
-                            <option value="">Select category...</option>
+                    <div class="rule-category">
+                        <span class="rule-category-text">
+                            {% if alias.default_category_id %}
+                                {% for cat in categories %}
+                                    {% if cat.id == alias.default_category_id %}
+                                        {{ cat.icon }} {{ cat.name }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                None
+                            {% endif %}
+                        </span>
+                        <select name="category_id" class="rule-category-select">
+                            <option value="">None</option>
                             {% for category in categories %}
-                            <option value="{{ category.id }}">
-                                {{ category.icon }} {{ category.name }}
-                            </option>
+                                <option value="{{ category.id }}" 
+                                        {% if alias.default_category_id == category.id %}selected{% endif %}>
+                                    {{ category.icon }} {{ category.name }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">
-                        Add Rule
-                    </button>
+                    <div class="rule-usage">
+                        <span class="usage-badge {% if alias.usage_count > 0 %}active{% endif %}">
+                            {{ alias.usage_count|default(0) }}
+                        </span>
+                    </div>
+                    
+                    <div class="rule-actions">
+                        <button type="button" onclick="editRule({{ alias.id }})" class="action-btn edit">
+                            ✏️ Edit
+                        </button>
+                        <button type="submit" class="action-btn save">
+                            💾 Save
+                        </button>
+                        <button type="button" onclick="cancelEdit({{ alias.id }})" class="action-btn cancel">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="deleteRule({{ alias.id }})" class="action-btn delete">
+                            🗑️
+                        </button>
+                    </div>
+                    
+                    <div class="update-options">
+                        <input type="checkbox" 
+                               name="update_transactions" 
+                               value="true" 
+                               id="update-{{ alias.id }}"
+                               class="update-checkbox">
+                        <label for="update-{{ alias.id }}" class="update-label">
+                            Also update all transactions with this merchant name
+                        </label>
+                    </div>
                 </div>
             </form>
-        </div>
 
-        <!-- Existing Merchant Rules -->
-        <div class="add-category-card">
-            <h2 class="card-title">
-                <span>🏪</span> Merchant Auto-Category Rules
-            </h2>
-            
-            {% if aliases %}
-            <div class="aliases-grid">
-                {% for alias in aliases %}
-                <div class="alias-item">
-                    <div class="alias-merchant">
-                        {{ alias.alias }}
-                        {% if alias.canonical_name != alias.alias %}
-                        <span style="color: var(--set-muted); font-size: 0.85rem;">
-                            → {{ alias.canonical_name }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    
-                    {% if alias.default_category %}
-                    <div class="alias-category">
-                        <span>{{ alias.default_category.icon }}</span>
-                        <span>{{ alias.default_category.name }}</span>
-                    </div>
-                    {% endif %}
-                    
-                    <form method="POST" action="{{ url_for('financial.settings') }}" 
-                          style="display: inline;"
-                          onsubmit="return confirm('Delete rule for {{ alias.alias }}?');">
-                        <input type="hidden" name="action" value="delete_alias">
-                        <input type="hidden" name="alias_id" value="{{ alias.id }}">
-                        <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem;">
-                            ✕
-                        </button>
-                    </form>
-                </div>
-                {% endfor %}
+            <!-- Hidden delete form -->
+            <form id="delete-{{ alias.id }}" 
+                  method="POST" 
+                  action="{{ url_for('financial.delete_merchant_alias', id=alias.id) }}" 
+                  style="display: none;">
+            </form>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-rules">
+            <p>No merchant rules configured yet.</p>
+            <p>Rules are created automatically when you categorize transactions.</p>
+        </div>
+        {% endif %}
+
+        <!-- Cleanup Info -->
+        <div class="cleanup-card">
+            <div class="cleanup-title">🧹 Cleanup Function</div>
+            <div class="cleanup-description">
+                The cleanup function will automatically fix common merchant name issues:
+                <ul style="margin: 10px 0;">
+                    <li>Remove store numbers (#197, 000XFORD)</li>
+                    <li>Remove location suffixes (ORTONVILLE, CLARKSTON)</li>
+                    <li>Consolidate variations (MEIJER STORE → MEIJER)</li>
+                    <li>Update all affected transactions</li>
+                </ul>
             </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-icon">🏪</div>
-                <h3>No merchant rules yet</h3>
-                <p>Add rules to automatically categorize transactions from specific merchants</p>
-            </div>
-            {% endif %}
         </div>
     </div>
+
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-// Tab switching
-function showTab(tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Remove active from all buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Show selected tab
-    document.getElementById(tabName + '-tab').classList.add('active');
-    
-    // Mark button as active
-    event.target.closest('.tab-btn').classList.add('active');
+function editRule(id) {
+    document.getElementById('rule-' + id).classList.add('editing');
 }
 
-// Icon picker
-function setIcon(icon) {
-    document.getElementById('iconPicker').value = icon;
+function cancelEdit(id) {
+    document.getElementById('rule-' + id).classList.remove('editing');
+    // Reset form values
+    const row = document.getElementById('rule-' + id);
+    const canonicalInput = row.querySelector('.rule-canonical-input');
+    const canonicalText = row.querySelector('.rule-canonical-text');
+    canonicalInput.value = canonicalText.textContent;
 }
 
-// Color picker
-function setColor(color) {
-    document.getElementById('colorPicker').value = color;
+function deleteRule(id) {
+    if (confirm('Delete this merchant rule?')) {
+        document.getElementById('delete-' + id).submit();
+    }
 }
-
-// Initialize with some emojis in the icon field
-document.getElementById('iconPicker').addEventListener('click', function() {
-    // You could open an emoji picker here
-    this.select();
-});
 </script>
 {% endblock %}
