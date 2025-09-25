@@ -65,8 +65,10 @@ class MerchantAlias(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     alias = db.Column(db.String(100), nullable=False)  # What appears on statement
+    normalized_name = db.Column(db.String(100), nullable=False)  # Normalized version
     canonical_name = db.Column(db.String(100), nullable=False)  # What we display
     default_category_id = db.Column(db.Integer, db.ForeignKey('spending_categories.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
         return f'<MerchantAlias {self.alias} -> {self.canonical_name}>'

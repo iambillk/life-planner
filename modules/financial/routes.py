@@ -12,6 +12,7 @@ import os
 import calendar
 import csv
 import io
+import re
 
 from models.base import db
 from models.financial import Transaction, SpendingCategory, MerchantAlias
@@ -76,7 +77,7 @@ def dashboard():
         SpendingCategory.icon,
         SpendingCategory.color,
         func.sum(Transaction.amount).label('total'),
-        func.count(Transaction.id).label('count')  # ADDED THIS LINE
+        func.count(Transaction.id).label('count')
     ).join(
         Transaction
     ).filter(
@@ -84,9 +85,9 @@ def dashboard():
         Transaction.date <= month_end
     ).group_by(
         SpendingCategory.id,
-        SpendingCategory.name,  # Added to GROUP BY
-        SpendingCategory.icon,  # Added to GROUP BY
-        SpendingCategory.color  # Added to GROUP BY
+        SpendingCategory.name,
+        SpendingCategory.icon,
+        SpendingCategory.color
     ).order_by(
         func.sum(Transaction.amount).desc()
     ).all()
@@ -113,60 +114,43 @@ def dashboard():
 def add_transaction():
     """Add a new transaction"""
     if request.method == 'POST':
-        # Get form data
-        date_str = request.form.get('date')
-        amount = float(request.form.get('amount', 0))
-        merchant = request.form.get('merchant', '').strip()
-        category_id = request.form.get('category_id')
-        card = request.form.get('card', 'Amex')
-        notes = request.form.get('notes', '').strip()
-        
-        # Handle new category
-        if category_id == 'new':
-            new_category_name = request.form.get('new_category', '').strip()
-            if new_category_name:
-                # Check if exists
-                category = SpendingCategory.query.filter_by(name=new_category_name).first()
-                if not category:
-                    category = SpendingCategory(
-                        name=new_category_name,
-                        is_custom=True,
-                        icon='💰',
-                        color='#6ea8ff'
-                    )
-                    db.session.add(category)
-                    db.session.commit()
-                category_id = category.id
-            else:
-                flash('Please enter a category name', 'error')
-                return redirect(url_for('financial.add_transaction'))
-        
         # Create transaction
         transaction = Transaction(
-            date=datetime.strptime(date_str, '%Y-%m-%d').date(),
-            amount=amount,
-            merchant=merchant,
-            category_id=int(category_id) if category_id and category_id != 'new' else None,
-            card=card,
-            notes=notes
+            date=datetime.strptime(request.form.get('date'), '%Y-%m-%d').date(),
+            amount=float(request.form.get('amount', 0)),
+            merchant=request.form.get('merchant', '').strip(),
+            category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
+            card=request.form.get('card', 'Amex'),
+            notes=request.form.get('notes', '').strip()
         )
         
         # Handle receipt photo
         if 'receipt_photo' in request.files:
             file = request.files['receipt_photo']
             if file and allowed_file(file.filename):
-                filename = save_uploaded_photo(file, 'receipts', f"{merchant}_{date_str}")
+                filename = save_uploaded_photo(file, 'receipts', f"{transaction.merchant}_{transaction.date}")
                 transaction.receipt_photo = filename
         
         # Update category usage count
         if transaction.category_id:
             category = SpendingCategory.query.get(transaction.category_id)
-            category.usage_count += 1
+            if category:
+                category.usage_count += 1
         
+        # Save transaction
         db.session.add(transaction)
         db.session.commit()
         
-        flash(f'Transaction added: ${amount:.2f} at {merchant}', 'success')
+        # Create merchant alias for future auto-categorization
+        if transaction.category_id:
+            create_merchant_alias_if_needed(transaction.merchant, transaction.category_id)
+            db.session.commit()
+        
+        flash(f'Transaction added: ${transaction.amount:.2f} at {transaction.merchant}', 'success')
+        
+        # Store last used values
+        category_id = transaction.category_id
+        card = transaction.card
         
         # Check if adding multiple
         if request.form.get('add_another'):
@@ -188,7 +172,7 @@ def add_transaction():
         .distinct()\
         .order_by(Transaction.merchant)\
         .all()
-    merchants = [m[0] for m in merchants_query if m[0]]  # Extract merchant names, filter None
+    merchants = [m[0] for m in merchants_query if m[0]]
     
     # Get last used values for convenience
     last_category = request.args.get('last_category')
@@ -286,6 +270,12 @@ def analytics():
     # Date range selector (default to last 6 months)
     end_date = date.today()
     start_date = request.args.get('start_date')
+    end_date_param = request.args.get('end_date')  # ← ADD THIS LINE
+    
+    # Handle end_date from form ← ADD THIS BLOCK
+    if end_date_param:
+        end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+    
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     else:
@@ -296,6 +286,9 @@ def analytics():
         Transaction.date >= start_date,
         Transaction.date <= end_date
     ).order_by(Transaction.date).all()
+    
+    # ← ADD THIS LINE HERE - Calculate total RIGHT AFTER getting transactions
+    total_spending = sum(t.amount for t in transactions)
     
     # Monthly spending trend
     monthly_spending = defaultdict(float)
@@ -328,7 +321,7 @@ def analytics():
     
     # Sort categories by total
     category_data = []
-    total_spending = sum(t.amount for t in transactions)
+    # total_spending = sum(t.amount for t in transactions) ← DELETE THIS LINE (we moved it up)
     for cat_name, cat_info in sorted(category_totals.items(), key=lambda x: x[1]['total'], reverse=True):
         percentage = (cat_info['total'] / total_spending * 100) if total_spending > 0 else 0
         category_data.append({
@@ -341,31 +334,35 @@ def analytics():
             'color': cat_info['color']
         })
     
-    # BUILD merchant_totals FIRST (MOVE THIS UP!)
+    # Build merchant_totals with normalization
     merchant_totals = defaultdict(lambda: {
         'total': 0, 
         'count': 0,
         'category': None,
         'first_date': None,
-        'last_date': None
+        'last_date': None,
+        'locations': set()
     })
     
     for t in transactions:
-        merchant_totals[t.merchant]['total'] += t.amount
-        merchant_totals[t.merchant]['count'] += 1
-        merchant_totals[t.merchant]['category'] = t.category.name if t.category else 'Uncategorized'
+        # Use normalized name for grouping
+        normalized = normalize_merchant_name(t.merchant)
+        
+        merchant_totals[normalized]['total'] += t.amount
+        merchant_totals[normalized]['count'] += 1
+        merchant_totals[normalized]['category'] = t.category.name if t.category else 'Uncategorized'
+        merchant_totals[normalized]['locations'].add(t.merchant)
         
         # Track first and last visit
-        if not merchant_totals[t.merchant]['first_date'] or t.date < merchant_totals[t.merchant]['first_date']:
-            merchant_totals[t.merchant]['first_date'] = t.date
-        if not merchant_totals[t.merchant]['last_date'] or t.date > merchant_totals[t.merchant]['last_date']:
-            merchant_totals[t.merchant]['last_date'] = t.date
+        if not merchant_totals[normalized]['first_date'] or t.date < merchant_totals[normalized]['first_date']:
+            merchant_totals[normalized]['first_date'] = t.date
+        if not merchant_totals[normalized]['last_date'] or t.date > merchant_totals[normalized]['last_date']:
+            merchant_totals[normalized]['last_date'] = t.date
     
-    # THEN build enhanced top merchants data
+    # Enhanced top merchants data
     top_merchants = []
-    if merchant_totals:  # Only process if there are merchants
+    if merchant_totals:
         for merchant, data in sorted(merchant_totals.items(), key=lambda x: x[1]['total'], reverse=True)[:15]:
-            # Ensure dates exist
             if data['first_date'] and data['last_date']:
                 days_between = (data['last_date'] - data['first_date']).days + 1
                 frequency = f"Every {days_between // data['count']} days" if data['count'] > 1 else "Once"
@@ -454,322 +451,35 @@ def search():
     )
 
 
-# ==================== API ENDPOINTS ====================
-
-@financial_bp.route('/api/suggest-category', methods=['POST'])
-def suggest_category():
-    """API endpoint to suggest category based on merchant"""
-    merchant = request.json.get('merchant', '').lower()
-    
-    # Check merchant aliases first
-    alias = MerchantAlias.query.filter_by(alias=merchant).first()
-    if alias and alias.default_category_id:
-        category = SpendingCategory.query.get(alias.default_category_id)
-        return jsonify({'category_id': category.id, 'category_name': category.name})
-    
-    # Check patterns
-    for cat_name, patterns in MERCHANT_PATTERNS.items():
-        for pattern in patterns:
-            if pattern in merchant:
-                category = SpendingCategory.query.filter_by(name=cat_name).first()
-                if category:
-                    return jsonify({'category_id': category.id, 'category_name': category.name})
-    
-    return jsonify({'category_id': None})
-
-# ==================== AMEX CSV IMPORT ====================
-
-@financial_bp.route('/import', methods=['GET', 'POST'])
-def import_amex():
-    """Import transactions from American Express CSV"""
-    if request.method == 'POST':
-        # Check if file was uploaded
-        if 'csv_file' not in request.files:
-            flash('No file selected', 'error')
-            return redirect(url_for('financial.import_amex'))
-        
-        file = request.files['csv_file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect(url_for('financial.import_amex'))
-        
-        if not file.filename.lower().endswith('.csv'):
-            flash('Please upload a CSV file', 'error')
-            return redirect(url_for('financial.import_amex'))
-        
-        try:
-            # Read CSV file
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-            csv_input = csv.DictReader(stream)
-            
-            # Parse and prepare transactions
-            transactions_to_import = []
-            skipped_transactions = []
-            category_mappings = {}
-            
-            for row in csv_input:
-                # Skip payment/credit transactions
-                amount = float(row['Amount'])
-                if amount < 0:
-                    skipped_transactions.append({
-                        'date': row['Date'],
-                        'description': row['Description'],
-                        'amount': amount,
-                        'reason': 'Payment/Credit'
-                    })
-                    continue
-                
-                # Parse date (MM/DD/YYYY format)
-                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y').date()
-                
-                # Clean up merchant name
-                merchant = row['Description'].strip()
-                
-                # Check for existing transaction (duplicate detection)
-                existing = Transaction.query.filter_by(
-                    date=date_obj,
-                    amount=amount,
-                    merchant=merchant,
-                    card='Amex'
-                ).first()
-                
-                if existing:
-                    skipped_transactions.append({
-                        'date': row['Date'],
-                        'description': merchant,
-                        'amount': amount,
-                        'reason': 'Already imported'
-                    })
-                    continue
-                
-                # Map Amex category to our categories
-                amex_category = row.get('Category', '')
-                suggested_category = map_amex_category(amex_category, merchant)
-                
-                transactions_to_import.append({
-                    'date': date_obj,
-                    'date_str': row['Date'],
-                    'amount': amount,
-                    'merchant': merchant,
-                    'amex_category': amex_category,
-                    'suggested_category_id': suggested_category['id'],
-                    'suggested_category_name': suggested_category['name'],
-                    'address': row.get('Address', ''),
-                    'city_state': row.get('City/State', ''),
-                    'reference': row.get('Reference', '').strip("'")
-                })
-            
-            # Store in session for review
-            session['amex_import_data'] = {
-                'transactions': transactions_to_import,
-                'skipped': skipped_transactions,
-                'total_count': len(transactions_to_import),
-                'total_amount': sum(t['amount'] for t in transactions_to_import),
-                'skipped_count': len(skipped_transactions)
-            }
-            
-            return redirect(url_for('financial.review_import'))
-            
-        except Exception as e:
-            flash(f'Error processing CSV file: {str(e)}', 'error')
-            return redirect(url_for('financial.import_amex'))
-    
-    # GET request - show upload form
-    return render_template('financial/import_amex.html', active='financial')
-
-
-@financial_bp.route('/import/review', methods=['GET', 'POST'])
-def review_import():
-    """Review and confirm Amex transactions before importing"""
-    import_data = session.get('amex_import_data')
-    
-    if not import_data:
-        flash('No import data found. Please upload a CSV file first.', 'error')
-        return redirect(url_for('financial.import_amex'))
-    
-    if request.method == 'POST':
-        # Process confirmed import
-        imported_count = 0
-        errors = []
-        
-        # FIXED: Use enumerate to match the template's loop.index0
-        for idx, trans_data in enumerate(import_data['transactions']):
-            try:
-                # FIXED: Get the category from form using index
-                category_id = request.form.get(f"category_{idx}")
-                
-                # Create transaction
-                transaction = Transaction(
-                    date=trans_data['date'],
-                    amount=trans_data['amount'],
-                    merchant=trans_data['merchant'],
-                    category_id=int(category_id) if category_id and category_id != '' else None,
-                    card='Amex',
-                    notes=f"Ref: {trans_data.get('reference', '')}"  # FIXED: Use .get() for safety
-                )
-                
-                # Update category usage count
-                if transaction.category_id:
-                    category = SpendingCategory.query.get(transaction.category_id)
-                    if category:
-                        category.usage_count += 1
-                
-                # Check for merchant alias - only if a category was selected
-                if category_id:
-                    create_merchant_alias_if_needed(trans_data['merchant'], category_id)
-                
-                db.session.add(transaction)
-                imported_count += 1
-                
-            except Exception as e:
-                errors.append(f"{trans_data['date_str']} - {trans_data['merchant']}: {str(e)}")
-        
-        try:
-            db.session.commit()
-            
-            # Clear session data
-            session.pop('amex_import_data', None)
-            
-            if errors:
-                flash(f'Imported {imported_count} transactions with {len(errors)} errors', 'warning')
-                for error in errors[:5]:  # Show first 5 errors
-                    flash(f'Error: {error}', 'error')
-            else:
-                flash(f'Successfully imported {imported_count} transactions!', 'success')
-            
-            return redirect(url_for('financial.dashboard'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Database error: {str(e)}', 'error')
-            return redirect(url_for('financial.review_import'))
-    
-    # GET request - show review page
-    categories = SpendingCategory.query.order_by(
-        SpendingCategory.is_custom,
-        SpendingCategory.usage_count.desc(),
-        SpendingCategory.name
-    ).all()
-    
-    return render_template(
-        'financial/review_import.html',
-        import_data=import_data,
-        categories=categories,
-        active='financial'
-    )
-
-
-@financial_bp.route('/import/cancel')
-def cancel_import():
-    """Cancel the import process"""
-    session.pop('amex_import_data', None)
-    flash('Import cancelled', 'info')
-    return redirect(url_for('financial.import_amex'))
-
-
-# ==================== HELPER FUNCTIONS ====================
-
-def map_amex_category(amex_category, merchant):
-    """Map American Express categories to our spending categories"""
-    
-    # Import the mapping from constants
-    from .constants import AMEX_CATEGORY_MAP
-    
-    # First check merchant alias
-    merchant_lower = merchant.lower()
-    alias = MerchantAlias.query.filter(
-        db.func.lower(MerchantAlias.alias) == merchant_lower
-    ).first()
-    
-    if alias and alias.default_category_id:
-        category = SpendingCategory.query.get(alias.default_category_id)
-        if category:
-            return {'id': category.id, 'name': category.name}
-    
-    # Then check merchant patterns
-    for cat_name, patterns in MERCHANT_PATTERNS.items():
-        for pattern in patterns:
-            if pattern in merchant_lower:
-                category = SpendingCategory.query.filter_by(name=cat_name).first()
-                if category:
-                    return {'id': category.id, 'name': category.name}
-    
-    # Finally use Amex category mapping
-    our_category_name = AMEX_CATEGORY_MAP.get(amex_category, 'Other')
-    category = SpendingCategory.query.filter_by(name=our_category_name).first()
-    
-    if category:
-        return {'id': category.id, 'name': category.name}
-    
-    # Default to 'Other'
-    other_category = SpendingCategory.query.filter_by(name='Other').first()
-    if other_category:
-        return {'id': other_category.id, 'name': 'Other'}
-    
-    return {'id': None, 'name': 'Uncategorized'}
-
-
-def create_merchant_alias_if_needed(merchant, category_id):
-    """Create a merchant alias for future auto-categorization"""
-    if not category_id:
-        return
-    
-    merchant_clean = merchant.strip()
-    
-    # Check if alias already exists
-    existing = MerchantAlias.query.filter_by(alias=merchant_clean).first()
-    if not existing:
-        # Create new alias
-        alias = MerchantAlias(
-            alias=merchant_clean,
-            canonical_name=merchant_clean,
-            default_category_id=int(category_id)
-        )
-        db.session.add(alias)
-# Add this route to modules/financial/routes.py
-
-# ==================== SETTINGS & CATEGORY MANAGEMENT ====================
+# ==================== SETTINGS ====================
 
 @financial_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
-    """Financial settings and category management"""
+    """Manage categories and merchant aliases"""
     if request.method == 'POST':
         action = request.form.get('action')
         
         if action == 'add_category':
-            # Add new category
+            # Add new custom category
             name = request.form.get('name', '').strip()
             icon = request.form.get('icon', '💰')
             color = request.form.get('color', '#6ea8ff')
             
             if name:
-                # Check if already exists
+                # Check if category exists
                 existing = SpendingCategory.query.filter_by(name=name).first()
                 if existing:
                     flash(f'Category "{name}" already exists', 'error')
                 else:
-                    new_category = SpendingCategory(
+                    category = SpendingCategory(
                         name=name,
                         icon=icon,
                         color=color,
                         is_custom=True
                     )
-                    db.session.add(new_category)
+                    db.session.add(category)
                     db.session.commit()
-                    flash(f'Category "{name}" added successfully!', 'success')
-            else:
-                flash('Category name is required', 'error')
-                
-        elif action == 'update_category':
-            # Update existing category
-            category_id = request.form.get('category_id')
-            if category_id:
-                category = SpendingCategory.query.get(int(category_id))
-                if category:
-                    category.icon = request.form.get(f'icon_{category_id}', category.icon)
-                    category.color = request.form.get(f'color_{category_id}', category.color)
-                    db.session.commit()
-                    flash(f'Category "{category.name}" updated!', 'success')
+                    flash(f'Category "{name}" added', 'success')
                     
         elif action == 'delete_category':
             # Delete category (only if custom and no transactions)
@@ -796,8 +506,9 @@ def settings():
             category_id = request.form.get('default_category')
             
             if merchant and category_id:
-                # Check if alias exists
-                existing = MerchantAlias.query.filter_by(alias=merchant).first()
+                normalized = normalize_merchant_name(merchant)
+                # Check if alias exists for normalized name
+                existing = MerchantAlias.query.filter_by(normalized_name=normalized).first()
                 if existing:
                     # Update existing
                     existing.canonical_name = canonical
@@ -807,6 +518,7 @@ def settings():
                     # Create new
                     alias = MerchantAlias(
                         alias=merchant,
+                        normalized_name=normalized,
                         canonical_name=canonical,
                         default_category_id=int(category_id)
                     )
@@ -851,3 +563,353 @@ def settings():
         aliases=aliases,
         active='financial'
     )
+
+
+# ==================== API ENDPOINTS ====================
+
+@financial_bp.route('/api/suggest-category', methods=['POST'])
+def suggest_category():
+    """API endpoint to suggest category based on merchant"""
+    merchant = request.json.get('merchant', '').lower()
+    
+    if not merchant:
+        return jsonify({'category_id': None})
+    
+    # Normalize the merchant name for matching
+    normalized = normalize_merchant_name(merchant)
+    
+    # Check merchant aliases using normalized name
+    alias = MerchantAlias.query.filter_by(normalized_name=normalized).first()
+    if alias and alias.default_category_id:
+        category = SpendingCategory.query.get(alias.default_category_id)
+        return jsonify({'category_id': category.id, 'category_name': category.name})
+    
+    # Check patterns on normalized name
+    normalized_lower = normalized.lower()
+    for cat_name, patterns in MERCHANT_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in normalized_lower:
+                category = SpendingCategory.query.filter_by(name=cat_name).first()
+                if category:
+                    return jsonify({'category_id': category.id, 'category_name': category.name})
+    
+    return jsonify({'category_id': None})
+
+
+# ==================== AMEX CSV IMPORT ====================
+
+@financial_bp.route('/import', methods=['GET', 'POST'])
+def import_amex():
+    """Import transactions from American Express CSV"""
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'csv_file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        file = request.files['csv_file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        if not file.filename.lower().endswith('.csv'):
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('financial.import_amex'))
+        
+        try:
+            # Read CSV file
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            
+            # Parse and prepare transactions
+            transactions_to_import = []
+            skipped_transactions = []
+            
+            for row in csv_input:
+                # Skip payment/credit transactions
+                amount = float(row['Amount'])
+                if amount < 0:
+                    skipped_transactions.append({
+                        'date': row['Date'],
+                        'description': row['Description'],
+                        'amount': amount,
+                        'reason': 'Payment/Credit'
+                    })
+                    continue
+                
+                # Parse date (MM/DD/YYYY format)
+                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y').date()
+                
+                # Clean up merchant name
+                merchant = row['Description'].strip()
+                
+                # Check for existing transaction (duplicate detection)
+                existing = Transaction.query.filter_by(
+                    date=date_obj,
+                    amount=amount,
+                    merchant=merchant,
+                    card='Amex'
+                ).first()
+                
+                if existing:
+                    skipped_transactions.append({
+                        'date': row['Date'],
+                        'description': merchant,
+                        'amount': amount,
+                        'reason': 'Already imported'
+                    })
+                    continue
+                
+                # Map Amex category to our categories
+                amex_category = row.get('Category', '')
+                suggested_category = map_amex_category(amex_category, merchant)
+                
+                # Store only essential data
+                transactions_to_import.append({
+                    'date': date_obj,
+                    'date_str': row['Date'],
+                    'amount': amount,
+                    'merchant': merchant[:100],
+                    'suggested_category_id': suggested_category['id'],
+                    'suggested_category_name': suggested_category['name']
+                })
+            
+            # Store in session for review
+            session['amex_import_data'] = {
+                'transactions': transactions_to_import[:100],
+                'skipped': skipped_transactions[:20],
+                'total_count': len(transactions_to_import),
+                'total_amount': sum(t['amount'] for t in transactions_to_import),
+                'skipped_count': len(skipped_transactions)
+            }
+            
+            if len(transactions_to_import) > 100:
+                flash(f'Large import: showing first 100 of {len(transactions_to_import)} transactions', 'warning')
+            
+            return redirect(url_for('financial.review_import'))
+            
+        except Exception as e:
+            flash(f'Error processing CSV file: {str(e)}', 'error')
+            return redirect(url_for('financial.import_amex'))
+    
+    # GET request - show upload form
+    return render_template('financial/import_amex.html', active='financial')
+
+
+@financial_bp.route('/import/review', methods=['GET', 'POST'])
+def review_import():
+    """Review and confirm Amex transactions before importing"""
+    import_data = session.get('amex_import_data')
+    
+    if not import_data:
+        flash('No import data found. Please upload a CSV file first.', 'error')
+        return redirect(url_for('financial.import_amex'))
+    
+    if request.method == 'POST':
+        # Process confirmed import
+        imported_count = 0
+        errors = []
+        
+        # Use enumerate to match the template's loop.index0
+        for idx, trans_data in enumerate(import_data['transactions']):
+            try:
+                # Get the category from form using index
+                category_id = request.form.get(f"category_{idx}")
+                
+                # Create transaction
+                transaction = Transaction(
+                    date=trans_data['date'],
+                    amount=trans_data['amount'],
+                    merchant=trans_data['merchant'],
+                    category_id=int(category_id) if category_id and category_id != '' else None,
+                    card='Amex',
+                    notes=None
+                )
+                
+                # Update category usage count
+                if transaction.category_id:
+                    category = SpendingCategory.query.get(transaction.category_id)
+                    if category:
+                        category.usage_count += 1
+                
+                # Check for merchant alias - only if a category was selected
+                if category_id:
+                    create_merchant_alias_if_needed(trans_data['merchant'], category_id)
+                
+                db.session.add(transaction)
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"{trans_data['date_str']} - {trans_data['merchant']}: {str(e)}")
+        
+        try:
+            db.session.commit()
+            
+            # Clear session data
+            session.pop('amex_import_data', None)
+            
+            if errors:
+                flash(f'Imported {imported_count} transactions with {len(errors)} errors', 'warning')
+                for error in errors[:5]:
+                    flash(f'Error: {error}', 'error')
+            else:
+                flash(f'Successfully imported {imported_count} transactions!', 'success')
+            
+            return redirect(url_for('financial.dashboard'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Database error: {str(e)}', 'error')
+            return redirect(url_for('financial.review_import'))
+    
+    # GET request - show review page
+    categories = SpendingCategory.query.order_by(
+        SpendingCategory.is_custom,
+        SpendingCategory.usage_count.desc(),
+        SpendingCategory.name
+    ).all()
+    
+    return render_template(
+        'financial/review_import.html',
+        import_data=import_data,
+        categories=categories,
+        active='financial'
+    )
+
+
+@financial_bp.route('/import/cancel')
+def cancel_import():
+    """Cancel the import process"""
+    session.pop('amex_import_data', None)
+    flash('Import cancelled', 'info')
+    return redirect(url_for('financial.import_amex'))
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+def normalize_merchant_name(merchant_name):
+    """
+    Normalize merchant name for better matching.
+    Extracts the core business name, removing location-specific info.
+    """
+    if not merchant_name:
+        return ""
+    
+    # Convert to uppercase for consistency
+    name = merchant_name.upper()
+    
+    # Common patterns to remove
+    # Remove state abbreviations at the end
+    name = re.sub(r'\b[A-Z]{2}$', '', name)
+    
+    # Remove city names before state
+    name = re.sub(r'\b[A-Z][A-Z\s]+\s+[A-Z]{2}$', '', name)
+    
+    # Remove store numbers (various formats)
+    name = re.sub(r'#\d+', '', name)
+    name = re.sub(r'\b\d{4,}\b', '', name)
+    name = re.sub(r'\s+\d{5}\s+\d{5}', '', name)
+    
+    # Remove common suffixes
+    suffixes_to_remove = [
+        r'\bINC\b', r'\bLLC\b', r'\bCO\b', r'\bCORP\b', 
+        r'\bLTD\b', r'\bCOMPANY\b', r'\bSTORE\b'
+    ]
+    for suffix in suffixes_to_remove:
+        name = re.sub(suffix, '', name)
+    
+    # Special handling for common chains
+    chain_mappings = {
+        '7-ELEVEN': ['7-11', 'SEVEN ELEVEN', '7 ELEVEN'],
+        'MCDONALDS': ['MCDONALD\'S', 'MCDONALDS', 'MC DONALDS'],
+        'WALMART': ['WAL-MART', 'WALMART', 'WAL MART'],
+        'TARGET': ['TARGET STORE', 'TARGET.COM', 'TARGET'],
+        'AMAZON': ['AMAZON.COM', 'AMZN MKTP', 'AMAZON PRIME'],
+        'SHELL': ['SHELL OIL', 'SHELL STATION', 'SHELL GAS'],
+        'KROGER': ['KROGER FUEL', 'KROGER GAS', 'KROGERS'],
+        'HOME DEPOT': ['HOME DEPOT', 'HOMEDEPOT.COM', 'THE HOME DEPOT'],
+        'LOWES': ['LOWE\'S', 'LOWES HOME', 'LOWES #'],
+        'TRACTOR SUPPLY': ['TRACTOR SUPPLY CO', 'TSC'],
+    }
+    
+    # Check if the name contains any of the chain variations
+    for canonical, variations in chain_mappings.items():
+        for variant in variations:
+            if variant in name:
+                return canonical
+    
+    # Clean up extra whitespace
+    name = ' '.join(name.split())
+    
+    # If the name is now too short, return the original (cleaned)
+    if len(name) < 3:
+        return merchant_name.upper().split()[0] if merchant_name.split() else merchant_name.upper()
+    
+    # Take the first 2-3 meaningful words
+    words = name.split()
+    if len(words) > 3:
+        meaningful_words = [w for w in words[:4] if not w.isdigit()][:3]
+        name = ' '.join(meaningful_words)
+    
+    return name.strip()
+
+
+def map_amex_category(amex_category, merchant):
+    """Map American Express categories to our spending categories"""
+    
+    from .constants import AMEX_CATEGORY_MAP
+    
+    # Normalize the merchant name for better matching
+    normalized = normalize_merchant_name(merchant)
+    
+    # First check merchant alias with normalized name
+    alias = MerchantAlias.query.filter_by(normalized_name=normalized).first()
+    
+    if alias and alias.default_category_id:
+        category = SpendingCategory.query.get(alias.default_category_id)
+        if category:
+            return {'id': category.id, 'name': category.name}
+    
+    # Then check merchant patterns with normalized name
+    normalized_lower = normalized.lower()
+    for cat_name, patterns in MERCHANT_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in normalized_lower:
+                category = SpendingCategory.query.filter_by(name=cat_name).first()
+                if category:
+                    return {'id': category.id, 'name': category.name}
+    
+    # Finally use Amex category mapping
+    our_category_name = AMEX_CATEGORY_MAP.get(amex_category, 'Other')
+    category = SpendingCategory.query.filter_by(name=our_category_name).first()
+    
+    if category:
+        return {'id': category.id, 'name': category.name}
+    
+    # Default to 'Other'
+    other_category = SpendingCategory.query.filter_by(name='Other').first()
+    if other_category:
+        return {'id': other_category.id, 'name': 'Other'}
+    
+    return {'id': None, 'name': 'Uncategorized'}
+
+
+def create_merchant_alias_if_needed(merchant, category_id):
+    """Create a merchant alias for future auto-categorization"""
+    if not category_id:
+        return
+    
+    merchant_clean = merchant.strip()
+    normalized = normalize_merchant_name(merchant_clean)
+    
+    # Check if alias exists for this normalized name
+    existing = MerchantAlias.query.filter_by(normalized_name=normalized).first()
+    if not existing:
+        # Create new alias
+        alias = MerchantAlias(
+            alias=merchant_clean,
+            normalized_name=normalized,
+            canonical_name=normalized,
+            default_category_id=category_id
+        )
+        db.session.add(alias)
