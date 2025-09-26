@@ -7,6 +7,11 @@ from . import projects_bp
 from .constants import PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
 from models import db, TCHProject, TCHTask, TCHIdea, TCHMilestone, TCHProjectNote, PersonalProject, ProjectFile
 
+from modules.vault.vault_service import (
+    get_entity_documents,
+    create_document_for_entity
+)
+
 # ==================== TCH PROJECTS ====================
 
 @projects_bp.route('/tch')
@@ -129,6 +134,9 @@ def add_tch():
 def tch_detail(id):
     """View TCH project details"""
     project = TCHProject.query.get_or_404(id)
+
+    # Get vault documents for this project
+    vault_documents = get_entity_documents('tch_project', id)
     
     # Calculate progress
     if project.tasks:
@@ -161,6 +169,7 @@ def tch_detail(id):
     
     return render_template('tch_project_detail.html', 
                          project=project,
+                         vault_documents=vault_documents,
                          tasks_by_category=tasks_by_category,
                          project_todos=project_todos,
                          files=files,
@@ -556,3 +565,50 @@ def update_personal(id):
     
     db.session.commit()
     return redirect(url_for('projects.personal_index'))
+
+@projects_bp.route('/tch/<int:id>/upload', methods=['POST'])
+def upload_tch_document(id):
+    """Upload a document for TCH project"""
+    project = TCHProject.query.get_or_404(id)
+    
+    if 'file' not in request.files:
+        flash('No file provided', 'error')
+        return redirect(url_for('projects.tch_detail', id=id))
+    
+    file = request.files['file']
+    if not file or not file.filename:
+        flash('No file selected', 'error')
+        return redirect(url_for('projects.tch_detail', id=id))
+    
+    doc_type = request.form.get('doc_type', 'document')
+    title = request.form.get('title', file.filename)
+    
+    # Auto-generate tags
+    tags = []
+    tags.append(f"tch_project_{project.id}")
+    if project.name:
+        tags.append(project.name.lower().replace(' ', '_'))
+    if project.category:
+        tags.append(project.category.lower())
+    if doc_type:
+        tags.append(doc_type)
+    
+    try:
+        doc = create_document_for_entity(
+            file=file,
+            entity_type='tch_project',
+            entity_id=project.id,
+            entity_name=project.name,
+            title=title,
+            doc_type=doc_type,
+            tags=tags
+        )
+        
+        db.session.commit()
+        flash('Document uploaded successfully!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error uploading document: {str(e)}', 'error')
+    
+    return redirect(url_for('projects.tch_detail', id=id))
