@@ -4,6 +4,12 @@ from datetime import datetime
 from . import todo_bp
 from models import db, TodoList, TodoItem, TCHProject, PersonalProject
 from .integration import TaskAggregator, UnifiedTask  # NEW IMPORT
+from models import TCHTask, PersonalTask, DailyTask, RecurringTaskTemplate, TaskTimeLog, TaskTemplate
+from .advanced_integration import (
+    DependencyManager, RecurringTaskManager, TimeTracker,
+    TemplateManager, MetadataManager
+)
+from datetime import date, timedelta
 
 # ==================== EXISTING ROUTES ====================
 
@@ -400,8 +406,8 @@ def api_quick_add():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@todo_bp.route('/api/task/<task_id>/update', methods=['POST'])
-def api_update_task(task_id):
+@todo_bp.route('/api/task/<task_id>/edit', methods=['POST'])
+def api_edit_task(task_id):
     """Update task title inline"""
     data = request.get_json()
     new_title = data.get('title', '').strip()
@@ -432,7 +438,7 @@ def api_update_task(task_id):
             # Daily tasks typically shouldn't be edited, but we'll allow it
             task = DailyTask.query.get(source_id)
             if task:
-                task.task_description = new_title
+                task.name = new_title  # DailyTask uses 'name' not 'task_description'
         else:
             return jsonify({'success': False, 'message': 'Invalid task source'}), 400
         
@@ -608,31 +614,20 @@ def api_bulk_delete():
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# Add these Phase 3 routes to modules/todo/routes.py after Phase 2 routes
-
 # ==================== PHASE 3: ADVANCED INTEGRATION ROUTES ====================
 
-# Import the advanced integration modules at the top of routes.py
-# from .advanced_integration import (
-#     DependencyManager, RecurringTaskManager, TimeTracker,
-#     TemplateManager, MetadataManager
-# )
-
 # --- Dependency Routes ---
-
 @todo_bp.route('/api/dependencies/<task_id>')
 def api_get_dependencies(task_id):
     """Get dependencies for a task"""
     deps = DependencyManager.get_dependencies(task_id)
     
-    # Enrich with task details
     enriched = {
         'prerequisites': [],
         'dependents': [],
         'can_complete': True
     }
     
-    # Get details for prerequisites
     for prereq_id in deps['prerequisites']:
         task = TaskAggregator.get_single_task(prereq_id)
         if task:
@@ -644,7 +639,6 @@ def api_get_dependencies(task_id):
             if not task.completed and prereq_id in deps['blocked_by']:
                 enriched['can_complete'] = False
     
-    # Get details for dependents
     for dep_id in deps['dependents']:
         task = TaskAggregator.get_single_task(dep_id)
         if task:
@@ -656,7 +650,6 @@ def api_get_dependencies(task_id):
     
     return jsonify(enriched)
 
-
 @todo_bp.route('/api/dependencies/add', methods=['POST'])
 def api_add_dependency():
     """Add a dependency between tasks"""
@@ -666,7 +659,7 @@ def api_add_dependency():
     dep_type = data.get('type', 'blocks')
     
     if not dependent_id or not prerequisite_id:
-        return jsonify({'success': False, 'message': 'Both task IDs required'}), 400
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
     
     if dependent_id == prerequisite_id:
         return jsonify({'success': False, 'message': 'Task cannot depend on itself'}), 400
@@ -674,10 +667,9 @@ def api_add_dependency():
     success = DependencyManager.add_dependency(dependent_id, prerequisite_id, dep_type)
     
     if success:
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'message': 'Dependency added'})
     else:
         return jsonify({'success': False, 'message': 'Dependency already exists or error occurred'}), 400
-
 
 @todo_bp.route('/api/dependencies/remove', methods=['POST'])
 def api_remove_dependency():
@@ -687,50 +679,414 @@ def api_remove_dependency():
     prerequisite_id = data.get('prerequisite_id')
     
     if not dependent_id or not prerequisite_id:
-        return jsonify({'success': False, 'message': 'Both task IDs required'}), 400
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
     
     success = DependencyManager.remove_dependency(dependent_id, prerequisite_id)
     
-    return jsonify({'success': success})
+    if success:
+        return jsonify({'success': True, 'message': 'Dependency removed'})
+    else:
+        return jsonify({'success': False, 'message': 'Dependency not found'}), 404
 
-
-# --- Time Tracking Routes ---
-
-@todo_bp.route('/api/time/start', methods=['POST'])
-def api_start_timer():
-    """Start time tracking for a task"""
-    data = request.get_json()
-    task_id = data.get('task_id')
-    task_title = data.get('task_title', 'Task')
-    
-    if not task_id:
-        return jsonify({'success': False, 'message': 'Task ID required'}), 400
-    
-    log = TimeTracker.start_timer(task_id, task_title)
+@todo_bp.route('/api/dependencies/can-complete/<task_id>')
+def api_can_complete(task_id):
+    """Check if a task can be completed based on dependencies"""
+    can_complete, blocking_tasks = DependencyManager.can_complete(task_id)
     
     return jsonify({
-        'success': True,
-        'start_time': log.start_time.isoformat(),
-        'log_id': log.id
+        'can_complete': can_complete,
+        'blocking_tasks': blocking_tasks
     })
 
+# --- Recurring Task Routes ---
+@todo_bp.route('/api/recurring/templates')
+def api_get_recurring_templates():
+    """Get all recurring task templates"""
+    templates = RecurringTaskTemplate.query.filter_by(is_active=True).all()
+    
+    return jsonify({
+        'templates': [{
+            'id': t.id,
+            'title': t.title,
+            'description': t.description,
+            'target_type': t.target_type,
+            'recurrence_type': t.recurrence_type,
+            'next_due': t.next_due.isoformat() if t.next_due else None,
+            'is_paused': t.is_paused
+        } for t in templates]
+    })
 
-@todo_bp.route('/api/time/stop', methods=['POST'])
-def api_stop_timer():
-    """Stop time tracking for a task"""
+@todo_bp.route('/api/recurring/create', methods=['POST'])
+def api_create_recurring():
+    """Create a new recurring task template"""
+    data = request.get_json()
+    
+    try:
+        template = RecurringTaskManager.create_template(
+            title=data.get('title'),
+            target_type=data.get('target_type', 'todo'),
+            recurrence_type=data.get('recurrence_type'),
+            description=data.get('description'),
+            project_id=data.get('project_id'),
+            days=data.get('days'),
+            day_of_month=data.get('day_of_month'),
+            interval=data.get('interval', 1),
+            priority=data.get('priority', 'medium'),
+            category=data.get('category'),
+            estimated_minutes=data.get('estimated_minutes')
+        )
+        
+        return jsonify({
+            'success': True,
+            'template_id': template.id,
+            'message': 'Recurring task template created'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@todo_bp.route('/api/recurring/generate', methods=['POST'])
+def api_generate_recurring():
+    """Manually generate recurring tasks for today"""
+    try:
+        created_count = RecurringTaskManager.generate_due_tasks()
+        return jsonify({
+            'success': True,
+            'created_count': created_count,
+            'message': f'Generated {created_count} recurring tasks'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@todo_bp.route('/api/recurring/pause/<int:template_id>', methods=['POST'])
+def api_pause_recurring(template_id):
+    """Pause/unpause a recurring task template"""
+    template = RecurringTaskTemplate.query.get_or_404(template_id)
+    template.is_paused = not template.is_paused
+    db.session.commit()
+    
+    status = 'paused' if template.is_paused else 'resumed'
+    return jsonify({'success': True, 'message': f'Template {status}'})
+
+@todo_bp.route('/api/recurring/delete/<int:template_id>', methods=['DELETE'])
+def api_delete_recurring(template_id):
+    """Delete a recurring task template"""
+    template = RecurringTaskTemplate.query.get_or_404(template_id)
+    template.is_active = False
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Template deleted'})
+
+# --- Time Tracking Routes ---
+@todo_bp.route('/api/time/start', methods=['POST'])
+def api_start_timer():
+    """Start a timer for a task"""
     data = request.get_json()
     task_id = data.get('task_id')
     
     if not task_id:
         return jsonify({'success': False, 'message': 'Task ID required'}), 400
     
-    log = TimeTracker.stop_timer(task_id)
+    TimeTracker.stop_all_timers()
+    log = TimeTracker.start_timer(task_id)
     
     if log:
         return jsonify({
             'success': True,
-            'duration_minutes': log.duration_minutes,
-            'total_minutes': TimeTracker.get_total_time(task_id)
+            'log_id': log.id,
+            'started_at': log.started_at.isoformat()
+        })
+    else:
+        return jsonify({'success': False, 'message': 'Failed to start timer'}), 500
+
+@todo_bp.route('/api/time/stop', methods=['POST'])
+def api_stop_timer():
+    """Stop the active timer"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    
+    if not task_id:
+        return jsonify({'success': False, 'message': 'Task ID required'}), 400
+    
+    minutes = TimeTracker.stop_timer(task_id)
+    
+    if minutes is not None:
+        return jsonify({
+            'success': True,
+            'minutes_logged': minutes,
+            'message': f'Logged {minutes} minutes'
         })
     else:
         return jsonify({'success': False, 'message': 'No active timer found'}), 404
+
+@todo_bp.route('/api/time/active')
+def api_get_active_timer():
+    """Get the currently active timer"""
+    active = TimeTracker.get_active_timer()
+    
+    if active:
+        elapsed = (datetime.utcnow() - active.started_at).total_seconds() / 60
+        return jsonify({
+            'active': True,
+            'task_id': active.task_id,
+            'started_at': active.started_at.isoformat(),
+            'elapsed_minutes': round(elapsed, 1)
+        })
+    else:
+        return jsonify({'active': False})
+
+@todo_bp.route('/api/time/task/<task_id>')
+def api_get_task_time(task_id):
+    """Get total time logged for a task"""
+    total_minutes = TimeTracker.get_task_total_time(task_id)
+    
+    return jsonify({
+        'task_id': task_id,
+        'total_minutes': total_minutes,
+        'formatted': f"{total_minutes // 60}h {total_minutes % 60}m"
+    })
+
+@todo_bp.route('/api/time/today')
+def api_get_today_time():
+    """Get time tracked today"""
+    logs = TaskTimeLog.query.filter(
+        db.func.date(TaskTimeLog.started_at) == date.today()
+    ).all()
+    
+    total_minutes = sum(log.minutes_logged or 0 for log in logs if log.minutes_logged)
+    
+    return jsonify({
+        'date': date.today().isoformat(),
+        'total_minutes': total_minutes,
+        'formatted': f"{total_minutes // 60}h {total_minutes % 60}m",
+        'task_count': len(logs)
+    })
+
+# --- Template Routes ---
+@todo_bp.route('/api/templates')
+def api_get_templates():
+    """Get all task templates"""
+    templates = TaskTemplate.query.filter_by(is_active=True).all()
+    
+    return jsonify({
+        'templates': [{
+            'id': t.id,
+            'name': t.name,
+            'description': t.description,
+            'category': t.category,
+            'task_count': len(t.tasks_data) if t.tasks_data else 0
+        } for t in templates]
+    })
+
+@todo_bp.route('/api/templates/create', methods=['POST'])
+def api_create_template():
+    """Create a new task template"""
+    data = request.get_json()
+    
+    try:
+        template = TemplateManager.create_template(
+            name=data.get('name'),
+            description=data.get('description'),
+            category=data.get('category', 'workflow'),
+            tasks=data.get('tasks', [])
+        )
+        
+        return jsonify({
+            'success': True,
+            'template_id': template.id,
+            'message': 'Template created'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@todo_bp.route('/api/templates/apply/<int:template_id>', methods=['POST'])
+def api_apply_template(template_id):
+    """Apply a template to create tasks"""
+    data = request.get_json()
+    target_project_id = data.get('project_id')
+    
+    try:
+        task_ids = TemplateManager.apply_template(template_id, target_project_id)
+        
+        return jsonify({
+            'success': True,
+            'created_tasks': task_ids,
+            'count': len(task_ids),
+            'message': f'Created {len(task_ids)} tasks from template'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@todo_bp.route('/api/templates/from-task', methods=['POST'])
+def api_create_template_from_task():
+    """Create a template from an existing task"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    template_name = data.get('name')
+    
+    if not task_id or not template_name:
+        return jsonify({'success': False, 'message': 'Task ID and name required'}), 400
+    
+    try:
+        template = TemplateManager.create_from_task(task_id, template_name)
+        
+        return jsonify({
+            'success': True,
+            'template_id': template.id,
+            'message': 'Template created from task'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# --- Metadata Routes ---
+@todo_bp.route('/api/metadata/<task_id>')
+def api_get_metadata(task_id):
+    """Get metadata for a task"""
+    metadata = MetadataManager.get_metadata(task_id)
+    
+    if metadata:
+        return jsonify({
+            'has_metadata': True,
+            'tags': metadata.tags,
+            'energy_level': metadata.energy_level,
+            'context': metadata.context,
+            'estimated_minutes': metadata.estimated_minutes,
+            'actual_minutes': metadata.actual_minutes,
+            'notes': metadata.notes
+        })
+    else:
+        return jsonify({'has_metadata': False})
+
+@todo_bp.route('/api/metadata/update', methods=['POST'])
+def api_update_metadata():
+    """Update metadata for a task"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    
+    if not task_id:
+        return jsonify({'success': False, 'message': 'Task ID required'}), 400
+    
+    try:
+        metadata = MetadataManager.update_metadata(
+            task_id=task_id,
+            tags=data.get('tags'),
+            energy_level=data.get('energy_level'),
+            context=data.get('context'),
+            estimated_minutes=data.get('estimated_minutes'),
+            actual_minutes=data.get('actual_minutes'),
+            notes=data.get('notes')
+        )
+        
+        return jsonify({'success': True, 'message': 'Metadata updated'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@todo_bp.route('/api/metadata/snooze', methods=['POST'])
+def api_snooze_task():
+    """Snooze a task until a later date"""
+    data = request.get_json()
+    task_id = data.get('task_id')
+    snooze_until = data.get('snooze_until')
+    
+    if not task_id or not snooze_until:
+        return jsonify({'success': False, 'message': 'Task ID and snooze date required'}), 400
+    
+    try:
+        snooze_date = datetime.fromisoformat(snooze_until).date()
+        success = MetadataManager.snooze_task(task_id, snooze_date)
+        
+        if success:
+            return jsonify({'success': True, 'message': f'Task snoozed until {snooze_date}'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to snooze task'}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# --- Analytics Routes ---
+@todo_bp.route('/api/analytics/productivity')
+def api_productivity_stats():
+    """Get productivity statistics"""
+    today_tasks = TaskAggregator.get_all_tasks(
+        include_completed=True,
+        date_filter='today'
+    )
+    
+    completed_today = len([t for t in today_tasks if t.completed])
+    
+    week_tasks = TaskAggregator.get_all_tasks(
+        include_completed=True,
+        date_filter='week'
+    )
+    
+    completed_week = len([t for t in week_tasks if t.completed])
+    
+    today_time = TaskTimeLog.query.filter(
+        db.func.date(TaskTimeLog.started_at) == date.today()
+    ).all()
+    
+    total_minutes_today = sum(log.minutes_logged or 0 for log in today_time if log.minutes_logged)
+    
+    velocity = completed_week / 7 if completed_week > 0 else 0
+    
+    return jsonify({
+        'completed_today': completed_today,
+        'completed_week': completed_week,
+        'minutes_today': total_minutes_today,
+        'velocity': round(velocity, 1),
+        'pending_tasks': len([t for t in today_tasks if not t.completed])
+    })
+
+@todo_bp.route('/api/analytics/by-source')
+def api_tasks_by_source():
+    """Get task breakdown by source"""
+    tasks = TaskAggregator.get_all_tasks(include_completed=True)
+    
+    by_source = {}
+    for task in tasks:
+        if task.source not in by_source:
+            by_source[task.source] = {
+                'total': 0,
+                'completed': 0,
+                'pending': 0
+            }
+        
+        by_source[task.source]['total'] += 1
+        if task.completed:
+            by_source[task.source]['completed'] += 1
+        else:
+            by_source[task.source]['pending'] += 1
+    
+    return jsonify(by_source)
+
+@todo_bp.route('/api/analytics/completion-rate')
+def api_completion_rate():
+    """Get completion rates over time"""
+    results = []
+    
+    for days_ago in range(30):
+        check_date = date.today() - timedelta(days=days_ago)
+        
+        tasks = TaskAggregator.get_all_tasks(include_completed=True)
+        
+        relevant_tasks = [t for t in tasks if t.created_at.date() <= check_date]
+        
+        completed = len([t for t in relevant_tasks if t.completed and 
+                        t.completed_date and t.completed_date.date() <= check_date])
+        
+        total = len(relevant_tasks)
+        
+        results.append({
+            'date': check_date.isoformat(),
+            'total': total,
+            'completed': completed,
+            'rate': (completed / total * 100) if total > 0 else 0
+        })
+    
+    return jsonify(results[::-1])
+
+

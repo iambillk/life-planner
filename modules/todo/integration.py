@@ -402,3 +402,134 @@ class TaskAggregator:
         except Exception:
             db.session.rollback()
             return False
+
+# Add this method to the TaskAggregator class in modules/todo/integration.py
+
+    @staticmethod
+    def get_single_task(task_id: str) -> Optional[UnifiedTask]:
+        """
+        Get a single task by its unified ID
+        
+        Args:
+            task_id: Unified task ID (e.g., 'tch_123')
+        
+        Returns:
+            UnifiedTask object or None if not found
+        """
+        try:
+            source, source_id = task_id.split('_', 1)
+            source_id = int(source_id)
+            
+            if source == 'tch':
+                task = TCHTask.query.get(source_id)
+                if task:
+                    priority = task.priority or 'medium'
+                    if task.project.priority == 'critical' and priority != 'critical':
+                        priority = 'high'
+                    
+                    return UnifiedTask(
+                        id=f"tch_{task.id}",
+                        source='tch',
+                        source_id=task.id,
+                        title=task.title,
+                        description=task.description,
+                        completed=task.completed,
+                        completed_date=task.completed_date,
+                        due_date=task.due_date,
+                        priority=priority,
+                        project_name=task.project.name,
+                        project_id=task.project_id,
+                        category=task.category,
+                        created_at=task.created_at,
+                        can_edit=True,
+                        can_complete=True,
+                        original_data={
+                            'assigned_to': task.assigned_to,
+                            'order_num': task.order_num
+                        }
+                    )
+            
+            elif source == 'personal':
+                task = PersonalTask.query.get(source_id)
+                if task:
+                    priority = task.project.priority or 'medium'
+                    
+                    return UnifiedTask(
+                        id=f"personal_{task.id}",
+                        source='personal',
+                        source_id=task.id,
+                        title=task.content,  # PersonalTask uses 'content'
+                        description=None,
+                        completed=task.completed,
+                        completed_date=task.completed_at,
+                        due_date=None,
+                        priority=priority,
+                        project_name=task.project.name,
+                        project_id=task.project_id,
+                        category=task.category,
+                        created_at=task.created_at,
+                        can_edit=True,
+                        can_complete=True,
+                        original_data={
+                            'order_num': task.order_num
+                        }
+                    )
+            
+            elif source == 'todo':
+                item = TodoItem.query.get(source_id)
+                if item:
+                    return UnifiedTask(
+                        id=f"todo_{item.id}",
+                        source='todo',
+                        source_id=item.id,
+                        title=item.content,
+                        description=item.note,
+                        completed=item.completed,
+                        completed_date=item.completed_at,
+                        due_date=item.due_date,
+                        priority='high' if item.priority else 'medium',
+                        project_name=item.todo_list.title,
+                        project_id=item.list_id,
+                        category=None,
+                        created_at=item.created_at,
+                        can_edit=True,
+                        can_complete=True,
+                        original_data={
+                            'list_title': item.todo_list.title,
+                            'list_color': item.todo_list.color,
+                            'order_num': item.order_num
+                        }
+                    )
+            
+            elif source == 'daily':
+                task = DailyTask.query.get(source_id)
+                if task:
+                    priority_map = {1: 'critical', 2: 'high', 3: 'medium', 4: 'low'}
+                    priority = priority_map.get(task.priority, 'medium')
+                    
+                    return UnifiedTask(
+                        id=f"daily_{task.id}",
+                        source='daily',
+                        source_id=task.id,
+                        title=task.name,
+                        description=task.notes,
+                        completed=task.completed,
+                        completed_date=task.completed_at if task.completed else None,
+                        due_date=task.date,
+                        priority=priority,
+                        project_name=f"{task.project_type} Project",
+                        project_id=task.project_id,
+                        category=task.category,
+                        created_at=datetime.combine(task.date, datetime.min.time()),
+                        can_edit=True,
+                        can_complete=True,
+                        original_data={
+                            'project_type': task.project_type,
+                            'time_estimate': task.time_estimate
+                        }
+                    )
+            
+            return None
+            
+        except Exception:
+            return None

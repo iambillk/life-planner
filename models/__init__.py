@@ -35,6 +35,15 @@ from .goals import Goal
 from .health import WeightEntry
 from .todo import TodoList, TodoItem
 
+from .todo_advanced import (
+    TaskDependency, 
+    RecurringTaskTemplate, 
+    TaskTimeLog,
+    TaskTemplate, 
+    TaskMetadata, 
+    TaskUserPreferences
+)
+
 # ========== NEW: Real Estate Models ==========
 from .realestate import (
     Property,
@@ -132,3 +141,4 @@ __all__ = [
     'Contact',
     'Company'
 ]
+
