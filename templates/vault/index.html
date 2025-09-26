@@ -5,19 +5,14 @@
 {% block extra_css %}
 <style>
   /* =============================================================================
-     VAULT INDEX - Premium Edition with Real Data
-     VERSION: v3.0.0
+     VAULT INDEX - Dark Theme Aligned with Project Design System
+     VERSION: v2.0.0-fused
      UPDATED: 2025-01-27
      
-     FEATURES:
-     - Beautiful tags cloud with glow effects
-     - Comprehensive stats dashboard
-     - Advanced search with filters
-     - Sophisticated animations
-     - Premium dark theme
+     Layout from File B + real data wiring and behaviors from File A
   ============================================================================= */
 
-  /* ===== Theme Variables ===== */
+  /* ===== Theme Variables (matching project standard) ===== */
   :root {
     --vault-bg: var(--bg, #0b0f1a);
     --vault-panel: var(--panel, #121a2a);
@@ -48,7 +43,7 @@
     gap: 20px;
   }
 
-  /* ===== Sticky Header ===== */
+  /* ===== Sticky Header with Actions ===== */
   .vault-header {
     position: sticky;
     top: 12px;
@@ -56,13 +51,14 @@
     background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
     border: 1px solid var(--vault-line);
     border-radius: var(--vault-radius);
-    padding: 16px 20px;
+    padding: 16px;
     box-shadow: var(--vault-shadow);
     backdrop-filter: blur(8px);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    margin-bottom: 8px;
+    gap: 12px;
     flex-wrap: wrap;
   }
 
@@ -86,708 +82,7 @@
     align-items: center;
   }
 
-  /* ===== Stats Dashboard ===== */
-  .stats-dashboard {
-    background: linear-gradient(135deg, var(--vault-card), rgba(110,168,255,0.03));
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    padding: 20px;
-    box-shadow: var(--vault-shadow-sm);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 20px;
-  }
-
-  .stat-card {
-    text-align: center;
-    padding: 16px;
-    background: var(--vault-sub);
-    border-radius: var(--vault-radius-sm);
-    border: 1px solid var(--vault-line);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(110,168,255,0.1) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-
-  .stat-card:hover::before {
-    opacity: 1;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--vault-primary);
-    box-shadow: 0 4px 12px rgba(110,168,255,0.2);
-  }
-
-  .stat-icon {
-    font-size: 28px;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--vault-primary);
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  .stat-label {
-    font-size: 12px;
-    color: var(--vault-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .stat-trend {
-    font-size: 11px;
-    margin-top: 4px;
-    color: var(--vault-success);
-  }
-
-  .stat-trend.down {
-    color: var(--vault-danger);
-  }
-
-  /* ===== Enhanced Search Section ===== */
-  .search-section {
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    padding: 20px;
-    box-shadow: var(--vault-shadow-sm);
-  }
-
-  .search-wrapper {
-    position: relative;
-    margin-bottom: 16px;
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 14px 48px 14px 18px;
-    background: var(--vault-sub);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius-sm);
-    color: var(--vault-text);
-    font-size: 15px;
-    transition: all 0.2s ease;
-  }
-
-  .search-input:focus {
-    outline: none;
-    border-color: var(--vault-primary);
-    box-shadow: 0 0 0 3px rgba(110,168,255,0.1);
-    background: rgba(110,168,255,0.03);
-  }
-
-  .search-icon {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--vault-muted);
-    pointer-events: none;
-  }
-
-  /* ===== Quick Filters (Type Chips) ===== */
-  .quick-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-
-  .filter-label {
-    color: var(--vault-muted);
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-right: 8px;
-    display: flex;
-    align-items: center;
-  }
-
-  .filter-chip {
-    padding: 8px 14px;
-    background: var(--vault-sub);
-    border: 1px solid var(--vault-line);
-    border-radius: 20px;
-    color: var(--vault-muted);
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    text-decoration: none;
-  }
-
-  .filter-chip:hover {
-    background: rgba(110,168,255,0.1);
-    border-color: rgba(110,168,255,0.3);
-    color: var(--vault-primary);
-    transform: translateY(-1px);
-  }
-
-  .filter-chip.active {
-    background: rgba(110,168,255,0.15);
-    border-color: var(--vault-primary);
-    color: var(--vault-primary);
-  }
-
-  .filter-count {
-    background: rgba(255,255,255,0.1);
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  /* ===== Date Range Filters ===== */
-  .date-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .date-chip {
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--vault-line);
-    border-radius: 16px;
-    color: var(--vault-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-  }
-
-  .date-chip:hover {
-    background: rgba(110,168,255,0.08);
-    border-color: rgba(110,168,255,0.3);
-    color: var(--vault-primary);
-  }
-
-  /* ===== Complete Tags Cloud ===== */
-  .tags-showcase {
-    background: linear-gradient(135deg, var(--vault-card), rgba(110,168,255,0.02));
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    padding: 24px;
-    box-shadow: var(--vault-shadow-sm);
-  }
-
-  .tags-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  .tags-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--vault-text);
-  }
-
-  .tags-count {
-    color: var(--vault-muted);
-    font-size: 13px;
-  }
-
-  .tags-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .tag-pill {
-    padding: 8px 14px;
-    background: rgba(110,168,255,0.1);
-    border: 1px solid rgba(110,168,255,0.3);
-    border-radius: 20px;
-    color: var(--vault-primary);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .tag-pill::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: radial-gradient(circle, rgba(110,168,255,0.3), transparent);
-    transition: width 0.3s, height 0.3s;
-    transform: translate(-50%, -50%);
-  }
-
-  .tag-pill:hover::before {
-    width: 100px;
-    height: 100px;
-  }
-
-  .tag-pill:hover {
-    background: rgba(110,168,255,0.2);
-    border-color: var(--vault-primary);
-    transform: scale(1.08) translateY(-2px);
-    box-shadow: 0 4px 12px rgba(110,168,255,0.3);
-    z-index: 1;
-  }
-
-  /* Size variations based on usage */
-  .tag-pill.size-xs {
-    font-size: 11px;
-    padding: 6px 10px;
-  }
-
-  .tag-pill.size-sm {
-    font-size: 12px;
-    padding: 7px 12px;
-  }
-
-  .tag-pill.size-md {
-    font-size: 13px;
-    padding: 8px 14px;
-  }
-
-  .tag-pill.size-lg {
-    font-size: 14px;
-    padding: 9px 16px;
-  }
-
-  .tag-pill.size-xl {
-    font-size: 15px;
-    padding: 10px 18px;
-    font-weight: 600;
-  }
-
-  .tag-name {
-    position: relative;
-    z-index: 1;
-  }
-
-  .tag-count {
-    opacity: 0.7;
-    font-size: 0.9em;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* ===== Search Results Dropdown ===== */
-  .search-results-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius-sm);
-    box-shadow: var(--vault-shadow);
-    max-height: 400px;
-    overflow-y: auto;
-    display: none;
-    z-index: 100;
-  }
-
-  .search-results-dropdown.active {
-    display: block;
-  }
-
-  .search-result-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--vault-line);
-    text-decoration: none;
-    color: var(--vault-text);
-    transition: background 0.2s ease;
-  }
-
-  .search-result-item:hover {
-    background: rgba(110,168,255,0.08);
-  }
-
-  .result-highlight {
-    background: rgba(110,168,255,0.3);
-    padding: 0 2px;
-    border-radius: 2px;
-  }
-
-  /* ===== Main Layout Grid ===== */
-  .vault-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-
-  /* ===== Sidebar ===== */
-  .vault-sidebar {
-    position: sticky;
-    top: 100px;
-    display: grid;
-    gap: 16px;
-  }
-
-  /* ===== Folders Section ===== */
-  .folders-card {
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    padding: 16px;
-    box-shadow: var(--vault-shadow-sm);
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--vault-line);
-  }
-
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--vault-text);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .folder-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--vault-radius-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    color: var(--vault-text);
-    font-size: 14px;
-  }
-
-  .folder-item:hover {
-    background: rgba(110,168,255,0.08);
-    transform: translateX(4px);
-  }
-
-  .folder-count {
-    margin-left: auto;
-    background: var(--vault-sub);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    color: var(--vault-muted);
-    font-weight: 600;
-  }
-
-  /* ===== Activity Timeline ===== */
-  .activity-card {
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    padding: 16px;
-    box-shadow: var(--vault-shadow-sm);
-  }
-
-  .activity-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    font-size: 13px;
-    color: var(--vault-muted);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .activity-item:last-child {
-    border-bottom: none;
-  }
-
-  .activity-icon {
-    width: 24px;
-    height: 24px;
-    background: var(--vault-sub);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-  }
-
-  .activity-text {
-    flex: 1;
-  }
-
-  .activity-time {
-    font-size: 11px;
-    opacity: 0.7;
-  }
-
-  /* ===== Main Content Area ===== */
-  .vault-main {
-    display: grid;
-    gap: 24px;
-  }
-
-  /* ===== Pinned Documents Section ===== */
-  .pinned-section {
-    background: linear-gradient(135deg, rgba(251,191,36,0.05), transparent);
-    border: 1px solid rgba(251,191,36,0.2);
-    border-radius: var(--vault-radius);
-    padding: 20px;
-  }
-
-  .pinned-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .pinned-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-
-  /* ===== Document Cards ===== */
-  .doc-card {
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius-sm);
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .doc-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--vault-primary), rgba(110,168,255,0.3));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .doc-card:hover {
-    border-color: var(--vault-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(110,168,255,0.15);
-  }
-
-  .doc-card:hover::before {
-    opacity: 1;
-  }
-
-  .doc-card-header {
-    display: flex;
-    align-items: start;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-
-  .doc-icon {
-    font-size: 24px;
-    width: 32px;
-    text-align: center;
-  }
-
-  .doc-content {
-    flex: 1;
-  }
-
-  .doc-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--vault-text);
-    margin-bottom: 4px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .doc-preview {
-    font-size: 12px;
-    color: var(--vault-muted);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 32px;
-  }
-
-  .doc-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--vault-line);
-    font-size: 11px;
-    color: var(--vault-muted);
-  }
-
-  .pin-indicator {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    color: #fbbf24;
-    font-size: 14px;
-  }
-
-  /* ===== Recent Documents List ===== */
-  .recent-section {
-    background: var(--vault-card);
-    border: 1px solid var(--vault-line);
-    border-radius: var(--vault-radius);
-    overflow: hidden;
-    box-shadow: var(--vault-shadow-sm);
-  }
-
-  .recent-header {
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--vault-line);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .recent-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--vault-text);
-  }
-
-  .view-all-link {
-    color: var(--vault-primary);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-  }
-
-  .view-all-link:hover {
-    text-decoration: underline;
-  }
-
-  .recent-list {
-    max-height: 600px;
-    overflow-y: auto;
-  }
-
-  .recent-item {
-    display: grid;
-    grid-template-columns: 36px 1fr auto;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--vault-line);
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-  }
-
-  .recent-item:last-child {
-    border-bottom: none;
-  }
-
-  .recent-item:hover {
-    background: rgba(110,168,255,0.04);
-  }
-
-  .recent-item-info {
-    display: grid;
-    gap: 4px;
-  }
-
-  .recent-item-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--vault-text);
-  }
-
-  .recent-item-path {
-    font-size: 12px;
-    color: var(--vault-muted);
-  }
-
-  .recent-item-meta {
-    text-align: right;
-    font-size: 12px;
-    color: var(--vault-muted);
-  }
-
-  /* ===== Empty States ===== */
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--vault-muted);
-  }
-
-  .empty-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-    opacity: 0.5;
-  }
-
-  .empty-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--vault-text);
-  }
-
-  .empty-text {
-    font-size: 13px;
-  }
-
-  /* ===== Buttons ===== */
+  /* ===== Buttons (matching project style) ===== */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -821,70 +116,314 @@
     border-color: var(--vault-primary);
   }
 
-  /* ===== File Upload ===== */
-  .upload-input {
-    display: none;
+  /* ===== Search Section ===== */
+  .search-section {
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius);
+    padding: 20px;
+    box-shadow: var(--vault-shadow-sm);
   }
 
-  /* ===== Scrollbar ===== */
-  .recent-list::-webkit-scrollbar {
-    width: 6px;
+  .search-wrapper {
+    position: relative;
   }
 
-  .recent-list::-webkit-scrollbar-track {
+  .search-input {
+    width: 100%;
+    padding: 14px 48px 14px 18px;
     background: var(--vault-sub);
-    border-radius: 3px;
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius-sm);
+    color: var(--vault-text);
+    font-size: 15px;
+    transition: all 0.2s ease;
   }
 
-  .recent-list::-webkit-scrollbar-thumb {
-    background: var(--vault-primary);
-    border-radius: 3px;
-    opacity: 0.5;
+  .search-input:focus {
+    outline: none;
+    border-color: var(--vault-primary);
+    box-shadow: 0 0 0 3px rgba(110,168,255,0.1);
+    background: rgba(110,168,255,0.03);
   }
 
-  .recent-list::-webkit-scrollbar-thumb:hover {
-    opacity: 0.8;
+  .search-input::placeholder {
+    color: var(--vault-muted);
   }
 
-  /* ===== Responsive ===== */
+  .search-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vault-muted);
+    pointer-events: none;
+  }
+
+  /* Live results dropdown (from File A) */
+  .search-results-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius-sm);
+    box-shadow: var(--vault-shadow);
+    max-height: 400px;
+    overflow-y: auto;
+    display: none;
+    z-index: 100;
+  }
+  .search-results-dropdown.active { display:block; }
+  .search-result-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--vault-line);
+    text-decoration: none; color: var(--vault-text);
+    transition: background .2s ease;
+  }
+  .search-result-item:hover { background: rgba(110,168,255,0.08); }
+  .result-highlight { background: rgba(110,168,255,0.3); padding: 0 2px; border-radius: 2px; }
+
+  /* ===== Quick Filters ===== */
+  .quick-filters {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label { color: var(--vault-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+
+  .filter-chip {
+    padding: 8px 14px;
+    background: var(--vault-sub);
+    border: 1px solid var(--vault-line);
+    border-radius: 20px;
+    color: var(--vault-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none;
+  }
+  .filter-chip:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: rgba(110,168,255,0.3);
+    color: var(--vault-primary);
+    transform: translateY(-1px);
+  }
+  .filter-chip.active {
+    background: rgba(110,168,255,0.15);
+    border-color: var(--vault-primary);
+    color: var(--vault-primary);
+  }
+  .filter-count { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+  /* ===== Main Layout Grid ===== */
+  .vault-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ===== Sidebar ===== */
+  .vault-sidebar {
+    position: sticky;
+    top: 100px;
+    display: grid;
+    gap: 16px;
+  }
+
+  /* ===== Folders Section ===== */
+  .folders-card {
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius);
+    padding: 16px;
+    box-shadow: var(--vault-shadow-sm);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--vault-line);
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vault-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .folder-list { display: grid; gap: 4px; }
+
+  .folder-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--vault-radius-sm);
+    cursor: pointer; transition: all 0.2s ease;
+    text-decoration: none; color: var(--vault-text); font-size: 14px;
+  }
+  .folder-item:hover { background: rgba(110,168,255,0.08); transform: translateX(4px); }
+  .folder-item.active { background: rgba(110,168,255,0.12); border-left: 3px solid var(--vault-primary); padding-left: 9px; }
+
+  .folder-icon { font-size: 18px; width: 24px; text-align: center; }
+  .folder-name { flex: 1; font-weight: 500; }
+  .folder-count {
+    background: var(--vault-sub);
+    padding: 2px 8px; border-radius: 12px;
+    font-size: 12px; color: var(--vault-muted); font-weight: 600;
+  }
+
+  /* ===== Tags Cloud ===== */
+  .tags-card {
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius);
+    padding: 16px;
+    box-shadow: var(--vault-shadow-sm);
+  }
+
+  .tags-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-pill {
+    padding: 6px 12px;
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 16px;
+    color: var(--vault-primary);
+    font-size: 12px; text-decoration: none; transition: all 0.2s ease; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tag-pill:hover { background: rgba(110,168,255,0.2); border-color: var(--vault-primary); transform: scale(1.05); }
+  .tag-count { opacity:.75; font-size: 11px; }
+
+  /* ===== Main Content Area ===== */
+  .vault-main { display: grid; gap: 24px; }
+
+  /* ===== Pinned Documents Section ===== */
+  .pinned-section {
+    background: linear-gradient(135deg, rgba(251,191,36,0.05), transparent);
+    border: 1px solid rgba(251,191,36,0.2);
+    border-radius: var(--vault-radius);
+    padding: 20px;
+  }
+
+  .pinned-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .pinned-header .icon { color: #fbbf24; font-size: 20px; }
+  .pinned-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--vault-text); }
+
+  .pinned-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  /* ===== Document Cards ===== */
+  .doc-card {
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius-sm);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+  .doc-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--vault-primary), rgba(110,168,255,0.3));
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .doc-card:hover { border-color: var(--vault-primary); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(110,168,255,0.15); }
+  .doc-card:hover::before { opacity: 1; }
+  .doc-card-header { display: flex; align-items: start; gap: 12px; margin-bottom: 10px; }
+  .doc-icon { font-size: 24px; width: 32px; text-align: center; opacity: 0.8; }
+  .doc-content { flex: 1; }
+  .doc-title {
+    font-size: 14px; font-weight: 600; color: var(--vault-text); margin-bottom: 4px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .doc-preview {
+    font-size: 12px; color: var(--vault-muted); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    min-height: 32px;
+  }
+  .doc-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--vault-line);
+    font-size: 11px; color: var(--vault-muted);
+  }
+  .doc-date { display: flex; align-items: center; gap: 4px; }
+  .doc-size { background: var(--vault-sub); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .pin-indicator { position: absolute; top: 8px; right: 8px; color: #fbbf24; font-size: 14px; }
+
+  /* ===== Recent Documents List ===== */
+  .recent-section {
+    background: var(--vault-card);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius);
+    overflow: hidden;
+    box-shadow: var(--vault-shadow-sm);
+  }
+  .recent-header { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent); padding: 16px 20px; border-bottom: 1px solid var(--vault-line); display:flex; justify-content:space-between; align-items:center; }
+  .recent-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--vault-text); }
+  .view-all-link { color: var(--vault-primary); text-decoration: none; font-size: 13px; font-weight: 500; }
+  .view-all-link:hover { text-decoration: underline; }
+
+  .recent-list { max-height: 600px; overflow-y: auto; }
+  .recent-item {
+    display: grid; grid-template-columns: 36px 1fr auto 100px;
+    align-items: center; gap: 12px; padding: 14px 20px;
+    border-bottom: 1px solid var(--vault-line);
+    text-decoration: none; color: inherit; transition: all 0.2s ease;
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item:hover { background: rgba(110,168,255,0.04); }
+  .recent-item-icon { font-size: 20px; opacity: 0.7; }
+  .recent-item-info { display: grid; gap: 4px; }
+  .recent-item-title { font-size: 14px; font-weight: 500; color: var(--vault-text); }
+  .recent-item-path { font-size: 12px; color: var(--vault-muted); }
+  .recent-item-tags { display: flex; gap: 6px; }
+  .mini-tag { padding: 2px 6px; background: rgba(110,168,255,0.1); border-radius: 4px; font-size: 11px; color: var(--vault-primary); }
+  .recent-item-date { font-size: 12px; color: var(--vault-muted); text-align: right; }
+
+  /* ===== Stats Bar ===== */
+  .stats-bar {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border: 1px solid var(--vault-line);
+    border-radius: var(--vault-radius-sm);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+  }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 20px; font-weight: 600; color: var(--vault-primary); display: block; }
+  .stat-label { font-size: 12px; color: var(--vault-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ===== Scrollbar Styling ===== */
+  .recent-list::-webkit-scrollbar { width: 6px; }
+  .recent-list::-webkit-scrollbar-track { background: var(--vault-sub); border-radius: 3px; }
+  .recent-list::-webkit-scrollbar-thumb { background: var(--vault-primary); border-radius: 3px; opacity: 0.5; }
+  .recent-list::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
+
+  /* ===== Responsive Design ===== */
   @media (max-width: 968px) {
-    .vault-layout {
-      grid-template-columns: 1fr;
-    }
-    
-    .vault-sidebar {
-      position: static;
-      grid-row: 2;
-    }
-    
-    .pinned-grid {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    }
-    
-    .stats-dashboard {
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    }
+    .vault-layout { grid-template-columns: 1fr; }
+    .vault-sidebar { position: static; grid-row: 2; }
+    .pinned-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   }
-
   @media (max-width: 640px) {
-    .vault-header {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-    
-    .header-actions {
-      justify-content: center;
-    }
-    
-    .recent-item {
-      grid-template-columns: 32px 1fr;
-      grid-template-rows: auto auto;
-    }
-    
-    .recent-item-meta {
-      grid-column: 2;
-    }
+    .vault-header { flex-direction: column; gap: 12px; align-items: stretch; }
+    .header-actions { justify-content: center; }
+    .recent-item { grid-template-columns: 32px 1fr; grid-template-rows: auto auto; }
+    .recent-item-tags, .recent-item-date { grid-column: 2; }
   }
 </style>
 {% endblock %}
@@ -897,259 +436,138 @@
       <span style="font-size: 24px;">📁</span>
       <h2>Document Vault</h2>
     </div>
-    
     <div class="header-actions">
-      <input type="file" id="upload-input" class="upload-input" accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.svg,.py,.js,.html,.css,.json,.yaml,.yml,.sh,.sql,.csv,.xml">
+      <!-- Hidden upload input wired to backend (File A behavior) -->
+      <input type="file" id="upload-input" class="upload-input" accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.svg,.py,.js,.html,.css,.json,.yaml,.yml,.sh,.sql,.csv,.xml" style="display:none;">
       <button class="btn" onclick="document.getElementById('upload-input').click()">
-        <span>📤</span>
-        <span>Upload</span>
+        <span>📤</span><span>Upload</span>
       </button>
       <a href="{{ url_for('vault.create_document') }}" class="btn btn-primary">
-        <span>➕</span>
-        <span>New Document</span>
+        <span>➕</span><span>New Document</span>
       </a>
     </div>
   </div>
 
-  <!-- Stats Dashboard -->
-  <div class="stats-dashboard">
-    <div class="stat-card">
-      <span class="stat-icon">📄</span>
-      <span class="stat-value" id="total-docs">{{ total_documents|default(0) }}</span>
-      <span class="stat-label">Total Documents</span>
-      <div class="stat-trend">↑ {{ new_this_week|default(0) }} this week</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">💾</span>
-      <span class="stat-value">{{ total_size_mb|default("0") }}MB</span>
-      <span class="stat-label">Storage Used</span>
-      <div class="stat-trend">{{ avg_file_size|default("0") }}KB avg</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">📌</span>
-      <span class="stat-value">{{ pinned_count|default(0) }}</span>
-      <span class="stat-label">Pinned</span>
-      <div class="stat-trend">Quick access</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">📂</span>
-      <span class="stat-value">{{ folders|length|default(0) }}</span>
-      <span class="stat-label">Folders</span>
-      <div class="stat-trend">Organized</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">🏷️</span>
-      <span class="stat-value">{{ all_tags|length|default(0) }}</span>
-      <span class="stat-label">Tags Used</span>
-      <div class="stat-trend">Categories</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">📊</span>
-      <span class="stat-value">{{ most_common_type|default("Note") }}</span>
-      <span class="stat-label">Most Common</span>
-      <div class="stat-trend">File type</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">⚠️</span>
-      <span class="stat-value">{{ expiring_soon|default(0) }}</span>
-      <span class="stat-label">Expiring Soon</span>
-      <div class="stat-trend {{ 'down' if expiring_soon > 0 }}">Next 30 days</div>
-    </div>
-    
-    <div class="stat-card">
-      <span class="stat-icon">🔥</span>
-      <span class="stat-value">{{ accessed_today|default(0) }}</span>
-      <span class="stat-label">Accessed Today</span>
-      <div class="stat-trend">Active files</div>
-    </div>
-  </div>
-
-  <!-- Enhanced Search Section -->
+  <!-- Search Section (form + live results wired) -->
   <div class="search-section">
     <div class="search-wrapper">
-      <form action="{{ url_for('vault.search') }}" method="get" style="margin: 0;">
+      <form action="{{ url_for('vault.search') }}" method="get" style="margin:0;">
         <input type="text" 
-               name="q"
                class="search-input" 
-               placeholder="Search documents by title, content, filename, or tags..."
+               placeholder="Search documents, folders, or tags..."
+               name="q"
                id="vault-search"
                autocomplete="off">
         <span class="search-icon">🔍</span>
       </form>
-      
-      <!-- Live Search Results -->
       <div class="search-results-dropdown" id="search-results"></div>
     </div>
     
-    <!-- Document Type Filters -->
+    <!-- Real quick filters (File A endpoints, File B styling) -->
     <div class="quick-filters">
-      <span class="filter-label">FILTER BY TYPE:</span>
-      <a href="{{ url_for('vault.index') }}" class="filter-chip active">
-        <span>📁</span>
-        <span>All Files</span>
+      <span class="filter-label">Filter by type:</span>
+      <a href="{{ url_for('vault.index') }}" class="filter-chip {% if not request.args.get('type') %}active{% endif %}">
+        <span>📁</span><span>All Files</span>
         <span class="filter-count">{{ total_documents|default(0) }}</span>
       </a>
       {% if type_counts %}
         {% if type_counts.get('document', 0) > 0 %}
-        <a href="{{ url_for('vault.search', type='document') }}" class="filter-chip">
-          <span>📄</span>
-          <span>Documents</span>
-          <span class="filter-count">{{ type_counts.document }}</span>
-        </a>
-        {% endif %}
-        {% if type_counts.get('code', 0) > 0 %}
-        <a href="{{ url_for('vault.search', type='code') }}" class="filter-chip">
-          <span>💻</span>
-          <span>Code</span>
-          <span class="filter-count">{{ type_counts.code }}</span>
+        <a href="{{ url_for('vault.search', type='document') }}" class="filter-chip {% if request.args.get('type')=='document' %}active{% endif %}">
+          <span>📄</span><span>Documents</span><span class="filter-count">{{ type_counts.document }}</span>
         </a>
         {% endif %}
         {% if type_counts.get('image', 0) > 0 %}
-        <a href="{{ url_for('vault.search', type='image') }}" class="filter-chip">
-          <span>🖼️</span>
-          <span>Images</span>
-          <span class="filter-count">{{ type_counts.image }}</span>
+        <a href="{{ url_for('vault.search', type='image') }}" class="filter-chip {% if request.args.get('type')=='image' %}active{% endif %}">
+          <span>🖼️</span><span>Images</span><span class="filter-count">{{ type_counts.image }}</span>
         </a>
         {% endif %}
         {% if type_counts.get('data', 0) > 0 %}
-        <a href="{{ url_for('vault.search', type='data') }}" class="filter-chip">
-          <span>📊</span>
-          <span>Data Files</span>
-          <span class="filter-count">{{ type_counts.data }}</span>
+        <a href="{{ url_for('vault.search', type='data') }}" class="filter-chip {% if request.args.get('type')=='data' %}active{% endif %}">
+          <span>📊</span><span>Data Files</span><span class="filter-count">{{ type_counts.data }}</span>
         </a>
         {% endif %}
         {% if type_counts.get('config', 0) > 0 %}
-        <a href="{{ url_for('vault.search', type='config') }}" class="filter-chip">
-          <span>⚙️</span>
-          <span>Configs</span>
-          <span class="filter-count">{{ type_counts.config }}</span>
+        <a href="{{ url_for('vault.search', type='config') }}" class="filter-chip {% if request.args.get('type')=='config' %}active{% endif %}">
+          <span>⚙️</span><span>Configs</span><span class="filter-count">{{ type_counts.config }}</span>
+        </a>
+        {% endif %}
+        {% if type_counts.get('code', 0) > 0 %}
+        <a href="{{ url_for('vault.search', type='code') }}" class="filter-chip {% if request.args.get('type')=='code' %}active{% endif %}">
+          <span>💻</span><span>Code</span><span class="filter-count">{{ type_counts.code }}</span>
         </a>
         {% endif %}
       {% endif %}
     </div>
-    
-    <!-- Date Range Filters -->
-    <div class="date-filters">
-      <span class="filter-label" style="margin-right: 8px; font-size: 12px; color: var(--vault-muted);">QUICK DATES:</span>
-      <a href="#" class="date-chip" onclick="filterByDate('today'); return false;">Today</a>
-      <a href="#" class="date-chip" onclick="filterByDate('week'); return false;">This Week</a>
-      <a href="#" class="date-chip" onclick="filterByDate('month'); return false;">This Month</a>
-      <a href="#" class="date-chip" onclick="filterByDate('year'); return false;">This Year</a>
-    </div>
-    
-    <!-- Recent Searches -->
-    {% if recent_searches %}
-    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
-      <span style="color: var(--vault-muted); font-size: 12px;">Recent:</span>
-      {% for search in recent_searches[:5] %}
-      <a href="{{ url_for('vault.search', q=search.query) }}" 
-         style="padding: 4px 10px; background: var(--vault-sub); border: 1px solid var(--vault-line); border-radius: 12px; color: var(--vault-primary); font-size: 12px; text-decoration: none; transition: all 0.2s;">
-        {{ search.query }}
-      </a>
-      {% endfor %}
-    </div>
-    {% endif %}
   </div>
-
-  <!-- Complete Tags Cloud -->
-  {% if all_tags %}
-  <div class="tags-showcase">
-    <div class="tags-header">
-      <div class="tags-title">
-        <span>🏷️</span>
-        <span>All Tags</span>
-      </div>
-      <span class="tags-count">{{ all_tags|length }} tags in use</span>
-    </div>
-    <div class="tags-cloud">
-      {% for tag in all_tags %}
-        {% set size_class = 'size-xs' %}
-        {% if tag.count > 20 %}
-          {% set size_class = 'size-xl' %}
-        {% elif tag.count > 15 %}
-          {% set size_class = 'size-lg' %}
-        {% elif tag.count > 10 %}
-          {% set size_class = 'size-md' %}
-        {% elif tag.count > 5 %}
-          {% set size_class = 'size-sm' %}
-        {% endif %}
-        
-        <a href="{{ url_for('vault.search', tag=tag.name) }}" 
-           class="tag-pill {{ size_class }}"
-           style="border-color: {{ tag.color|default('#6ea8ff') }}30; background: {{ tag.color|default('#6ea8ff') }}15;"
-           title="{{ tag.count }} document{{ 's' if tag.count != 1 }}">
-          <span class="tag-name">#{{ tag.name }}</span>
-          <span class="tag-count">({{ tag.count }})</span>
-        </a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
 
   <!-- Main Layout Grid -->
   <div class="vault-layout">
     <!-- Sidebar -->
     <div class="vault-sidebar">
-      <!-- Folders -->
+      <!-- Folders (real) -->
       <div class="folders-card">
         <div class="section-header">
-          <span class="section-title">
-            <span>📂</span>
-            <span>FOLDERS</span>
-          </span>
-          <a href="{{ url_for('vault.manage_folders') }}" style="color: var(--vault-muted); font-size: 18px; text-decoration: none; transition: all 0.2s;" title="Manage Folders">⚙️</a>
+          <span class="section-title">Folders</span>
+          <a href="{{ url_for('vault.manage_folders') }}" title="Manage Folders" style="margin-left:auto; color: var(--vault-muted); text-decoration:none;">⚙️</a>
         </div>
         <div class="folder-list">
-          <a href="{{ url_for('vault.index') }}" class="folder-item">
-            <span>📁</span>
-            <span>All Documents</span>
+          <a href="{{ url_for('vault.index') }}" class="folder-item {% if not request.args.get('folder') %}active{% endif %}">
+            <span class="folder-icon">📂</span>
+            <span class="folder-name">All Documents</span>
+            <span class="folder-count">{{ total_documents|default(0) }}</span>
           </a>
           {% for folder in folders %}
-          <a href="{{ url_for('vault.search', folder=folder.id) }}" class="folder-item">
-            <span>{{ folder.icon }}</span>
-            <span>{{ folder.name }}</span>
+          <a href="{{ url_for('vault.search', folder=folder.id) }}" class="folder-item {% if request.args.get('folder', type=int) == folder.id %}active{% endif %}">
+            <span class="folder-icon">{{ folder.icon }}</span>
+            <span class="folder-name">{{ folder.name }}</span>
             <span class="folder-count">{{ folder.documents|length }}</span>
           </a>
           {% endfor %}
         </div>
       </div>
 
-      <!-- Activity Timeline -->
-      {% if recent_activity %}
-      <div class="activity-card">
+      <!-- Tags (real) -->
+      {% if all_tags %}
+      <div class="tags-card">
         <div class="section-header">
-          <span class="section-title">
-            <span>⚡</span>
-            <span>RECENT ACTIVITY</span>
-          </span>
+          <span class="section-title">Tags</span>
         </div>
-        {% for activity in recent_activity[:5] %}
-        <div class="activity-item">
-          <span class="activity-icon">{{ activity.icon }}</span>
-          <span class="activity-text">{{ activity.text }}</span>
-          <span class="activity-time">{{ activity.time }}</span>
+        <div class="tags-cloud">
+          {% for tag in all_tags %}
+          <a href="{{ url_for('vault.search', tag=tag.name) }}" class="tag-pill" style="border-color: {{ tag.color|default('#6ea8ff') }}30; background: {{ tag.color|default('#6ea8ff') }}15;">
+            <span>#{{ tag.name }}</span>
+            <span class="tag-count">({{ tag.count }})</span>
+          </a>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
       {% endif %}
+
+      <!-- Stats (real) -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-value">{{ total_documents|default(0) }}</span>
+          <span class="stat-label">Files</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ total_size_mb|default("0") }}MB</span>
+          <span class="stat-label">Used</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ pinned_count|default(0) }}</span>
+          <span class="stat-label">Pinned</span>
+        </div>
+      </div>
     </div>
 
     <!-- Main Content -->
     <div class="vault-main">
-      <!-- Pinned Documents -->
+      <!-- Pinned Documents (real) -->
       {% if pinned_docs %}
       <div class="pinned-section">
         <div class="pinned-header">
-          <span style="color: #fbbf24; font-size: 20px;">📌</span>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--vault-text);">
-            Pinned Documents
-          </h3>
+          <span class="icon">📌</span>
+          <h3>Pinned Documents</h3>
         </div>
         <div class="pinned-grid">
           {% for doc in pinned_docs %}
@@ -1179,9 +597,9 @@
               </div>
             </div>
             <div class="doc-meta">
-              <span>📅 {{ doc.updated_at.strftime('%b %d, %Y') if doc.updated_at else 'Unknown' }}</span>
+              <span class="doc-date">📅 {{ doc.updated_at.strftime('%b %d, %Y') if doc.updated_at else 'Unknown' }}</span>
               {% if doc.file_size %}
-              <span>{{ (doc.file_size / 1024)|round(1) }} KB</span>
+              <span class="doc-size">{{ (doc.file_size / 1024)|round(1) }} KB</span>
               {% endif %}
             </div>
           </a>
@@ -1190,7 +608,7 @@
       </div>
       {% endif %}
 
-      <!-- Recent Documents -->
+      <!-- Recent Documents (real) -->
       <div class="recent-section">
         <div class="recent-header">
           <h3>Recent Documents</h3>
@@ -1200,7 +618,7 @@
           {% if recent_docs %}
             {% for doc in recent_docs %}
             <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="recent-item">
-              <span style="font-size: 20px;">
+              <span class="recent-item-icon">
                 {% if doc.doc_type == 'code' %}💻
                 {% elif doc.doc_type == 'config' %}⚙️
                 {% elif doc.doc_type == 'image' %}🖼️
@@ -1210,22 +628,22 @@
                 {% else %}📎{% endif %}
               </span>
               <div class="recent-item-info">
-                <div class="recent-item-title">
+                <span class="recent-item-title">
                   {{ doc.title }}
-                  {% if doc.pinned %}
-                  <span style="color: #fbbf24; font-size: 12px; margin-left: 6px;">📌</span>
-                  {% endif %}
-                </div>
+                  {% if doc.pinned %}<span style="color:#fbbf24; font-size:12px; margin-left:6px;">📌</span>{% endif %}
+                </span>
                 {% if doc.folder %}
-                <div class="recent-item-path">{{ doc.folder.icon }} {{ doc.folder.name }}</div>
+                <span class="recent-item-path">{{ doc.folder.icon }} {{ doc.folder.name }}</span>
                 {% endif %}
               </div>
-              <div class="recent-item-meta">
-                <div>{{ doc.updated_at.strftime('%b %d') if doc.updated_at else 'Unknown' }}</div>
-                {% if doc.file_size %}
-                <div style="font-size: 11px; opacity: 0.8;">{{ (doc.file_size / 1024)|round(1) }} KB</div>
+              <div class="recent-item-tags">
+                {% if doc.tags %}
+                  {% for t in doc.tags[:3] %}
+                    <span class="mini-tag">#{{ t.name }}</span>
+                  {% endfor %}
                 {% endif %}
               </div>
+              <span class="recent-item-date">{{ doc.updated_at.strftime('%b %d') if doc.updated_at else 'Unknown' }}</span>
             </a>
             {% endfor %}
           {% else %}
@@ -1242,14 +660,12 @@
 </div>
 
 <script>
-  // Quick file upload
+  // ===== File upload (from File A)
   document.getElementById('upload-input').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
     const formData = new FormData();
     formData.append('file', file);
-    
     fetch('{{ url_for("vault.upload_file") }}', {
       method: 'POST',
       body: formData
@@ -1268,32 +684,28 @@
     });
   });
 
-  // Enhanced live search with highlighting
+  // ===== Live search with highlighting (from File A)
   let searchTimeout;
   const searchInput = document.getElementById('vault-search');
   const searchResults = document.getElementById('search-results');
-  
+
   searchInput.addEventListener('input', function(e) {
     clearTimeout(searchTimeout);
     const query = e.target.value.trim();
-    
     if (query.length < 2) {
       searchResults.classList.remove('active');
       return;
     }
-    
     searchTimeout = setTimeout(() => {
       fetch(`{{ url_for("vault.api_search") }}?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
           if (data.length > 0) {
             searchResults.innerHTML = data.map(doc => {
-              // Highlight matching text
               const highlightedTitle = doc.title.replace(
                 new RegExp(query, 'gi'),
                 match => `<span class="result-highlight">${match}</span>`
               );
-              
               return `
                 <a href="${doc.url}" class="search-result-item">
                   <span style="font-size: 20px;">${doc.icon}</span>
@@ -1316,38 +728,12 @@
         });
     }, 300);
   });
-  
+
   // Hide search results when clicking outside
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.search-wrapper')) {
       searchResults.classList.remove('active');
     }
-  });
-
-  // Date range filtering
-  function filterByDate(range) {
-    window.location.href = `{{ url_for("vault.search") }}?date_range=${range}`;
-  }
-
-  // Animate stats on page load
-  window.addEventListener('load', function() {
-    const statValues = document.querySelectorAll('.stat-value');
-    statValues.forEach(stat => {
-      const value = stat.innerText;
-      if (!isNaN(value)) {
-        let current = 0;
-        const target = parseInt(value);
-        const increment = target / 30;
-        const timer = setInterval(() => {
-          current += increment;
-          if (current >= target) {
-            current = target;
-            clearInterval(timer);
-          }
-          stat.innerText = Math.floor(current);
-        }, 30);
-      }
-    });
   });
 </script>
 {% endblock %}
