@@ -1,121 +1,166 @@
 {% extends "base.html" %}
-
-{% block title %}{{ project.name }}{% endblock %}
-{% block header %}{{ project.name }}{% endblock %}
+{% block title %}{{ project.name }} - Personal Project{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* Override parent container constraints */
-  .container, .content, .main-content, main, body > div {
-    max-width: none !important;
-    width: 100% !important;
-  }
-
+  /* Personal Project Detail Styles */
   :root {
-    --pd-bg: #0a0d15;
-    --pd-surface: #0f1420;
-    --pd-surface-light: #141825;
-    --pd-surface-hover: #1a1f30;
-    --pd-border: #1e2435;
-    --pd-border-light: #252b40;
-    --pd-text: #e8ecf5;
-    --pd-text-dim: #8b95b0;
-    --pd-text-muted: #5a6580;
-    
-    --pd-accent: #4d7fff;
-    --pd-accent-hover: #6089ff;
-    --pd-accent-glow: rgba(77, 127, 255, 0.25);
-    
+    --pd-bg: #0a0f1a;
+    --pd-surface: #0f1823;
+    --pd-surface-light: #141f2e;
+    --pd-surface-hover: #1a2838;
+    --pd-border: rgba(255, 255, 255, 0.1);
+    --pd-border-light: rgba(255, 255, 255, 0.05);
+    --pd-text: #e2e8f0;
+    --pd-text-dim: #94a3b8;
+    --pd-text-muted: #64748b;
+    --pd-accent: #818cf8;
+    --pd-accent-glow: rgba(129, 140, 248, 0.15);
     --pd-success: #10b981;
     --pd-success-bg: rgba(16, 185, 129, 0.1);
     --pd-warning: #f59e0b;
     --pd-warning-bg: rgba(245, 158, 11, 0.1);
     --pd-danger: #ef4444;
     --pd-danger-bg: rgba(239, 68, 68, 0.1);
-    
     --pd-priority-low: #6b7280;
-    --pd-priority-medium: #f59e0b;
-    --pd-priority-high: #ef4444;
-    --pd-priority-critical: #dc2626;
+    --pd-priority-medium: #3b82f6;
+    --pd-priority-high: #f59e0b;
+    --pd-priority-critical: #ef4444;
   }
 
-  /* Main Container - Full Width */
-  .project-workspace {
+  body {
+    background: var(--pd-bg);
+  }
+
+  /* Layout */
+  .project-detail-container {
+    display: flex;
     min-height: 100vh;
     background: var(--pd-bg);
-    display: flex;
-    flex-direction: column;
   }
 
-  /* Hero Header Section - COMPACT */
-  .project-hero {
-    background: linear-gradient(135deg, #0f1420 0%, #1a1f35 100%);
-    border-bottom: 1px solid var(--pd-border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+  /* Hero Header */
+  .project-header {
+    margin-bottom: 1.5rem;
   }
 
   .hero-content {
-    padding: 1rem 2rem;
-    width: 100%;
-    max-width: none;
-  }
-
-  .hero-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
+    background: linear-gradient(135deg, var(--pd-surface) 0%, var(--pd-surface-light) 100%);
+    border: 1px solid var(--pd-border);
+    border-radius: 1rem;
+    padding: 2rem;
   }
 
   .project-title-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+    margin-bottom: 1rem;
   }
 
-  .project-title {
-    font-size: 1.5rem;
-    font-weight: 600;
+  .project-name {
+    font-size: 2rem;
+    font-weight: 700;
     color: var(--pd-text);
-    margin: 0;
+    margin: 0 0 0.5rem 0;
   }
 
   .project-description {
-    font-size: 0.95rem;
     color: var(--pd-text-dim);
+    font-size: 1.1rem;
     margin: 0;
-    max-width: 400px;
   }
 
+  /* Metadata */
+  .project-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+
+  .meta-chip {
+    padding: 0.25rem 0.75rem;
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    color: var(--pd-text-dim);
+  }
+
+  .category-chip {
+    background: var(--pd-accent-glow);
+    border-color: var(--pd-accent);
+    color: var(--pd-accent);
+  }
+
+  .status-planning { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+  .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  .status-on_hold { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .status-completed { background: rgba(129, 140, 248, 0.1); color: #818cf8; }
+
+  .priority-low { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+  .priority-medium { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+  .priority-high { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .priority-critical { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+  /* Progress Section */
+  .progress-section {
+    margin-top: 1rem;
+  }
+
+  .progress-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--pd-text-dim);
+  }
+
+  .progress-bar-container {
+    background: var(--pd-surface);
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    background: linear-gradient(90deg, var(--pd-accent), #a78bfa);
+    height: 100%;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+  }
+
+  .progress-percentage {
+    font-size: 0.7rem;
+    color: white;
+    font-weight: 600;
+    margin-right: 0.25rem;
+  }
+
+  /* Actions */
   .hero-actions {
     display: flex;
     gap: 0.75rem;
-    flex-shrink: 0;
+    margin-top: 1rem;
   }
 
   .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-    border: 1px solid var(--pd-border);
+    padding: 0.5rem 1rem;
     background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: 0.5rem;
     color: var(--pd-text);
-    cursor: pointer;
-    transition: all 0.2s ease;
     text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
   }
 
   .btn:hover {
     background: var(--pd-surface-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
   .btn-primary {
@@ -125,99 +170,53 @@
   }
 
   .btn-primary:hover {
-    background: var(--pd-accent-hover);
-    box-shadow: 0 4px 20px var(--pd-accent-glow);
+    background: #6366f1;
   }
 
   .btn-sm {
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 0.75rem;
     font-size: 0.875rem;
   }
 
   .btn-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    border: 1px solid var(--pd-border);
-    background: var(--pd-surface);
+    background: transparent;
+    border: none;
+    color: var(--pd-text-dim);
     cursor: pointer;
-    transition: all 0.2s ease;
+    padding: 0.25rem;
+    transition: all 0.2s;
   }
 
   .btn-icon:hover {
-    background: var(--pd-accent-glow);
-    border-color: var(--pd-accent);
+    color: var(--pd-text);
   }
 
-  /* Metadata Bar */
-  .project-meta-bar {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .meta-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.9rem;
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 999px;
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-  }
-
-  .meta-chip.status-planning { border-color: #6b7280; color: #9ca3af; }
-  .meta-chip.status-active { border-color: var(--pd-accent); color: var(--pd-accent); background: rgba(77, 127, 255, 0.1); }
-  .meta-chip.status-on_hold { border-color: var(--pd-warning); color: var(--pd-warning); background: var(--pd-warning-bg); }
-  .meta-chip.status-completed { border-color: var(--pd-success); color: var(--pd-success); background: var(--pd-success-bg); }
-
-  .meta-chip.priority-low { border-color: var(--pd-priority-low); }
-  .meta-chip.priority-medium { border-color: var(--pd-priority-medium); color: var(--pd-priority-medium); }
-  .meta-chip.priority-high { border-color: var(--pd-priority-high); color: var(--pd-priority-high); }
-  .meta-chip.priority-critical { 
-    border-color: var(--pd-priority-critical); 
-    color: white; 
-    background: var(--pd-priority-critical);
-    animation: criticalPulse 2s ease-in-out infinite;
-  }
-
-  @keyframes criticalPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  /* Combined Goals Bar */
+  /* Goals Bar */
   .goals-bar {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--pd-border);
   }
 
   .goal-item {
-    flex: 1;
     display: flex;
     gap: 0.75rem;
-    align-items: flex-start;
+    padding: 1rem;
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: 0.75rem;
   }
 
   .goal-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--pd-accent-glow);
-    border-radius: 0.5rem;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
+    background: var(--pd-accent-glow);
+    border-radius: 0.5rem;
+    font-size: 1.25rem;
   }
 
   .goal-content-wrapper {
@@ -226,7 +225,7 @@
   }
 
   .goal-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--pd-text-muted);
@@ -234,96 +233,32 @@
   }
 
   .goal-text {
-    font-size: 0.875rem;
     color: var(--pd-text);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    line-height: 1.4;
+    font-size: 0.9rem;
   }
 
-  /* Progress Section - Inline Compact */
-  .progress-section {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-top: 1rem;
-  }
-
-  .progress-stats {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-  }
-
-  .progress-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .progress-stat-label {
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  .progress-stat-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--pd-text);
-  }
-
-  .progress-bar-container {
-    flex: 1;
-    max-width: 300px;
-    height: 1.5rem;
-    background: var(--pd-surface);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    border: 1px solid var(--pd-border);
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--pd-accent), var(--pd-accent-hover));
-    border-radius: inherit;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 0.5rem;
-  }
-
-  .progress-percentage {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
-  }
-
-  /* Timeline Bar (at top) */
+  /* Timeline Bar */
   .timeline-bar {
-    background: linear-gradient(135deg, var(--pd-surface) 0%, var(--pd-surface-light) 100%);
-    border-bottom: 1px solid var(--pd-border);
-    padding: 1rem 2rem;
-  }
-
-  .timeline-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    max-width: none;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
   }
 
   .timeline-item {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: 0.75rem;
   }
 
   .timeline-icon {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -350,43 +285,7 @@
     font-weight: 500;
   }
 
-  /* Inline Editable Selects */
-  .editable-chip {
-    position: relative;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .inline-select {
-    background: transparent;
-    border: none;
-    color: inherit;
-    font: inherit;
-    padding: 0.4rem 0.9rem;
-    cursor: pointer;
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1em;
-    padding-right: 2rem;
-  }
-
-  .inline-select:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 999px;
-  }
-
-  .inline-select:focus {
-    outline: 2px solid var(--pd-accent);
-    outline-offset: 2px;
-    border-radius: 999px;
-  }
-
-  /* Main Content Area - Full Width */
+  /* Main Content Area */
   .project-content {
     flex: 1;
     padding: 1.5rem 2rem;
@@ -394,7 +293,7 @@
     max-width: none;
   }
 
-  /* Main Dashboard Grid - Optimized for Wide Screens */
+  /* Dashboard Grid */
   .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 400px;
@@ -402,7 +301,7 @@
     height: calc(100vh - 200px);
   }
 
-  /* Tasks Section - Primary Focus */
+  /* Tasks Section */
   .tasks-section {
     background: var(--pd-surface);
     border: 1px solid var(--pd-border);
@@ -438,45 +337,14 @@
     gap: 0.5rem;
   }
 
-  /* Task Categories */
-  .tasks-container {
-    padding: 1.5rem;
+  .tasks-content {
     flex: 1;
+    padding: 1rem;
     overflow-y: auto;
-    overflow-x: hidden;
     min-height: 0;
-    scroll-behavior: smooth;
   }
 
-  .tasks-container::-webkit-scrollbar {
-    width: 10px;
-  }
-
-  .tasks-container::-webkit-scrollbar-track {
-    background: var(--pd-surface);
-    border-radius: 5px;
-  }
-
-  .tasks-container::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 5px;
-    border: 2px solid var(--pd-surface);
-  }
-
-  .tasks-container::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  .tasks-container {
-    background:
-      linear-gradient(var(--pd-surface) 10%, transparent 30%),
-      linear-gradient(transparent 70%, var(--pd-surface) 90%) 0 100%;
-    background-attachment: local, local;
-    background-size: 100% 30px, 100% 30px;
-    background-repeat: no-repeat;
-  }
-
-  /* Individual Tasks */
+  /* Task Items */
   .task-item {
     display: flex;
     gap: 1rem;
@@ -486,17 +354,16 @@
     border-radius: 0.75rem;
     margin-bottom: 0.75rem;
     transition: all 0.2s ease;
-    cursor: pointer;
   }
 
   .task-item:hover {
     background: var(--pd-surface-hover);
+    border-color: var(--pd-accent);
     transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
 
   .task-item.completed {
-    opacity: 0.5;
+    opacity: 0.6;
     background: var(--pd-surface);
   }
 
@@ -508,16 +375,8 @@
   .task-checkbox {
     width: 20px;
     height: 20px;
-    border-radius: 0.375rem;
-    border: 2px solid var(--pd-border-light);
     cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  .task-checkbox:checked {
-    background: var(--pd-success);
-    border-color: var(--pd-success);
+    accent-color: var(--pd-accent);
   }
 
   .task-content {
@@ -539,28 +398,17 @@
     flex-wrap: wrap;
   }
 
-  .task-priority {
+  .task-category {
     padding: 0.125rem 0.5rem;
+    background: var(--pd-surface);
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
+    color: var(--pd-text-dim);
   }
 
-  .task-priority.priority-low {
-    background: var(--pd-priority-low);
-    color: white;
-    opacity: 0.8;
-  }
-
-  .task-priority.priority-medium {
-    background: var(--pd-priority-medium);
-    color: white;
-  }
-
-  .task-priority.priority-high {
-    background: var(--pd-priority-high);
-    color: white;
+  .task-completed-date {
+    font-size: 0.75rem;
+    color: var(--pd-success);
   }
 
   .task-actions {
@@ -575,14 +423,21 @@
     opacity: 1;
   }
 
-  /* Sidebar Sections */
+  .task-action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 0.25rem;
+  }
+
+  /* Sidebar */
   .sidebar-column {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     height: 100%;
-    overflow: hidden;
-    padding-bottom: 1rem; /* Add padding at bottom to prevent cutoff */
+    overflow-y: auto;
   }
 
   .sidebar-section {
@@ -590,72 +445,37 @@
     border: 1px solid var(--pd-border);
     border-radius: 1rem;
     overflow: hidden;
-    flex-shrink: 0;
-    min-height: 280px; /* Changed from height to min-height */
-    max-height: 280px; /* Add max-height to maintain consistency */
     display: flex;
     flex-direction: column;
-  }
-
-  .sidebar-content {
-    padding: 1rem;
     flex: 1;
-    overflow-y: auto; /* This ensures scrolling */
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-    min-height: 0; /* Important for flexbox scrolling */
+    max-height: calc((100vh - 250px) / 3);
   }
 
-  /* Ensure all sidebar content areas are scrollable */
-  .sidebar-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Visual scroll indicators for all sidebar sections */
   .sidebar-content {
-    /* Subtle shadow at top/bottom when scrollable */
-    background:
-      linear-gradient(var(--pd-surface) 10%, transparent 30%),
-      linear-gradient(transparent 70%, var(--pd-surface) 90%) 0 100%;
-    background-attachment: local, local;
-    background-size: 100% 30px, 100% 30px;
-    background-repeat: no-repeat;
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    min-height: 0;
   }
 
   /* Ideas */
   .idea-item {
     padding: 0.75rem;
     background: var(--pd-surface-light);
-    border-left: 3px solid var(--pd-accent);
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     margin-bottom: 0.75rem;
+    border: 1px solid var(--pd-border);
     transition: all 0.2s ease;
   }
 
   .idea-item:hover {
     background: var(--pd-surface-hover);
-    transform: translateX(2px);
   }
 
   .idea-content {
     font-size: 0.875rem;
     color: var(--pd-text);
     margin-bottom: 0.5rem;
-    line-height: 1.4;
   }
 
   .idea-status {
@@ -669,15 +489,15 @@
 
   .idea-status.status-new { background: var(--pd-accent-glow); color: var(--pd-accent); }
   .idea-status.status-considering { background: var(--pd-warning-bg); color: var(--pd-warning); }
-  .idea-status.status-planned { background: var(--pd-success-bg); color: var(--pd-success); }
+  .idea-status.status-implemented { background: var(--pd-success-bg); color: var(--pd-success); }
   .idea-status.status-rejected { background: var(--pd-danger-bg); color: var(--pd-danger); }
 
   /* Milestones */
   .milestone-item {
-    padding: 1rem;
+    padding: 0.75rem;
     background: var(--pd-surface-light);
     border-radius: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     border: 1px solid var(--pd-border);
     position: relative;
     transition: all 0.2s ease;
@@ -685,7 +505,7 @@
 
   .milestone-item:hover {
     border-color: var(--pd-accent);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
 
   .milestone-item.completed {
@@ -694,15 +514,16 @@
   }
 
   .milestone-title {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--pd-text);
     margin-bottom: 0.25rem;
   }
 
   .milestone-date {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: var(--pd-text-dim);
+    margin-bottom: 0.5rem;
   }
 
   /* Notes */
@@ -725,98 +546,39 @@
     line-height: 1.5;
   }
 
-  /* Files */
-  .files-grid {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: var(--pd-surface-light);
-    border: 1px solid var(--pd-border);
-    border-radius: 0.5rem;
-    transition: all 0.2s ease;
-  }
-
-  .file-item:hover {
-    background: var(--pd-surface-hover);
-    border-color: var(--pd-accent);
-  }
-
-  .file-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--pd-accent-glow);
-    border-radius: 0.375rem;
-  }
-
-  .file-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .file-name {
-    font-size: 0.875rem;
-    color: var(--pd-accent);
-    font-weight: 500;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    text-decoration: none;
-  }
-
-  .file-name:hover {
-    color: var(--pd-accent-hover);
-    text-decoration: underline;
-  }
-
-  .file-size {
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  .file-actions {
-    display: flex;
-    gap: 0.25rem;
-  }
-
   /* Empty States */
   .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
     color: var(--pd-text-muted);
+    text-align: center;
   }
 
   .empty-state-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
     opacity: 0.5;
   }
 
   .empty-state-text {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
   }
 
-  /* Modal Styles */
+  /* Modals */
   .modal-overlay {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
     backdrop-filter: blur(4px);
   }
 
@@ -824,106 +586,114 @@
     background: var(--pd-surface);
     border: 1px solid var(--pd-border);
     border-radius: 1rem;
-    padding: 1.5rem;
-    width: 90%;
+    padding: 2rem;
     max-width: 500px;
+    width: 90%;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
   }
 
-  .modal-content h3 {
-    margin: 0 0 1rem 0;
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
     color: var(--pd-text);
   }
 
-  .modal-content input,
-  .modal-content textarea,
-  .modal-content select {
-    width: 100%;
-    background: var(--pd-surface-light);
-    color: var(--pd-text);
+  .modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
     border: 1px solid var(--pd-border);
     border-radius: 0.5rem;
+    cursor: pointer;
+    color: var(--pd-text-dim);
+    transition: all 0.2s ease;
+  }
+
+  .modal-close:hover {
+    background: var(--pd-danger-bg);
+    border-color: var(--pd-danger);
+    color: var(--pd-danger);
+  }
+
+  /* Form Styles */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--pd-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .form-input,
+  .form-textarea,
+  .form-select {
+    width: 100%;
     padding: 0.75rem;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
+    background: var(--pd-surface-light);
+    border: 1px solid var(--pd-border);
+    border-radius: 0.5rem;
+    color: var(--pd-text);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
   }
 
-  .modal-content textarea {
+  .form-input:focus,
+  .form-textarea:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--pd-accent);
+    background: var(--pd-surface-hover);
+  }
+
+  .form-textarea {
     resize: vertical;
+    min-height: 100px;
   }
 
-  .modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-  }
-
-  /* Scrollbar Styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--pd-surface);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Responsive Design */
-  @media (max-width: 1400px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr 350px;
-    }
-  }
-
+  /* Responsive */
   @media (max-width: 1200px) {
     .dashboard-grid {
       grid-template-columns: 1fr;
-      height: auto;
     }
-
+    
     .sidebar-column {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 1rem;
       height: auto;
+    }
+    
+    .sidebar-section {
+      max-height: 400px;
     }
   }
 
   @media (max-width: 768px) {
-    .hero-content {
-      padding: 1rem;
-    }
-
-    .project-content {
-      padding: 1rem;
-    }
-
-    .hero-top {
+    .project-detail-container {
       flex-direction: column;
-      gap: 1rem;
     }
-
-    .project-title {
-      font-size: 1.25rem;
+    
+    .timeline-bar {
+      flex-direction: column;
     }
-
-    .sidebar-column {
-      grid-template-columns: 1fr;
-    }
-
-    .dashboard-grid {
+    
+    .goals-bar {
       grid-template-columns: 1fr;
     }
   }
@@ -931,41 +701,36 @@
 {% endblock %}
 
 {% block content %}
-<div class="project-workspace">
-  <!-- Compact Hero Header -->
-  <header class="project-hero">
-    <div class="hero-content">
-      <div class="hero-top">
-        <div class="project-title-section">
-          <h1 class="project-title">{{ project.name }}</h1>
-          {% if project.description %}
-          <p class="project-description">{{ project.description }}</p>
-          {% endif %}
+<div class="project-detail-container">
+  <!-- Main Content Area -->
+  <main class="project-content">
+    <!-- Hero Header -->
+    <header class="project-header">
+      <div class="hero-content">
+        <div class="hero-top">
+          <div class="project-title-section">
+            <h1 class="project-name">{{ project.name }}</h1>
+            {% if project.description %}
+            <p class="project-description">{{ project.description }}</p>
+            {% endif %}
+          </div>
         </div>
-        
-        <!-- Metadata Bar -->
-        <div class="project-meta-bar">
-          <span class="meta-chip">📁 {{ project.category or 'Uncategorized' }}</span>
+
+        <!-- Metadata Row -->
+        <div class="project-meta">
+          <span class="meta-chip category-chip">{{ project.category|replace('_', ' ')|title if project.category else 'Uncategorized' }}</span>
           
-          <!-- Editable Status -->
-          <div class="meta-chip status-{{ project.status }} editable-chip">
-            <select id="status-select" class="inline-select" onchange="updateStatus(this.value)">
-              <option value="planning" {% if project.status == 'planning' %}selected{% endif %}>Planning</option>
-              <option value="active" {% if project.status == 'active' %}selected{% endif %}>Active</option>
-              <option value="on_hold" {% if project.status == 'on_hold' %}selected{% endif %}>On Hold</option>
-              <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>Completed</option>
-            </select>
-          </div>
+          <span class="meta-chip status-{{ project.status }}">
+            {% if project.status == 'planning' %}📝 Planning
+            {% elif project.status == 'active' %}🚀 Active
+            {% elif project.status == 'on_hold' %}⏸️ On Hold
+            {% elif project.status == 'completed' %}✅ Completed
+            {% endif %}
+          </span>
           
-          <!-- Editable Priority -->
-          <div class="meta-chip priority-{{ project.priority }} editable-chip">
-            <select id="priority-select" class="inline-select" onchange="updatePriority(this.value)">
-              <option value="low" {% if project.priority == 'low' %}selected{% endif %}>Low Priority</option>
-              <option value="medium" {% if project.priority == 'medium' %}selected{% endif %}>Medium Priority</option>
-              <option value="high" {% if project.priority == 'high' %}selected{% endif %}>High Priority</option>
-              <option value="critical" {% if project.priority == 'critical' %}selected{% endif %}>Critical Priority</option>
-            </select>
-          </div>
+          <span class="meta-chip priority-{{ project.priority }}">
+            {{ project.priority|title }} Priority
+          </span>
           
           {% if project.deadline %}
           <span class="meta-chip">📅 Due {{ project.deadline.strftime('%b %d, %Y') }}</span>
@@ -1033,34 +798,24 @@
         {% endif %}
       </div>
       {% endif %}
-    </div>
-  </header>
+    </header>
 
-  <!-- Timeline Stats Bar (moved up!) -->
-  <div class="timeline-bar">
-    <div class="timeline-grid">
+    <!-- Timeline Stats Bar -->
+    <div class="timeline-bar">
       <div class="timeline-item">
-        <div class="timeline-icon">🗓️</div>
+        <div class="timeline-icon">🚀</div>
         <div class="timeline-details">
           <div class="timeline-label">Started</div>
-          <div class="timeline-value">
-            {{ project.created_at.strftime('%b %d, %Y') }}
-          </div>
+          <div class="timeline-value">{{ project.created_at.strftime('%b %d, %Y') }}</div>
         </div>
       </div>
       
       {% if project.deadline %}
       <div class="timeline-item">
-        <div class="timeline-icon">⏰</div>
+        <div class="timeline-icon">📅</div>
         <div class="timeline-details">
           <div class="timeline-label">Deadline</div>
-          <div class="timeline-value">
-            {{ project.deadline.strftime('%b %d, %Y') }}
-            {% set now = datetime.now().date() %}
-            {% if project.deadline < now and project.status != 'completed' %}
-              <span style="color: var(--pd-danger); font-size: 0.75rem;"> (OVERDUE)</span>
-            {% endif %}
-          </div>
+          <div class="timeline-value">{{ project.deadline.strftime('%b %d, %Y') }}</div>
         </div>
       </div>
       {% endif %}
@@ -1068,33 +823,20 @@
       <div class="timeline-item">
         <div class="timeline-icon">📊</div>
         <div class="timeline-details">
-          <div class="timeline-label">Duration</div>
-          <div class="timeline-value">
-            {{ (datetime.now().date() - project.created_at.date()).days }} days
-          </div>
+          <div class="timeline-label">Progress</div>
+          <div class="timeline-value">{{ project.progress }}%</div>
         </div>
       </div>
       
       <div class="timeline-item">
-        <div class="timeline-icon">📈</div>
+        <div class="timeline-icon">⏱️</div>
         <div class="timeline-details">
-          <div class="timeline-label">Velocity</div>
-          <div class="timeline-value">
-            {% set completed_count = project.tasks|selectattr('completed')|list|length %}
-            {% set days_active = (datetime.now().date() - project.created_at.date()).days or 1 %}
-            {% set weeks_active = (days_active / 7) or 1 %}
-            {{ (completed_count / weeks_active)|round(1) }} tasks/week
-            <div style="font-size: 0.7rem; color: var(--pd-text-muted);">
-              ({{ completed_count }} done in {{ days_active }} days)
-            </div>
-          </div>
+          <div class="timeline-label">Last Updated</div>
+          <div class="timeline-value">{{ project.updated_at.strftime('%b %d at %I:%M %p') }}</div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Main Content -->
-  <main class="project-content">
     <!-- Main Dashboard Grid -->
     <div class="dashboard-grid">
       <!-- Tasks Section (Primary) -->
@@ -1105,136 +847,52 @@
             <span>Tasks</span>
           </h2>
           <div class="section-actions">
-            <button class="btn btn-sm">🔍 Filter</button>
-            <button class="btn btn-primary btn-sm" onclick="openModal('add-task-form')">➕ Add Task</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('add-task-form')">
+              ➕ Add Task
+            </button>
           </div>
         </div>
         
-        <div class="tasks-container">
-          {% if project.tasks %}
-            {% for task in project.tasks %}
-            <div class="task-item {% if task.completed %}completed{% endif %}">
-              <input type="checkbox" 
-                     class="task-checkbox"
-                     data-task-id="{{ task.id }}"
-                     {% if task.completed %}checked{% endif %}>
+        <div class="tasks-content">
+          {% for task in project.tasks %}
+          <div class="task-item {% if task.completed %}completed{% endif %}">
+            <input type="checkbox" 
+                   class="task-checkbox" 
+                   data-task-id="{{ task.id }}"
+                   {% if task.completed %}checked{% endif %}>
+            
+            <div class="task-content">
+              <!-- FIX: PersonalTask uses 'content' not 'title' -->
+              <div class="task-title">{{ task.content }}</div>
               
-              <div class="task-content">
-                <div class="task-title">{{ task.content }}</div>
-                <div class="task-meta">
-                  {% if task.priority %}
-                  <span class="task-priority priority-{{ task.priority }}">
-                    {{ task.priority }}
-                  </span>
-                  {% endif %}
-                  {% if task.due_date %}
-                  <span class="task-due">
-                    📅 {{ task.due_date.strftime('%b %d') }}
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-              
-              <div class="task-actions">
-                <button class="btn-icon" onclick="editTask({{ task.id }})" title="Edit">✏️</button>
-                <button class="btn-icon" onclick="deleteTask({{ task.id }})" title="Delete">🗑️</button>
+              <div class="task-meta">
+                {% if task.category %}
+                <span class="task-category">{{ task.category }}</span>
+                {% endif %}
+                
+                {% if task.completed_at %}
+                <span class="task-completed-date">✓ {{ task.completed_at.strftime('%b %d') }}</span>
+                {% endif %}
               </div>
             </div>
-            {% endfor %}
+            
+            <div class="task-actions">
+              <button onclick="editTask({{ task.id }})" class="task-action-btn" title="Edit">✏️</button>
+              <button onclick="deleteTask({{ task.id }})" class="task-action-btn" title="Delete">🗑️</button>
+            </div>
+          </div>
           {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">📋</div>
-              <div class="empty-state-text">No tasks yet</div>
-            </div>
-          {% endif %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <div class="empty-state-text">No tasks yet. Add your first task to get started!</div>
+          </div>
+          {% endfor %}
         </div>
       </section>
 
       <!-- Sidebar Column -->
-      <div class="sidebar-column">
-        <!-- Files Section (at top) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>📎</span>
-              <span>Files</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-file-form')">📤</button>
-            </div>
-          </div>
-          
-          <div class="sidebar-content">
-            <div class="files-grid">
-              {% for file in project.files %}
-              <div class="file-item">
-                <div class="file-icon">📄</div>
-                <div class="file-info">
-                  <a href="{{ url_for('persprojects.download_file', file_id=file.id) }}" 
-                     class="file-name"
-                     title="Download {{ file.original_name }}">
-                    {{ file.original_name }}
-                  </a>
-                  <div class="file-size">{{ file.uploaded_at.strftime('%b %d') }}</div>
-                </div>
-                <button class="btn-icon" onclick="deleteFile({{ file.id }})" title="Delete">🗑️</button>
-              </div>
-              {% else %}
-              <div class="empty-state">
-                <div class="empty-state-icon">📎</div>
-                <div class="empty-state-text">No files attached</div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-        </section>
-
-        <!-- Notes Section (second) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>📝</span>
-              <span>Notes</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-note-form')">➕</button>
-            </div>
-          </div>
-          
-          <div class="sidebar-content">
-            {% for note in project.notes %}
-            <div class="note-item">
-              <div class="note-content">{{ note.content }}</div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <span style="font-size: 0.75rem; color: var(--pd-text-muted);">
-                  {{ note.category }} • {{ note.created_at.strftime('%b %d') }}
-                </span>
-                <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" 
-                     class="btn-icon" 
-                     title="Edit note"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteNote({{ note.id }})" 
-                          title="Delete note"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
-            {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">📝</div>
-              <div class="empty-state-text">No notes yet</div>
-            </div>
-            {% endfor %}
-          </div>
-        </section>
-
-        <!-- Ideas Section (third) -->
+      <aside class="sidebar-column">
+        <!-- Ideas Section -->
         <section class="sidebar-section">
           <div class="section-header">
             <h2 class="section-title">
@@ -1242,7 +900,7 @@
               <span>Ideas</span>
             </h2>
             <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-idea-form')">➕</button>
+              <button class="btn btn-sm" onclick="openModal('add-idea-form')">+</button>
             </div>
           </div>
           
@@ -1250,30 +908,11 @@
             {% for idea in project.ideas %}
             <div class="idea-item">
               <div class="idea-content">{{ idea.content }}</div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <select class="idea-status status-{{ idea.status }}" 
-                        onchange="updateIdeaStatus({{ idea.id }}, this.value)"
-                        style="background: var(--pd-surface); border: 1px solid var(--pd-border); 
-                               padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.7rem;
-                               color: var(--pd-text); cursor: pointer;">
-                  <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
-                  <option value="considering" {% if idea.status == 'considering' %}selected{% endif %}>Considering</option>
-                  <option value="planned" {% if idea.status == 'planned' %}selected{% endif %}>Planned</option>
-                  <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
-                </select>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="idea-status status-{{ idea.status }}">{{ idea.status }}</span>
                 <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" 
-                     class="btn-icon" 
-                     title="Edit idea"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteIdea({{ idea.id }})" 
-                          title="Delete idea"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
+                  <a href="{{ url_for('persprojects.edit_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit">✏️</a>
+                  <button onclick="deleteIdea({{ idea.id }})" class="btn-icon" title="Delete">🗑️</button>
                 </div>
               </div>
             </div>
@@ -1286,7 +925,42 @@
           </div>
         </section>
 
-        <!-- Milestones Section (fourth/last) -->
+        <!-- Notes Section -->
+        <section class="sidebar-section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <span>📝</span>
+              <span>Notes</span>
+            </h2>
+            <div class="section-actions">
+              <button class="btn btn-sm" onclick="openModal('add-note-form')">+</button>
+            </div>
+          </div>
+          
+          <div class="sidebar-content">
+            {% for note in project.notes %}
+            <div class="note-item">
+              <div class="note-content">{{ note.content }}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                <span style="font-size: 0.7rem; color: var(--pd-text-muted);">
+                  {{ note.category }} · {{ note.created_at.strftime('%b %d') }}
+                </span>
+                <div style="display: flex; gap: 0.25rem;">
+                  <a href="{{ url_for('persprojects.edit_note', note_id=note.id) }}" class="btn-icon" title="Edit">✏️</a>
+                  <button onclick="deleteNote({{ note.id }})" class="btn-icon" title="Delete">🗑️</button>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+              <div class="empty-state-icon">📝</div>
+              <div class="empty-state-text">No notes yet</div>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <!-- Milestones Section -->
         <section class="sidebar-section">
           <div class="section-header">
             <h2 class="section-title">
@@ -1294,7 +968,7 @@
               <span>Milestones</span>
             </h2>
             <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-milestone-form')">➕</button>
+              <button class="btn btn-sm" onclick="openModal('add-milestone-form')">+</button>
             </div>
           </div>
           
@@ -1310,7 +984,7 @@
                 <button class="btn-icon" 
                         onclick="completeMilestone({{ milestone.id }})"
                         title="Mark complete"
-                        style="background: var(--pd-success-bg); color: var(--pd-success); font-size: 0.75rem;">
+                        style="background: var(--pd-success-bg); color: var(--pd-success); font-size: 0.75rem; width: auto; padding: 0.25rem 0.5rem;">
                   ✓ Complete
                 </button>
                 {% else %}
@@ -1320,13 +994,12 @@
                   <a href="{{ url_for('persprojects.edit_milestone', milestone_id=milestone.id) }}" 
                      class="btn-icon" 
                      title="Edit milestone"
-                     style="text-decoration: none; font-size: 0.875rem;">
+                     style="text-decoration: none;">
                     ✏️
                   </a>
                   <button class="btn-icon" 
                           onclick="deleteMilestone({{ milestone.id }})" 
-                          title="Delete milestone"
-                          style="font-size: 0.875rem;">
+                          title="Delete milestone">
                     🗑️
                   </button>
                 </div>
@@ -1340,101 +1013,119 @@
             {% endfor %}
           </div>
         </section>
-      </div>
+      </aside>
     </div>
   </main>
 </div>
 
-<!-- Add Forms (Hidden by default) -->
-<div id="add-task-form" class="modal-overlay" style="display: none;">
+<!-- Modal Forms -->
+<!-- Add Task Modal - FIXED -->
+<div id="add-task-form" class="modal-overlay">
   <div class="modal-content">
-    <h3>Add New Task</h3>
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Task</h3>
+      <button class="modal-close" onclick="closeModal('add-task-form')">✕</button>
+    </div>
     <form method="POST" action="{{ url_for('persprojects.add_task', project_id=project.id) }}">
-      <input type="text" name="content" placeholder="Task description..." required>
-      <select name="priority">
-        <option value="low">Low Priority</option>
-        <option value="medium" selected>Medium Priority</option>
-        <option value="high">High Priority</option>
-      </select>
-      <input type="date" name="due_date" placeholder="Due date">
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Create Task</button>
-        <button type="button" class="btn" onclick="closeModal('add-task-form')">Cancel</button>
+      <div class="form-group">
+        <label class="form-label">Task Description</label>
+        <!-- FIX: PersonalTask expects 'content' not 'title' -->
+        <input type="text" name="content" class="form-input" placeholder="What needs to be done?" required>
       </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select">
+          <option value="">None</option>
+          <option value="planning">Planning</option>
+          <option value="research">Research</option>
+          <option value="development">Development</option>
+          <option value="testing">Testing</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Task</button>
     </form>
   </div>
 </div>
 
-<div id="add-idea-form" class="modal-overlay" style="display: none;">
+<!-- Add Idea Modal -->
+<div id="add-idea-form" class="modal-overlay">
   <div class="modal-content">
-    <h3>Add New Idea</h3>
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Idea</h3>
+      <button class="modal-close" onclick="closeModal('add-idea-form')">✕</button>
+    </div>
     <form method="POST" action="{{ url_for('persprojects.add_idea', project_id=project.id) }}">
-      <textarea name="content" placeholder="Describe your idea..." rows="4" required></textarea>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Add Idea</button>
-        <button type="button" class="btn" onclick="closeModal('add-idea-form')">Cancel</button>
+      <div class="form-group">
+        <label class="form-label">Idea</label>
+        <textarea name="content" class="form-textarea" required></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="new" selected>New</option>
+          <option value="considering">Considering</option>
+          <option value="implemented">Implemented</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Idea</button>
     </form>
   </div>
 </div>
 
-<div id="add-milestone-form" class="modal-overlay" style="display: none;">
+<!-- Add Note Modal -->
+<div id="add-note-form" class="modal-overlay">
   <div class="modal-content">
-    <h3>Add New Milestone</h3>
-    <form method="POST" action="{{ url_for('persprojects.add_milestone', project_id=project.id) }}">
-      <input type="text" name="title" placeholder="Milestone title" required>
-      <textarea name="description" placeholder="Description (optional)" rows="3"></textarea>
-      <input type="date" name="target_date" placeholder="Target date">
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Create Milestone</button>
-        <button type="button" class="btn" onclick="closeModal('add-milestone-form')">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="add-note-form" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <h3>Add New Note</h3>
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Note</h3>
+      <button class="modal-close" onclick="closeModal('add-note-form')">✕</button>
+    </div>
     <form method="POST" action="{{ url_for('persprojects.add_note', project_id=project.id) }}">
-      <textarea name="content" placeholder="Note content..." rows="4" required></textarea>
-      <select name="category">
-        <option value="general">General</option>
-        <option value="progress">Progress</option>
-        <option value="issue">Issue</option>
-        <option value="research">Research</option>
-        <option value="reference">Reference</option>
-      </select>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Add Note</button>
-        <button type="button" class="btn" onclick="closeModal('add-note-form')">Cancel</button>
+      <div class="form-group">
+        <label class="form-label">Note</label>
+        <textarea name="content" class="form-textarea" rows="4" required></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select">
+          <option value="general">General</option>
+          <option value="progress">Progress</option>
+          <option value="issue">Issue</option>
+          <option value="research">Research</option>
+          <option value="reference">Reference</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Note</button>
     </form>
   </div>
 </div>
 
-<div id="add-file-form" class="modal-overlay" style="display: none;">
+<!-- Add Milestone Modal -->
+<div id="add-milestone-form" class="modal-overlay">
   <div class="modal-content">
-    <h3>Upload File</h3>
-    <form method="POST" action="{{ url_for('persprojects.upload_file', project_id=project.id) }}" enctype="multipart/form-data">
-      <div style="border: 2px dashed var(--pd-border); border-radius: 0.5rem; padding: 2rem; text-align: center; margin-bottom: 1rem;">
-        <input type="file" name="file" id="file-input" style="display: none;" onchange="updateFileList()">
-        <label for="file-input" style="cursor: pointer;">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
-          <div style="color: var(--pd-text);">Click to select file</div>
-          <div style="color: var(--pd-text-muted); font-size: 0.875rem; margin-top: 0.5rem;">PDF, images, docs, spreadsheets, archives</div>
-        </label>
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Milestone</h3>
+      <button class="modal-close" onclick="closeModal('add-milestone-form')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('persprojects.add_milestone', project_id=project.id) }}">
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" name="title" class="form-input" required>
       </div>
-      <div id="selected-files" style="margin-bottom: 1rem;"></div>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Upload File</button>
-        <button type="button" class="btn" onclick="closeModal('add-file-form')">Cancel</button>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-textarea"></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">Target Date</label>
+        <input type="date" name="target_date" class="form-input">
+      </div>
+      <button type="submit" class="btn btn-primary">Add Milestone</button>
     </form>
   </div>
 </div>
 
-<!-- JavaScript -->
 <script>
 // Modal functions
 function openModal(modalId) {
@@ -1443,82 +1134,6 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
   document.getElementById(modalId).style.display = 'none';
-}
-
-// File upload preview
-function updateFileList() {
-  const input = document.getElementById('file-input');
-  const fileList = document.getElementById('selected-files');
-  fileList.innerHTML = '';
-  
-  if (input.files.length > 0) {
-    const file = input.files[0];
-    const size = (file.size / 1024).toFixed(1) + ' KB';
-    fileList.innerHTML = `<div style="color: var(--pd-text-dim); font-size: 0.875rem;">
-      <strong>Selected:</strong> ${file.name} (${size})
-    </div>`;
-  }
-}
-
-// Delete file
-function deleteFile(fileId) {
-  if (confirm('Delete this file?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/personal/file/${fileId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-
-// Update Status
-function updateStatus(newStatus) {
-  const formData = new FormData();
-  formData.append('name', '{{ project.name }}');
-  formData.append('category', '{{ project.category or "" }}');
-  formData.append('description', '{{ project.description or "" }}');
-  formData.append('goal', '{{ project.goal or "" }}');
-  formData.append('motivation', '{{ project.motivation or "" }}');
-  formData.append('strategy', '{{ project.strategy or "" }}');
-  formData.append('priority', '{{ project.priority }}');
-  formData.append('status', newStatus);
-  formData.append('deadline', '{{ project.deadline.strftime("%Y-%m-%d") if project.deadline else "" }}');
-  
-  fetch(`{{ url_for('persprojects.edit', id=project.id) }}`, {
-    method: 'POST',
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      const chip = document.getElementById('status-select').closest('.editable-chip');
-      chip.className = `meta-chip status-${newStatus} editable-chip`;
-      showToast('Status updated successfully!');
-    }
-  });
-}
-
-// Update Priority
-function updatePriority(newPriority) {
-  const formData = new FormData();
-  formData.append('name', '{{ project.name }}');
-  formData.append('category', '{{ project.category or "" }}');
-  formData.append('description', '{{ project.description or "" }}');
-  formData.append('goal', '{{ project.goal or "" }}');
-  formData.append('motivation', '{{ project.motivation or "" }}');
-  formData.append('strategy', '{{ project.strategy or "" }}');
-  formData.append('priority', newPriority);
-  formData.append('status', '{{ project.status }}');
-  formData.append('deadline', '{{ project.deadline.strftime("%Y-%m-%d") if project.deadline else "" }}');
-  
-  fetch(`{{ url_for('persprojects.edit', id=project.id) }}`, {
-    method: 'POST',
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      const chip = document.getElementById('priority-select').closest('.editable-chip');
-      chip.className = `meta-chip priority-${newPriority} editable-chip`;
-      showToast('Priority updated successfully!');
-    }
-  });
 }
 
 // Toast notification
@@ -1566,7 +1181,7 @@ document.querySelectorAll('.task-checkbox').forEach(checkbox => {
   });
 });
 
-// Task management
+// Task management - FIXED ROUTES
 function editTask(taskId) {
   window.location.href = `/personal/task/${taskId}/edit`;
 }
@@ -1581,20 +1196,7 @@ function deleteTask(taskId) {
   }
 }
 
-// Ideas Management
-function updateIdeaStatus(ideaId, newStatus) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = `/personal/idea/${ideaId}/status`;
-  const input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'status';
-  input.value = newStatus;
-  form.appendChild(input);
-  document.body.appendChild(form);
-  form.submit();
-}
-
+// Ideas Management - FIXED ROUTES
 function deleteIdea(ideaId) {
   if (confirm('Delete this idea?')) {
     const form = document.createElement('form');
@@ -1605,7 +1207,7 @@ function deleteIdea(ideaId) {
   }
 }
 
-// Milestones Management
+// Milestones Management - FIXED ROUTES
 function completeMilestone(milestoneId) {
   const form = document.createElement('form');
   form.method = 'POST';
@@ -1624,7 +1226,7 @@ function deleteMilestone(milestoneId) {
   }
 }
 
-// Notes Management
+// Notes Management - FIXED ROUTES
 function deleteNote(noteId) {
   if (confirm('Delete this note?')) {
     const form = document.createElement('form');
@@ -1634,26 +1236,6 @@ function deleteNote(noteId) {
     form.submit();
   }
 }
-
-// Progress animation on page load
-window.addEventListener('load', () => {
-  const progressFill = document.querySelector('.progress-bar-fill');
-  if (progressFill) {
-    progressFill.style.transition = 'width 1s cubic-bezier(0.4, 0, 0.2, 1)';
-  }
-});
-
-// Add animation keyframes
-if (!document.getElementById('toast-animations')) {
-  const style = document.createElement('style');
-  style.id = 'toast-animations';
-  style.textContent = `
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(style);
-}
 </script>
+
 {% endblock %}

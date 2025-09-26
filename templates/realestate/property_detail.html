@@ -158,6 +158,93 @@ v1.1.1 - Fixed tall/odd-height action buttons across cards.
     </div>
   </section> 
   
+  {# ============================== DOCUMENTS ============================== #}
+  <section class="kcard" id="documents">
+    <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div class="kcard-title">📁 Documents</div>
+      <button class="kbtn kbtn-primary" onclick="showUploadModal()">
+        + Add Document
+      </button>
+    </div>
+    
+    {% if vault_documents %}
+    <div class="kcard-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+      {% for doc in vault_documents[:6] %}
+      <article class="doc-card" style="border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,0.02);display:flex;gap:12px;align-items:center;">
+        <div class="doc-icon" style="font-size:24px;">
+          {{ '📄' if doc.doc_type == 'document' else '📑' if doc.doc_type == 'contract' else '🧾' if doc.doc_type == 'receipt' else '🔐' if doc.doc_type == 'warranty' else '🖼️' if doc.doc_type == 'image' else '📎' }}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ doc.title }}</div>
+          <div class="khint" style="font-size:.85rem;">
+            {{ (doc.file_size // 1024) if doc.file_size else 0 }}KB · {{ doc.created_at.strftime('%b %d, %Y') if doc.created_at else '' }}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="kbtn-icon" target="_blank" title="View">👁️</a>
+          <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="kbtn-icon" title="Download">⬇️</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    
+    {% if vault_documents|length > 6 %}
+    <div style="text-align:center;margin-top:12px;">
+      <a href="{{ url_for('realestate.property_documents', id=property.id) }}" class="kbtn">
+        View all {{ vault_documents|length }} documents →
+      </a>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="kempty">
+      <div style="font-size:24px;margin-bottom:6px;">📂</div>
+      No documents uploaded yet.
+    </div>
+    {% endif %}
+  </section>
+
+  {# Upload Modal #}
+  <div id="documentUploadModal" class="modal" style="display:none;" onclick="if(event.target===this)hideUploadModal()">
+    <div class="modal-content" style="background:var(--card-bg,#0c1322);padding:24px;border-radius:12px;width:90%;max-width:500px;margin:100px auto;">
+      <h3 style="margin-top:0;">Upload Document</h3>
+      <form action="{{ url_for('realestate.upload_property_document', id=property.id) }}" 
+            method="POST" enctype="multipart/form-data">
+        
+        <div class="kfield" style="margin-bottom:16px;">
+          <label>Document Type</label>
+          <select name="doc_type" class="form-control" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,0.02);">
+            <option value="contract">Contract/Lease</option>
+            <option value="warranty">Warranty</option>
+            <option value="receipt">Receipt/Invoice</option>
+            <option value="inspection">Inspection Report</option>
+            <option value="insurance">Insurance</option>
+            <option value="tax">Tax Document</option>
+            <option value="permit">Permit</option>
+            <option value="document">Other Document</option>
+          </select>
+        </div>
+        
+        <div class="kfield" style="margin-bottom:16px;">
+          <label>Title (optional)</label>
+          <input type="text" name="title" placeholder="e.g., 'HVAC Warranty 2024'" 
+                 style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,0.02);">
+        </div>
+        
+        <div class="kfield" style="margin-bottom:16px;">
+          <label>File</label>
+          <input type="file" name="file" required 
+                 style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,0.02);">
+        </div>
+        
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button type="button" onclick="hideUploadModal()" class="kbtn">Cancel</button>
+          <button type="submit" class="kbtn kbtn-primary">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
   {# ============================== OUTBUILDINGS ============================ #} 
   <section class="kcard" id="outbuildings">
     <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
@@ -913,5 +1000,14 @@ if (document.getElementById('modalCaption')) {
     e.stopPropagation();
   });
 }
+// Document upload modal functions
+function showUploadModal() {
+  document.getElementById('documentUploadModal').style.display = 'block';
+}
+
+function hideUploadModal() {
+  document.getElementById('documentUploadModal').style.display = 'none';
+}
 </script>
 {% endblock %}
+

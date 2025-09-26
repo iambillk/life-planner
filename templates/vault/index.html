@@ -511,17 +511,26 @@
           <a href="{{ url_for('vault.manage_folders') }}" title="Manage Folders" style="margin-left:auto; color: var(--vault-muted); text-decoration:none;">⚙️</a>
         </div>
         <div class="folder-list">
-          <a href="{{ url_for('vault.index') }}" class="folder-item {% if not request.args.get('folder') %}active{% endif %}">
-            <span class="folder-icon">📂</span>
-            <span class="folder-name">All Documents</span>
-            <span class="folder-count">{{ total_documents|default(0) }}</span>
+          <a href="{{ url_for('vault.index') }}" class="folder-item">
+            <span>📁</span>
+            <span>All Documents</span>
           </a>
           {% for folder in folders %}
-          <a href="{{ url_for('vault.search', folder=folder.id) }}" class="folder-item {% if request.args.get('folder', type=int) == folder.id %}active{% endif %}">
-            <span class="folder-icon">{{ folder.icon }}</span>
-            <span class="folder-name">{{ folder.name }}</span>
+          <a href="{{ url_for('vault.search', folder=folder.id) }}" class="folder-item">
+            <span>{{ folder.icon }}</span>
+            <span>{{ folder.name }}</span>
             <span class="folder-count">{{ folder.documents|length }}</span>
           </a>
+          <!-- Show child folders indented -->
+          {% if folder.children %}
+            {% for child in folder.children %}
+            <a href="{{ url_for('vault.search', folder=child.id) }}" class="folder-item" style="padding-left: 32px;">
+              <span>{{ child.icon }}</span>
+              <span>{{ child.name }}</span>
+              <span class="folder-count">{{ child.documents|length }}</span>
+            </a>
+            {% endfor %}
+          {% endif %}
           {% endfor %}
         </div>
       </div>

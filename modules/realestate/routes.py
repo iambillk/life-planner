@@ -6,7 +6,6 @@ from collections import defaultdict
 from flask import jsonify
 import json
 import os
-
 # ✅ Import db and models directly from their modules (no models/__init__.py exports needed)
 from models.base import db
 from models.realestate import (
@@ -16,9 +15,16 @@ from models.realestate import (
     PropertyVendor,
     PropertyOutbuilding,
 )
-
 from . import realestate_bp
 from modules.equipment.utils import allowed_file, save_uploaded_photo
+
+# ADD THESE VAULT IMPORTS HERE
+from modules.vault.vault_service import (
+    create_document_from_file, 
+    link_document_to_entity,
+    get_entity_documents,
+    unlink_document_from_entity
+)
 
 
 # ---------------- Dashboard ----------------
@@ -70,6 +76,9 @@ def dashboard():
 @realestate_bp.route("/<int:id>")
 def property_detail(id):
     prop = Property.query.get_or_404(id)
+
+    from modules.vault.vault_service import get_entity_documents
+    vault_documents = get_entity_documents('property', id)
     
     # Maintenance list
     maintenance = (
@@ -126,6 +135,7 @@ def property_detail(id):
     return render_template(
         "realestate/property_detail.html",
         property=prop,
+        vault_documents=vault_documents,
         maintenance=maintenance,
         photos_by_maint=photos_by_maint,
         recent_photos=recent_photos,
@@ -905,3 +915,94 @@ def portfolio_costs():
         yoy_change=yoy_change,
         active="realestate"
     )
+
+# In modules/realestate/routes.py
+
+from modules.vault.vault_service import (
+    create_document_from_file, 
+    link_document_to_entity,
+    get_entity_documents,
+    unlink_document_from_entity
+)
+
+@realestate_bp.route('/property/<int:id>/documents')
+def property_documents(id):
+    """View all documents for a property"""
+    property = Property.query.get_or_404(id)
+    documents = get_entity_documents('property', id)
+    
+    # Group documents by type for better display
+    grouped_docs = {
+        'contracts': [],
+        'warranties': [],
+        'receipts': [],
+        'photos': [],
+        'other': []
+    }
+    
+    for doc in documents:
+        if 'contract' in doc.doc_type.lower() or 'lease' in doc.title.lower():
+            grouped_docs['contracts'].append(doc)
+        elif 'warranty' in doc.doc_type.lower() or 'warranty' in doc.title.lower():
+            grouped_docs['warranties'].append(doc)
+        elif 'receipt' in doc.doc_type.lower() or 'invoice' in doc.title.lower():
+            grouped_docs['receipts'].append(doc)
+        elif doc.doc_type == 'image':
+            grouped_docs['photos'].append(doc)
+        else:
+            grouped_docs['other'].append(doc)
+    
+    return render_template('realestate/property_documents.html',
+                         property=property,
+                         documents=documents,
+                         grouped_docs=grouped_docs)
+
+@realestate_bp.route('/property/<int:id>/upload', methods=['POST'])
+def upload_property_document(id):
+    """Upload a document for a property"""
+    property = Property.query.get_or_404(id)
+    
+    if 'file' not in request.files:
+        flash('No file provided', 'error')
+        return redirect(url_for('realestate.property_detail', id=id))
+    
+    file = request.files['file']
+    if not file or not file.filename:
+        flash('No file selected', 'error')
+        return redirect(url_for('realestate.property_detail', id=id))
+    
+    # Get document metadata from form
+    doc_type = request.form.get('doc_type', 'document')
+    title = request.form.get('title', file.filename)
+    
+    # Auto-generate tags
+    tags = []
+    tags.append(f"property_{property.id}")
+    if property.address and property.address.strip():
+        tags.append(property.address.split()[0].lower())
+    if doc_type:
+        tags.append(doc_type)
+    
+    try:
+        # Use the new function that handles folders automatically
+        from modules.vault.vault_service import create_document_for_entity
+        
+        doc = create_document_for_entity(
+            file=file,
+            entity_type='property',
+            entity_id=property.id,
+            entity_name=property.name or property.address or f"Property #{property.id}",
+            title=title,
+            doc_type=doc_type,
+            tags=tags
+        )
+        
+        db.session.commit()
+        flash('Document uploaded successfully!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error uploading document: {str(e)}', 'error')
+    
+    return redirect(url_for('realestate.property_detail', id=id))
+
