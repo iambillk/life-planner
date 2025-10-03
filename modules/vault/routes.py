@@ -843,3 +843,85 @@ def filter_documents():
         return redirect(url_for('vault.search', date_range=date_range))
     
     return redirect(url_for('vault.index'))
+
+# Add this route to your modules/vault/routes.py file
+
+@vault_bp.route('/archived')
+def archived_documents():
+    """View all archived documents"""
+    # Get all archived documents
+    archived_docs = db.session.query(VaultDocument).filter_by(
+        archived=True
+    ).order_by(desc(VaultDocument.updated_at)).all()
+    
+    # Get counts by type for filters
+    type_counts = {}
+    for doc in archived_docs:
+        doc_type = doc.doc_type or 'note'
+        type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
+    
+    # Get filter parameters
+    doc_type = request.args.get('type')
+    
+    # Filter by type if specified
+    if doc_type:
+        archived_docs = [doc for doc in archived_docs if doc.doc_type == doc_type]
+    
+    return render_template('vault/archived.html',
+        archived_docs=archived_docs,
+        type_counts=type_counts,
+        selected_type=doc_type,
+        total_archived=len(archived_docs)
+    )
+
+
+@vault_bp.route('/document/<int:id>/restore', methods=['POST'])
+def restore_document(id):
+    """Restore an archived document"""
+    doc = db.session.query(VaultDocument).get(id)
+    if not doc:
+        flash('Document not found', 'error')
+        return redirect(url_for('vault.archived_documents'))
+    
+    doc.archived = False
+    db.session.commit()
+    
+    flash(f'Document "{doc.title}" has been restored', 'success')
+    
+    # Check where to redirect
+    if request.form.get('return_to') == 'view':
+        return redirect(url_for('vault.view_document', id=doc.id))
+    else:
+        return redirect(url_for('vault.archived_documents'))
+
+
+@vault_bp.route('/archived/restore-all', methods=['POST'])
+def restore_all_archived():
+    """Restore all archived documents"""
+    count = db.session.query(VaultDocument).filter_by(archived=True).update({'archived': False})
+    db.session.commit()
+    
+    flash(f'Restored {count} document{"s" if count != 1 else ""}', 'success')
+    return redirect(url_for('vault.index'))
+
+
+@vault_bp.route('/archived/delete-all', methods=['POST'])
+def delete_all_archived():
+    """Permanently delete all archived documents"""
+    archived_docs = db.session.query(VaultDocument).filter_by(archived=True).all()
+    count = len(archived_docs)
+    
+    for doc in archived_docs:
+        # Delete file if exists
+        if doc.file_path and os.path.exists(doc.file_path):
+            try:
+                os.remove(doc.file_path)
+            except:
+                pass
+        # Delete from database
+        db.session.delete(doc)
+    
+    db.session.commit()
+    
+    flash(f'Permanently deleted {count} document{"s" if count != 1 else ""}', 'success')
+    return redirect(url_for('vault.index'))

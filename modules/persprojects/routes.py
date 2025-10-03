@@ -4,9 +4,18 @@ from datetime import datetime
 import os
 from urllib.parse import unquote_plus
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 from . import persprojects_bp
-from .constants import PERSONAL_PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
+from .constants import PERSONAL_PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS, IDEA_STATUSES, NOTE_CATEGORIES
 from models import db, PersonalProject, PersonalTask, PersonalIdea, PersonalMilestone, PersonalProjectNote, PersonalProjectFile
+
+# ADD VAULT IMPORTS
+from modules.vault.vault_service import (
+    create_document_for_entity,
+    get_entity_documents
+)
+
+
 
 @persprojects_bp.route('/')
 def index():
@@ -83,7 +92,35 @@ def detail(id):
     else:
         project.progress = 0
     
-    return render_template('persprojects/detail.html', project=project)
+    # Get vault documents for this project
+    from models.vault import VaultDocument, VaultFolder
+    
+    # Find the folder for this personal project
+    # The vault service creates folders like "Personal Project #ID" or uses the project name
+    folder = VaultFolder.query.filter(
+        or_(
+            VaultFolder.name == project.name,
+            VaultFolder.name == f"Personal Project #{project.id}"
+        )
+    ).first()
+    
+    vault_documents = []
+    if folder:
+        vault_documents = VaultDocument.query.filter_by(
+            folder_id=folder.id,
+            archived=False
+        ).order_by(VaultDocument.pinned.desc(), VaultDocument.created_at.desc()).all()
+    
+    return render_template('persprojects/detail.html',
+                       project=project,
+                       vault_documents=vault_documents,
+                       categories=PERSONAL_PROJECT_CATEGORIES,
+                       statuses=PROJECT_STATUSES,
+                       priorities=[p[0] for p in PRIORITY_LEVELS],  # pass just keys
+                       idea_statuses=[s[0] for s in IDEA_STATUSES],
+                       note_categories=NOTE_CATEGORIES,
+    )
+
 
 # ==================== EMAIL CAPTURE (PERSONAL) ====================
 
@@ -304,15 +341,38 @@ def capture_personal_post():
 @persprojects_bp.route('/<int:project_id>/task/add', methods=['POST'])
 def add_task(project_id):
     """Add task to project"""
+    from .constants import PERSONAL_PROJECT_CATEGORIES, PRIORITY_LEVELS
+    def _coerce(v, allowed, default):
+        v = (v or '').strip()
+        return v if v in allowed else default
+
+    content   = (request.form.get('content') or '').strip()
+    category  = _coerce(request.form.get('category'), PERSONAL_PROJECT_CATEGORIES, 'Other')
+    priority  = _coerce(request.form.get('priority'), [p[0] for p in PRIORITY_LEVELS], 'medium')
+    due_str   = request.form.get('due_date') or ''
+    notes     = (request.form.get('notes') or '').strip()
+
+    due_date = None
+    if due_str:
+        try:
+            from datetime import datetime
+            due_date = datetime.strptime(due_str, '%Y-%m-%d').date()
+        except Exception:
+            due_date = None
+
     task = PersonalTask(
         project_id=project_id,
-        content=request.form.get('content'),
-        category=request.form.get('category')
+        content=content,
+        category=category,
+        priority=priority,
+        due_date=due_date,
+        notes=notes
     )
     db.session.add(task)
     db.session.commit()
     flash('Task added!', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
+
 
 @persprojects_bp.route('/task/<int:task_id>/toggle', methods=['POST'])
 def toggle_task(task_id):
@@ -659,3 +719,46 @@ def delete_file(file_id):
     
     flash('File reference removed from project', 'success')
     return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/<int:project_id>/vault/upload', methods=['POST'])
+def upload_to_vault(project_id):
+    """Upload file to vault for this project"""
+    project = PersonalProject.query.get_or_404(project_id)
+    
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('persprojects.detail', id=project_id))
+    
+    file = request.files['file']
+    
+    if file and file.filename:
+        # Create vault document for this personal project
+        doc = create_document_for_entity(
+            file=file,
+            entity_type='personal_project',
+            entity_id=project_id,
+            entity_name=project.name,
+            title=request.form.get('title', file.filename),
+            doc_type=request.form.get('doc_type', 'document'),
+            tags=request.form.getlist('tags')
+        )
+        
+        db.session.commit()
+        flash(f'Document uploaded to vault successfully!', 'success')
+    
+    return redirect(url_for('persprojects.detail', id=project_id))
+
+@persprojects_bp.route('/file/<int:file_id>/view')
+def view_file(file_id):
+    file_record = PersonalProjectFile.query.get_or_404(file_id)
+    path = file_record.filename  # UNC ok if the service account can read it
+
+    if not os.path.exists(path):
+        flash('File not found on NFS drive', 'error')
+        return redirect(url_for('persprojects.detail', id=file_record.project_id))
+
+    import mimetypes
+    mt, _ = mimetypes.guess_type(file_record.original_name or path)
+    mt = mt or 'application/octet-stream'
+    # Serve inline so <iframe> / <img> can render it
+    return send_file(path, as_attachment=False, download_name=file_record.original_name, mimetype=mt)

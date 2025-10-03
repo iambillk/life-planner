@@ -140,6 +140,44 @@
     </div>
   </div>
 
+  <!-- NEW: Linked Properties (as Vendor) -->
+  <section class="kcard" id="linked-properties-company" style="margin-bottom:20px;">
+    <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="kcard-title">🏠 Linked Properties (as Vendor)</div>
+      <a class="kbtn kbtn-primary" href="{{ url_for('rolodex.company_link_property', id=company.id) }}">➕ Link to Property</a>
+    </div>
+
+    {% if property_links %}
+    <div class="kcard-body" style="display:grid;gap:10px;">
+      {% for link in property_links %}
+        {% set p = properties_by_id.get(link.target_id) %}
+        <article class="kmini" style="border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <a class="kbtn" href="{{ url_for('realestate.property_detail', id=link.target_id) }}">{{ p.name if p else ('Property #' ~ link.target_id) }}</a>
+              {% if link.role %}<span class="kchip">{{ link.role }}</span>{% endif %}
+              {% if link.is_primary %}<span class="kchip" style="background:rgba(110,168,255,.18);border-color:rgba(110,168,255,.45);">Primary</span>{% endif %}
+              {% if link.label %}<span class="kchip" title="{{ link.label }}">{{ link.label }}</span>{% endif %}
+            </div>
+            {% if link.notes %}<div class="khint" style="margin-top:4px;">{{ link.notes }}</div>{% endif %}
+          </div>
+
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+            <form method="POST" action="{{ url_for('rolodex.company_make_primary', id=company.id, link_id=link.id) }}">
+              <button class="kbtn" {% if link.is_primary %}disabled{% endif %}>Make Primary</button>
+            </form>
+            <form method="POST" action="{{ url_for('rolodex.company_unlink_property', id=company.id, link_id=link.id) }}">
+              <button class="kbtn kbtn-danger" onclick="return confirm('Unlink this property?')">Remove</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="kempty">No properties linked yet.</div>
+    {% endif %}
+  </section>
+
   <!-- Associated Contacts -->
   <div style="background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">

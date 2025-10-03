@@ -73,6 +73,25 @@ def create_app():
     @app.context_processor
     def inject_datetime():
         return {'datetime': datetime}
+
+    # Context processors
+    @app.context_processor
+    def inject_datetime():
+        return {'datetime': datetime}
+
+    # 👇 Add this block to expose all LibreNMS settings to every Jinja template
+    @app.context_processor
+    def inject_librenms():
+        return {
+            "librenms": {
+                "base_url": app.config.get("LIBRENMS_BASE_URL", "").rstrip("/"),
+                "token": app.config.get("LIBRENMS_API_TOKEN"),          # if you use it in server-side calls
+                "img_width": app.config.get("LIBRENMS_IMG_WIDTH", 900),
+                "img_height": app.config.get("LIBRENMS_IMG_HEIGHT", 220),
+                "period": app.config.get("LIBRENMS_DEFAULT_PERIOD", "-24h"),
+            }
+        }
+
     
     # Register blueprints
     register_blueprints(app)
@@ -103,6 +122,8 @@ def register_blueprints(app):
     from modules.rolodex import rolodex_bp
     from modules.home import home_bp
     from modules.vault import vault_bp
+    from modules.tasks import tasks_bp
+    from modules.network.routes import network_bp
 
         
     app.register_blueprint(daily_bp, url_prefix='/daily')
@@ -117,6 +138,8 @@ def register_blueprints(app):
     app.register_blueprint(rolodex_bp, url_prefix='/rolodex')
     app.register_blueprint(home_bp, url_prefix='/home')
     app.register_blueprint(vault_bp, url_prefix='/vault')
+    app.register_blueprint(tasks_bp)
+    app.register_blueprint(network_bp)
 
     # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)

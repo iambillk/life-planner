@@ -1,17 +1,15 @@
-# modules/projects/routes.py - Complete file with vault integration
+# modules/projects/routes.py - Complete file with file attachments
 import os
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from werkzeug.utils import secure_filename
-from sqlalchemy import or_
 from datetime import datetime
 from . import projects_bp
-from .constants import PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS, TASK_CATEGORIES
+from .constants import PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS
 from models import db, TCHProject, TCHTask, TCHIdea, TCHMilestone, TCHProjectNote, PersonalProject, ProjectFile
 
-# ADD VAULT IMPORTS
 from modules.vault.vault_service import (
-    create_document_for_entity,
-    get_entity_documents
+    get_entity_documents,
+    create_document_for_entity
 )
 
 # ==================== TCH PROJECTS ====================
@@ -84,14 +82,14 @@ def add_tch():
             deadline=datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date() if request.form.get('deadline') else None
         )
         db.session.add(project)
-        db.session.flush()  # Get the ID without committing
+        db.session.flush()  # This gets us the project.id without committing
         
-        # Handle file attachments
+        # Handle file uploads
         uploaded_files = []
         if 'attachments' in request.files:
             files = request.files.getlist('attachments')
             
-            # Create project folder if it doesn't exist
+            # Create project folder
             upload_folder = os.path.join('static', 'project_files', 'tch', str(project.id))
             os.makedirs(upload_folder, exist_ok=True)
             
@@ -119,7 +117,6 @@ def add_tch():
         
         db.session.commit()
         
-        # Update flash message to indicate if files were added
         if uploaded_files:
             flash(f'Project "{project.name}" created with {len(uploaded_files)} files!', 'success')
         else:
@@ -137,6 +134,9 @@ def add_tch():
 def tch_detail(id):
     """View TCH project details"""
     project = TCHProject.query.get_or_404(id)
+
+    # Get vault documents for this project
+    vault_documents = get_entity_documents('tch_project', id)
     
     # Calculate progress
     if project.tasks:
@@ -161,44 +161,51 @@ def tch_detail(id):
         is_archived=False
     ).order_by(TodoList.is_pinned.desc(), TodoList.created_at.desc()).all()
     
-    # GET VAULT DOCUMENTS INSTEAD OF OLD FILES
-    vault_documents = get_entity_documents('project', id)
+    # Get files for this project
+    files = ProjectFile.query.filter_by(
+        project_type='tch',
+        project_id=id
+    ).order_by(ProjectFile.uploaded_at.desc()).all()
     
     return render_template('tch_project_detail.html', 
                          project=project,
+                         vault_documents=vault_documents,
                          tasks_by_category=tasks_by_category,
                          project_todos=project_todos,
-                         vault_documents=vault_documents,  # Pass vault docs instead of files
-                         active='tch',
-                         task_categories=TASK_CATEGORIES,
-                         priority_levels=PRIORITY_LEVELS,
-    )
+                         files=files,
+                         module_type='tch_project',
+                         active='tch')
 
 @projects_bp.route('/tch/<int:id>/edit', methods=['GET', 'POST'])
 def edit_tch(id):
-    """Edit TCH project"""
+    """Edit TCH project with category"""
     project = TCHProject.query.get_or_404(id)
     
     if request.method == 'POST':
-        # Update basic fields
         project.name = request.form.get('name')
         project.description = request.form.get('description')
         project.category = request.form.get('category', 'General')
         project.goal = request.form.get('goal')
         project.motivation = request.form.get('motivation')
         project.strategy = request.form.get('strategy')
-        project.priority = request.form.get('priority', 'medium')
-        project.status = request.form.get('status', 'planning')
+        project.priority = request.form.get('priority')
+        project.status = request.form.get('status')
         
-        # Update dates
         if request.form.get('start_date'):
             project.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
         if request.form.get('deadline'):
             project.deadline = datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date()
-        else:
-            project.deadline = None
         
-        # NEW THIS SECTION: Handle file uploads (same pattern as add_tch)
+        # Handle retrospective fields
+        project.what_worked = request.form.get('what_worked')
+        project.what_was_hard = request.form.get('what_was_hard')
+        project.lessons_learned = request.form.get('lessons_learned')
+        
+        # If marking as completed, set completion date
+        if project.status == 'completed' and not project.completed_date:
+            project.completed_date = datetime.utcnow().date()
+        
+        # ADD THIS SECTION: Handle file uploads (same pattern as add_tch)
         uploaded_files = []
         if 'attachments' in request.files:
             files = request.files.getlist('attachments')
@@ -264,55 +271,7 @@ def delete_tch(id):
     flash(f'Project "{name}" deleted!', 'success')
     return redirect(url_for('projects.tch_index'))
 
-# ==================== VAULT INTEGRATION ====================
-
-@projects_bp.route('/tch/<int:id>/vault/upload', methods=['POST'])
-def upload_tch_vault_document(id):
-    """Upload a document for a TCH project to vault"""
-    project = TCHProject.query.get_or_404(id)
-    
-    if 'file' not in request.files:
-        flash('No file provided', 'error')
-        return redirect(url_for('projects.tch_detail', id=id))
-    
-    file = request.files['file']
-    if not file or not file.filename:
-        flash('No file selected', 'error')
-        return redirect(url_for('projects.tch_detail', id=id))
-    
-    # Get document metadata from form
-    doc_type = request.form.get('doc_type', 'document')
-    title = request.form.get('title', file.filename)
-    
-    # Auto-generate tags
-    tags = []
-    tags.append(f"project_{project.id}")
-    tags.append("tch")
-    if project.category:
-        tags.append(project.category.lower())
-    
-    try:
-        # Use the vault service function
-        doc = create_document_for_entity(
-            file=file,
-            entity_type='project',
-            entity_id=project.id,
-            entity_name=project.name,
-            title=title,
-            doc_type=doc_type,
-            tags=tags
-        )
-        
-        db.session.commit()
-        flash('Document uploaded successfully!', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error uploading document: {str(e)}', 'error')
-    
-    return redirect(url_for('projects.tch_detail', id=id))
-
-# ==================== FILE MANAGEMENT (OLD SYSTEM - KEEPING FOR NOW) ====================
+# ==================== FILE MANAGEMENT ====================
 
 @projects_bp.route('/tch/<int:project_id>/file/<int:file_id>/delete', methods=['POST'])
 def delete_file(project_id, file_id):
@@ -363,50 +322,49 @@ def add_tch_task(project_id):
     return redirect(url_for('projects.tch_detail', id=project_id))
 
 @projects_bp.route('/tch/task/<int:task_id>/toggle', methods=['POST'])
-def toggle_task(task_id):
-    """Toggle task completion status"""
+def toggle_tch_task(task_id):
+    """Toggle task completion"""
     task = TCHTask.query.get_or_404(task_id)
     task.completed = not task.completed
     task.completed_date = datetime.utcnow() if task.completed else None
     db.session.commit()
-    
-    # Calculate new progress
-    project = task.project
-    completed_tasks = sum(1 for t in project.tasks if t.completed)
-    progress = int((completed_tasks / len(project.tasks)) * 100) if project.tasks else 0
-    
-    return jsonify({'completed': task.completed, 'progress': progress})
+    return jsonify({'success': True, 'completed': task.completed})
 
 @projects_bp.route('/tch/task/<int:task_id>/edit', methods=['GET', 'POST'])
 def edit_tch_task(task_id):
-    """Edit a TCH project task"""
+    """Edit task"""
     task = TCHTask.query.get_or_404(task_id)
-    project = TCHProject.query.get_or_404(task.project_id)
+    project = task.project
     
     if request.method == 'POST':
         task.title = request.form.get('title')
-        task.description = request.form.get('description', '')
-        task.category = request.form.get('category', 'General')
+        task.description = request.form.get('description')
+        task.category = request.form.get('category')
         task.priority = request.form.get('priority', 'medium')
+        task.assigned_to = request.form.get('assigned_to')
         
-        due_date_str = request.form.get('due_date')
-        if due_date_str:
-            task.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
-        else:
-            task.due_date = None
+        if request.form.get('due_date'):
+            task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date()
         
         db.session.commit()
-        flash('Task updated successfully!', 'success')
-        return redirect(url_for('projects.tch_detail', id=project.id))
+        flash('Task updated!', 'success')
+        return redirect(url_for('projects.tch_detail', id=task.project_id))
+    
+    # Task categories for the dropdown
+    task_categories = ['Development', 'Design', 'Testing', 'Documentation', 
+                       'Research', 'Meeting', 'Review', 'Deployment', 
+                       'Communication', 'Other']
     
     return render_template('tch_edit_task.html', 
-                         task=task, 
+                         task=task,
                          project=project,
-                         priorities=PRIORITY_LEVELS)
+                         task_categories=task_categories,
+                         priorities=['low', 'medium', 'high'],
+                         active='tch')
 
 @projects_bp.route('/tch/task/<int:task_id>/delete', methods=['POST'])
 def delete_tch_task(task_id):
-    """Delete TCH task"""
+    """Delete task"""
     task = TCHTask.query.get_or_404(task_id)
     project_id = task.project_id
     db.session.delete(task)
@@ -553,16 +511,20 @@ def edit_tch_note(note_id):
         
         db.session.commit()
         flash('Note updated!', 'success')
-        return redirect(url_for('projects.tch_detail', id=project.id))
+        return redirect(url_for('projects.tch_detail', id=note.project_id))
+    
+    # Note categories for the dropdown
+    note_categories = ['general', 'meeting', 'technical', 'idea']
     
     return render_template('tch_edit_note.html', 
-                         note=note, 
+                         note=note,
                          project=project,
-                         categories=['general', 'technical', 'business', 'personal'])
+                         note_categories=note_categories,
+                         active='tch')
 
 @projects_bp.route('/tch/note/<int:note_id>/delete', methods=['POST'])
 def delete_tch_note(note_id):
-    """Delete TCH note"""
+    """Delete note"""
     note = TCHProjectNote.query.get_or_404(note_id)
     project_id = note.project_id
     db.session.delete(note)
@@ -574,54 +536,79 @@ def delete_tch_note(note_id):
 
 @projects_bp.route('/personal')
 def personal_index():
-    """Personal projects dashboard"""
-    projects = PersonalProject.query.filter_by(archived=False).order_by(PersonalProject.created_at.desc()).all()
+    """Personal projects list"""
+    projects = PersonalProject.query.filter_by(status='active').all()
     return render_template('personal_projects.html', projects=projects, active='personal')
 
-@projects_bp.route('/personal/add', methods=['GET', 'POST'])
+@projects_bp.route('/personal/add', methods=['POST'])
 def add_personal():
     """Add personal project"""
-    if request.method == 'POST':
-        project = PersonalProject(
-            name=request.form.get('name'),
-            description=request.form.get('description'),
-            status=request.form.get('status', 'active')
-        )
-        db.session.add(project)
-        db.session.commit()
-        flash(f'Personal project "{project.name}" created!', 'success')
-        return redirect(url_for('projects.personal_detail', id=project.id))
-    
-    return render_template('personal_add_project.html', active='personal')
-
-@projects_bp.route('/personal/<int:id>')
-def personal_detail(id):
-    """View personal project details"""
-    project = PersonalProject.query.get_or_404(id)
-    return render_template('personal_project_detail.html', project=project, active='personal')
-
-@projects_bp.route('/personal/<int:id>/edit', methods=['GET', 'POST'])
-def edit_personal(id):
-    """Edit personal project"""
-    project = PersonalProject.query.get_or_404(id)
-    
-    if request.method == 'POST':
-        project.name = request.form.get('name')
-        project.description = request.form.get('description')
-        project.status = request.form.get('status')
-        project.updated_at = datetime.utcnow()
-        db.session.commit()
-        flash('Personal project updated!', 'success')
-        return redirect(url_for('projects.personal_detail', id=id))
-    
-    return render_template('personal_edit_project.html', project=project, active='personal')
-
-@projects_bp.route('/personal/<int:id>/delete', methods=['POST'])
-def delete_personal(id):
-    """Delete personal project"""
-    project = PersonalProject.query.get_or_404(id)
-    name = project.name
-    db.session.delete(project)
+    project = PersonalProject(
+        name=request.form.get('name'),
+        description=request.form.get('description'),
+        status='active',
+        deadline=datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date() if request.form.get('deadline') else None
+    )
+    db.session.add(project)
     db.session.commit()
-    flash(f'Personal project "{name}" deleted!', 'success')
+    flash('Personal project added!', 'success')
     return redirect(url_for('projects.personal_index'))
+
+@projects_bp.route('/personal/<int:id>/update', methods=['POST'])
+def update_personal(id):
+    """Update personal project progress"""
+    project = PersonalProject.query.get_or_404(id)
+    project.progress = int(request.form.get('progress', 0))
+    
+    if project.progress >= 100:
+        project.status = 'completed'
+    
+    db.session.commit()
+    return redirect(url_for('projects.personal_index'))
+
+@projects_bp.route('/tch/<int:id>/upload', methods=['POST'])
+def upload_tch_document(id):
+    """Upload a document for TCH project"""
+    project = TCHProject.query.get_or_404(id)
+    
+    if 'file' not in request.files:
+        flash('No file provided', 'error')
+        return redirect(url_for('projects.tch_detail', id=id))
+    
+    file = request.files['file']
+    if not file or not file.filename:
+        flash('No file selected', 'error')
+        return redirect(url_for('projects.tch_detail', id=id))
+    
+    doc_type = request.form.get('doc_type', 'document')
+    title = request.form.get('title', file.filename)
+    
+    # Auto-generate tags
+    tags = []
+    tags.append(f"tch_project_{project.id}")
+    if project.name:
+        tags.append(project.name.lower().replace(' ', '_'))
+    if project.category:
+        tags.append(project.category.lower())
+    if doc_type:
+        tags.append(doc_type)
+    
+    try:
+        doc = create_document_for_entity(
+            file=file,
+            entity_type='tch_project',
+            entity_id=project.id,
+            entity_name=project.name,
+            title=title,
+            doc_type=doc_type,
+            tags=tags
+        )
+        
+        db.session.commit()
+        flash('Document uploaded successfully!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error uploading document: {str(e)}', 'error')
+    
+    return redirect(url_for('projects.tch_detail', id=id))

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set active = 'rolodex' %}
+{% block title %}Link Property — {{ contact.display_name }}{% endblock %}
+{% block header %}Link Property to {{ contact.display_name }}{% endblock %}
+
+{% block content %}
+<section class="kcard">
+  <div class="kcard-head"><div class="kcard-title">Select Property</div></div>
+  <div class="kcard-body">
+    <form method="POST">
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="property_id">Property</label>
+        <select id="property_id" name="property_id" required style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+          {% for p in properties %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="role">Role</label>
+        <select id="role" name="role" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+          <option value="">(none)</option>
+          <option>owner</option><option>tenant</option><option>realtor</option>
+          <option>lender</option><option>inspector</option><option>contractor</option>
+          <option>plumber</option><option>electrician</option><option>hvac</option>
+          <option>landscaper</option><option>emergency</option><option>other</option>
+        </select>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="label">Label (optional)</label>
+        <input id="label" name="label" type="text" placeholder="e.g., Primary Realtor"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label><input type="checkbox" name="is_primary" value="1"> Mark as Primary for this role</label>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3"
+                  style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <a class="kbtn" href="{{ url_for('rolodex.contact_detail', id=contact.id) }}">Cancel</a>
+        <button class="kbtn kbtn-primary" type="submit">Link</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

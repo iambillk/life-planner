@@ -1,12 +1,13 @@
 # modules/realestate/routes.py
 # Real Estate routes — with outbuildings + vendors + purchase fields + delete property
-from flask import render_template, request, redirect, url_for, flash, current_app
+
+from flask import render_template, request, redirect, url_for, flash, current_app, jsonify
 from datetime import datetime, timedelta
 from collections import defaultdict
-from flask import jsonify
 import json
 import os
-# ✅ Import db and models directly from their modules (no models/__init__.py exports needed)
+
+# DB + models
 from models.base import db
 from models.realestate import (
     Property,
@@ -15,16 +16,64 @@ from models.realestate import (
     PropertyVendor,
     PropertyOutbuilding,
 )
+
+# Rolodex models
+from models.rolodex import Contact, Company
+
+# Link tables
+from models.rolodex_link import ContactLink          # people links (existing)
+from models.company_link import CompanyLink           # company links (new)
+
+# Blueprints / utils
 from . import realestate_bp
 from modules.equipment.utils import allowed_file, save_uploaded_photo
 
-# ADD THESE VAULT IMPORTS HERE
+# Vault service
 from modules.vault.vault_service import (
-    create_document_from_file, 
+    create_document_from_file,
     link_document_to_entity,
     get_entity_documents,
-    unlink_document_from_entity
+    unlink_document_from_entity,
 )
+
+# People link helpers
+from modules.rolodex.service_links import (
+    link_contact,
+    unlink_contact,            # people unlink
+    set_primary,               # make a person link primary
+    links_for_target,          # fetch person links for a target
+)
+
+# Company link helpers (aliased unlink to avoid name collision)
+from modules.rolodex.service_company_links import (
+    link_company,
+    unlink_company as unlink_company_link,
+    set_company_primary,
+    company_links_for_target,
+)
+
+# HELPERS #
+
+# --- People/Company link loaders --------------------------------------------
+def _load_property_links(property_id: int):
+    # People links
+    person_links = links_for_target("property", property_id)
+    person_contact_ids = [l.contact_id for l in person_links if l.contact_id]
+    contacts_by_id = (
+        {c.id: c for c in Contact.query.filter(Contact.id.in_(person_contact_ids)).all()}
+        if person_contact_ids else {}
+    )
+
+    # Company links
+    comp_links = company_links_for_target("property", property_id)
+    company_ids = [l.company_id for l in comp_links if l.company_id]
+    companies_by_id = (
+        {c.id: c for c in Company.query.filter(Company.id.in_(company_ids)).all()}
+        if company_ids else {}
+    )
+
+    return person_links, contacts_by_id, comp_links, companies_by_id
+
 
 
 # ---------------- Dashboard ----------------
@@ -77,32 +126,32 @@ def dashboard():
 def property_detail(id):
     prop = Property.query.get_or_404(id)
 
-    from modules.vault.vault_service import get_entity_documents
+    # Documents (vault)
     vault_documents = get_entity_documents('property', id)
-    
+
     # Maintenance list
     maintenance = (
-        PropertyMaintenance.query.filter_by(property_id=id)
+        PropertyMaintenance.query
+        .filter_by(property_id=id)
         .order_by(
             PropertyMaintenance.date_completed.desc(),
             PropertyMaintenance.id.desc()
         )
         .all()
     )
-    
-    # Calculate property-specific maintenance totals
+
+    # Cost summaries
     current_year = datetime.now().year
-    property_ytd = 0
-    property_last_year = 0
-    
+    property_ytd = 0.0
+    property_last_year = 0.0
     for m in maintenance:
         if m.date_completed and m.cost:
             if m.date_completed.year == current_year:
-                property_ytd += m.cost
+                property_ytd += (m.cost or 0.0)
             elif m.date_completed.year == (current_year - 1):
-                property_last_year += m.cost
-    
-    # Photos grouped by maintenance_id
+                property_last_year += (m.cost or 0.0)
+
+    # Maintenance photos grouped
     maint_ids = [m.id for m in maintenance] or [0]
     photos = (
         PropertyMaintenancePhoto.query
@@ -117,21 +166,26 @@ def property_detail(id):
     for ph in photos:
         photos_by_maint[ph.maintenance_id].append(ph)
     recent_photos = photos[:12]
-    
+
     # Vendors
     vendors = (
-        PropertyVendor.query.filter_by(property_id=id)
+        PropertyVendor.query
+        .filter_by(property_id=id)
         .order_by(PropertyVendor.service_type.asc(), PropertyVendor.company_name.asc())
         .all()
     )
-    
+
     # Outbuildings
     outbuildings = (
-        PropertyOutbuilding.query.filter_by(property_id=id)
+        PropertyOutbuilding.query
+        .filter_by(property_id=id)
         .order_by(PropertyOutbuilding.name.asc())
         .all()
     )
-    
+
+    # ✅ People & Companies linked to this property
+    person_links, contacts_by_id, company_links, companies_by_id = _load_property_links(id)
+
     return render_template(
         "realestate/property_detail.html",
         property=prop,
@@ -144,8 +198,15 @@ def property_detail(id):
         property_ytd=property_ytd,
         property_last_year=property_last_year,
         current_year=current_year,
+        # NEW context for links
+        contact_links=person_links,
+        contacts_by_id=contacts_by_id,
+        company_links=company_links,
+        companies_by_id=companies_by_id,
         active="realestate",
     )
+
+
 
 
 # ---------------- Add / Edit / Delete Property ----------------
@@ -1005,4 +1066,77 @@ def upload_property_document(id):
         flash(f'Error uploading document: {str(e)}', 'error')
     
     return redirect(url_for('realestate.property_detail', id=id))
+
+@realestate_bp.route("/<int:property_id>/contacts/add", methods=["GET", "POST"])
+def add_property_contact(property_id):
+    prop = Property.query.get_or_404(property_id)
+    if request.method == "POST":
+        contact_id = int(request.form["contact_id"])
+        role = (request.form.get("role") or "").strip() or None
+        label = (request.form.get("label") or "").strip() or None
+        is_primary = bool(request.form.get("is_primary"))
+        notes = (request.form.get("notes") or "").strip() or None
+
+        link_contact(
+            contact_id, "property", property_id,
+            role=role, label=label, is_primary=is_primary, notes=notes
+        )
+        flash("Contact linked.", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    contacts = Contact.query.order_by(Contact.display_name.asc()).all()
+    return render_template(
+        "realestate/add_property_contact.html",
+        property=prop, contacts=contacts, active="realestate"
+    )
+
+
+@realestate_bp.route("/<int:property_id>/contacts/<int:link_id>/remove", methods=["POST"])
+def remove_property_contact(property_id, link_id):
+    unlink_contact(link_id)
+    flash("Contact link removed.", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
+
+
+@realestate_bp.route("/<int:property_id>/contacts/<int:link_id>/primary", methods=["POST"])
+def make_property_contact_primary(property_id, link_id):
+    set_primary(link_id)
+    flash("Primary contact updated.", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
+@realestate_bp.route("/<int:property_id>/companies/add", methods=["GET", "POST"])
+def add_property_company(property_id):
+    prop = Property.query.get_or_404(property_id)
+    if request.method == "POST":
+        company_id = int(request.form["company_id"])
+        role = (request.form.get("role") or "").strip() or None
+        label = (request.form.get("label") or "").strip() or None
+        is_primary = bool(request.form.get("is_primary"))
+        notes = (request.form.get("notes") or "").strip() or None
+
+        link_company(
+            company_id, "property", property_id,
+            role=role, label=label, is_primary=is_primary, notes=notes
+        )
+        flash("Company linked.", "success")
+        return redirect(url_for("realestate.property_detail", id=property_id))
+
+    companies = Company.query.order_by(Company.name.asc()).all()
+    return render_template(
+        "realestate/add_property_company.html",
+        property=prop, companies=companies, active="realestate"
+    )
+
+
+@realestate_bp.route("/<int:property_id>/companies/<int:link_id>/remove", methods=["POST"])
+def remove_property_company(property_id, link_id):
+    unlink_company_link(link_id)  # aliased in imports
+    flash("Company link removed.", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
+
+
+@realestate_bp.route("/<int:property_id>/companies/<int:link_id>/primary", methods=["POST"])
+def make_property_company_primary(property_id, link_id):
+    set_company_primary(link_id)
+    flash("Primary company updated.", "success")
+    return redirect(url_for("realestate.property_detail", id=property_id))
 

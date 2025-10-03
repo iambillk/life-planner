@@ -4,10 +4,14 @@
     <!--
     =============================================================================
       FILE: base.html  (Billas Planner — Base Layout)
-      TEMPLATE VERSION: v1.1.0
-      LAST UPDATED: 2025-09-12
+      TEMPLATE VERSION: v1.1.1
+      LAST UPDATED: 2025-09-30
 
       CHANGELOG:
+        v1.1.1 (2025-09-30)
+        - NEW: Home Network nav flashes red when any device is DOWN (polls /network/api/any-down)
+        - Minor: added stable id on Home Network nav link
+
         v1.1.0 (2025-09-12)
         - NEW: User-customizable sidebar order (drag & drop), saved to localStorage.
         - FIX: Closing </a> for Weight Loss nav item.
@@ -122,6 +126,25 @@
       @media (max-height: 760px){
         aside.sidebar nav.sidebar-nav a.nav-item{padding:5px 9px!important;min-height:32px!important;font-size:.92rem!important}
       }
+
+      /* ============================
+         NAV DOWN ALERT (NEW)
+         ============================ */
+      .nav-alert{
+        color:#fff !important;
+        background:linear-gradient(135deg,#ef4444,#dc2626) !important;
+        border-color:rgba(239,68,68,.55) !important;
+        box-shadow:0 0 0 0 rgba(239,68,68,.6);
+        animation:navPulse 1.15s ease-in-out infinite;
+      }
+      @keyframes navPulse{
+        0%{ box-shadow:0 0 0 0 rgba(239,68,68,.55); }
+        70%{ box-shadow:0 0 0 10px rgba(239,68,68,0); }
+        100%{ box-shadow:0 0 0 0 rgba(239,68,68,0); }
+      }
+      @media (prefers-reduced-motion: reduce){
+        .nav-alert{ animation:none; }
+      }
     </style>
 </head>
 
@@ -165,16 +188,21 @@
                     <span class="icon">⚖️</span><span>Weight Loss</span>
                 </a> <!-- fixed missing closing tag -->
                 <a data-key="rolodex"   href="{{ url_for('rolodex.contacts') }}"  class="nav-item {{ 'active' if active == 'rolodex' }}">
-                    <span class="icon">📇</span><span>Player’s Black Book</span>
+                    <span class="icon">📇</span><span>Rolodex System</span>
                 <a data-key="vault" href="{{ url_for('vault.index') }}" class="nav-item {{ 'active' if active == 'vault' }}">
-                    <span class="icon">📁</span><span>CribVault</span>
+                    <span class="icon">📁</span><span>Document Vault</span>
                 </a>
                 <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
                     <span class="icon">🏠</span><span>Home</span>
                 </a>
-				<a data-key="todo" href="{{ url_for('todo.unified') }}" class="nav-item {{ 'active' if active == 'todo' }}">
-					<span class="icon">✅</span><span>All Tasks</span>
-				</a>
+                <!-- Added id for alert targeting -->
+                <a data-key="network" id="nav-home-network" href="{{ url_for('network.devices') }}" 
+                   class="nav-item {{ 'active' if active == 'network' }}">
+                    <span class="icon">🖧</span><span>Network Command Center</span>
+                </a>
+                <a data-key="tasks" href="{{ url_for('tasks.index') }}" class="nav-item {{ 'active' if active == 'tasks' }}">
+                  <span class="icon">✅</span><span>All Tasks</span>
+                </a>
             </nav>
 
             <!-- Customize controls -->
@@ -195,11 +223,12 @@
                   <summary>About & Changelog</summary>
                   <div class="about-grid">
                     <div><strong>Template:</strong> base.html</div>
-                    <div><strong>Version:</strong> <span class="badge">{{ base_version|default('v1.1.0') }}</span></div>
-                    <small>Last updated: 2025-09-12</small>
+                    <div><strong>Version:</strong> <span class="badge">{{ base_version|default('v1.1.1') }}</span></div>
+                    <small>Last updated: 2025-09-30</small>
                   </div>
                   <div class="about-changelog">
                     <code>
+v1.1.1 — Home Network nav flashes red when any device is down (polls /network/api/any-down).
 v1.1.0 — User-customizable sidebar order (drag & drop), localStorage persist; fix Weight Loss closing tag.
 v1.0.3 — Strong overrides to significantly reduce sidebar spacing.
 v1.0.2 — Initial tightening and emoji normalization.
@@ -216,7 +245,7 @@ v1.0.0 — Dark refactor, a11y, sticky header, flash polish, changelog panel.
                 <h1>{% block header %}{% endblock %}</h1>
                 <div class="top-bar-actions">
                     <span class="badge" title="Base template version">
-                      <span aria-hidden="true">🏷️</span> {{ base_version|default('v1.1.0') }}
+                      <span aria-hidden="true">🏷️</span> {{ base_version|default('v1.1.1') }}
                     </span>
 
                     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -392,6 +421,34 @@ v1.0.0 — Dark refactor, a11y, sticky header, flash polish, changelog panel.
 
         // Initialize on load
         applyOrder();
+      })();
+
+      /* =========================
+         NAV DOWN ALERT (NEW)
+         ========================= */
+      (function monitorNetworkNav(){
+        const link = document.getElementById('nav-home-network');
+        if(!link) return;
+
+        async function check(){
+          try{
+            const r = await fetch('{{ url_for("network.api_any_down") }}', { cache: "no-store" });
+            if(!r.ok) return;
+            const data = await r.json(); // { any_down: bool, down_count: int }
+            if(data && data.any_down){
+              link.classList.add('nav-alert');
+              link.setAttribute('aria-label', `Home Network (${data.down_count} down)`);
+              link.title = `${data.down_count} device(s) down`;
+            }else{
+              link.classList.remove('nav-alert');
+              link.removeAttribute('aria-label');
+              link.removeAttribute('title');
+            }
+          }catch(_){ /* silent */ }
+        }
+
+        check();               // initial
+        setInterval(check, 30_000); // every 30s
       })();
     </script>
 

@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+{% block title %}Archived Documents - Vault{% endblock %}
+{% block header %}Archived Documents{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* =============================================================================
+     VAULT ARCHIVED - Dark Theme Aligned with Project Design System
+     VERSION: v1.0.0
+     CREATED: 2025-01-27
+  ============================================================================= */
+
+  /* ===== Theme Variables ===== */
+  :root {
+    --arch-bg: var(--bg, #0b0f1a);
+    --arch-panel: var(--panel, #121a2a);
+    --arch-card: var(--card, #0f1625);
+    --arch-line: var(--line, #1f2a3d);
+    --arch-text: var(--text, #e6eaf2);
+    --arch-muted: var(--text-muted, #9fb0c8);
+    --arch-primary: var(--primary, #6ea8ff);
+    --arch-success: var(--success, #22c55e);
+    --arch-danger: var(--danger, #ef4444);
+    --arch-warning: var(--warning, #f59e0b);
+    --arch-radius: var(--radius, 14px);
+    --arch-radius-sm: var(--radius-sm, 10px);
+    --arch-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  /* ===== Container ===== */
+  .archived-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  /* ===== Header Bar ===== */
+  .archived-header {
+    background: linear-gradient(180deg, rgba(245,158,11,.05), rgba(245,158,11,.02));
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: var(--arch-radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--arch-shadow);
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .archive-icon {
+    font-size: 32px;
+  }
+
+  .header-info h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--arch-text);
+  }
+
+  .header-info .subtitle {
+    color: var(--arch-muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  /* ===== Action Buttons ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--arch-line);
+    background: var(--arch-card);
+    color: var(--arch-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn:hover {
+    background: rgba(110, 168, 255, 0.1);
+    border-color: var(--arch-primary);
+    transform: translateY(-1px);
+  }
+
+  .btn-success {
+    background: var(--arch-success);
+    color: white;
+    border-color: var(--arch-success);
+  }
+
+  .btn-success:hover {
+    background: #16a34a;
+    border-color: #16a34a;
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--arch-danger);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--arch-danger);
+  }
+
+  /* ===== Filters Bar ===== */
+  .filters-bar {
+    background: var(--arch-card);
+    border: 1px solid var(--arch-line);
+    border-radius: var(--arch-radius);
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--arch-muted);
+  }
+
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--arch-line);
+    background: transparent;
+    color: var(--arch-text);
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-chip:hover {
+    background: rgba(110, 168, 255, 0.1);
+    border-color: var(--arch-primary);
+    color: var(--arch-primary);
+  }
+
+  .filter-chip.active {
+    background: rgba(110, 168, 255, 0.15);
+    border-color: var(--arch-primary);
+    color: var(--arch-primary);
+  }
+
+  .filter-count {
+    background: rgba(255,255,255,0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ===== Documents Grid ===== */
+  .documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .doc-card {
+    background: var(--arch-card);
+    border: 1px solid var(--arch-line);
+    border-radius: var(--arch-radius-sm);
+    padding: 16px;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .doc-card:hover {
+    border-color: rgba(245, 158, 11, 0.3);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.1);
+  }
+
+  .archived-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--arch-warning);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .doc-header {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .doc-icon {
+    font-size: 24px;
+    opacity: 0.7;
+  }
+
+  .doc-content {
+    flex: 1;
+  }
+
+  .doc-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--arch-text);
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .doc-preview {
+    font-size: 13px;
+    color: var(--arch-muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .doc-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--arch-line);
+    font-size: 12px;
+    color: var(--arch-muted);
+  }
+
+  .doc-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .doc-size {
+    background: rgba(255,255,255,0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .doc-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--arch-line);
+  }
+
+  .card-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    border: 1px solid var(--arch-line);
+    background: transparent;
+    color: var(--arch-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .card-btn:hover {
+    background: rgba(110, 168, 255, 0.1);
+    border-color: var(--arch-primary);
+    color: var(--arch-primary);
+  }
+
+  .card-btn.restore:hover {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--arch-success);
+    color: var(--arch-success);
+  }
+
+  .card-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--arch-danger);
+    color: var(--arch-danger);
+  }
+
+  /* ===== Empty State ===== */
+  .empty-state {
+    background: var(--arch-card);
+    border: 2px dashed var(--arch-line);
+    border-radius: var(--arch-radius);
+    padding: 60px 20px;
+    text-align: center;
+    margin: 40px auto;
+    max-width: 500px;
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--arch-text);
+    margin-bottom: 8px;
+  }
+
+  .empty-text {
+    color: var(--arch-muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  /* ===== Warning Modal Styles ===== */
+  .warning-text {
+    color: var(--arch-warning);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .documents-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .header-content {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .header-actions {
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="archived-container">
+  <!-- Header -->
+  <div class="archived-header">
+    <div class="header-content">
+      <div class="header-left">
+        <span class="archive-icon">📦</span>
+        <div class="header-info">
+          <h1>Archived Documents</h1>
+          <div class="subtitle">
+            {{ total_archived }} document{{ 's' if total_archived != 1 else '' }} in archive
+          </div>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <a href="{{ url_for('vault.index') }}" class="btn">
+          ← Back to Vault
+        </a>
+        
+        {% if archived_docs %}
+        <form method="POST" action="{{ url_for('vault.restore_all_archived') }}" style="display: inline;"
+              onsubmit="return confirm('Restore all {{ total_archived }} archived documents?');">
+          <button type="submit" class="btn btn-success">
+            ♻️ Restore All
+          </button>
+        </form>
+        
+        <form method="POST" action="{{ url_for('vault.delete_all_archived') }}" style="display: inline;"
+              onsubmit="return confirm('PERMANENTLY DELETE all {{ total_archived }} archived documents? This cannot be undone!');">
+          <button type="submit" class="btn btn-danger">
+            🗑️ Delete All
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  {% if archived_docs %}
+  <div class="filters-bar">
+    <span class="filter-label">Filter by type:</span>
+    <div class="filter-chips">
+      <a href="{{ url_for('vault.archived_documents') }}" 
+         class="filter-chip {% if not selected_type %}active{% endif %}">
+        <span>📁</span>
+        <span>All</span>
+        <span class="filter-count">{{ total_archived }}</span>
+      </a>
+      
+      {% for doc_type, count in type_counts.items() %}
+      <a href="{{ url_for('vault.archived_documents', type=doc_type) }}" 
+         class="filter-chip {% if selected_type == doc_type %}active{% endif %}">
+        <span>
+          {% if doc_type == 'code' %}💻
+          {% elif doc_type == 'config' %}⚙️
+          {% elif doc_type == 'document' %}📄
+          {% elif doc_type == 'note' %}📝
+          {% elif doc_type == 'image' %}🖼️
+          {% elif doc_type == 'data' %}📊
+          {% else %}📎{% endif %}
+        </span>
+        <span>{{ doc_type|title }}</span>
+        <span class="filter-count">{{ count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Documents Grid -->
+  {% if archived_docs %}
+  <div class="documents-grid">
+    {% for doc in archived_docs %}
+    <div class="doc-card">
+      <span class="archived-badge">Archived</span>
+      
+      <div class="doc-header">
+        <span class="doc-icon">
+          {% if doc.doc_type == 'code' %}💻
+          {% elif doc.doc_type == 'config' %}⚙️
+          {% elif doc.doc_type == 'document' %}📄
+          {% elif doc.doc_type == 'note' %}📝
+          {% elif doc.doc_type == 'image' %}🖼️
+          {% elif doc.doc_type == 'data' %}📊
+          {% else %}📎{% endif %}
+        </span>
+        <div class="doc-content">
+          <div class="doc-title">{{ doc.title }}</div>
+          <div class="doc-preview">
+            {% if doc.content %}
+              {{ doc.content[:100] }}{% if doc.content|length > 100 %}...{% endif %}
+            {% elif doc.file_name %}
+              File: {{ doc.file_name }}
+            {% else %}
+              No preview available
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="doc-meta">
+        <span class="doc-date">
+          📅 Archived {{ doc.updated_at.strftime('%b %d, %Y') if doc.updated_at else 'Unknown' }}
+        </span>
+        {% if doc.file_size %}
+        <span class="doc-size">{{ (doc.file_size / 1024)|round(1) }} KB</span>
+        {% endif %}
+      </div>
+      
+      <div class="doc-actions">
+        <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="card-btn">
+          👁️ View
+        </a>
+        
+        <form method="POST" action="{{ url_for('vault.restore_document', id=doc.id) }}" style="flex: 1;">
+          <button type="submit" class="card-btn restore" style="width: 100%;">
+            ♻️ Restore
+          </button>
+        </form>
+        
+        <form method="POST" action="{{ url_for('vault.delete_document', id=doc.id) }}" 
+              style="flex: 1;" 
+              onsubmit="return confirm('Permanently delete \'{{ doc.title }}\'? This cannot be undone!');">
+          <button type="submit" class="card-btn delete" style="width: 100%;">
+            🗑️ Delete
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  
+  <div class="warning-text" style="text-align: center; margin-top: 20px;">
+    ⚠️ Deleted documents cannot be recovered. Archive is meant for temporary storage of inactive documents.
+  </div>
+  
+  {% else %}
+  <!-- Empty State -->
+  <div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <div class="empty-title">No Archived Documents</div>
+    <div class="empty-text">
+      When you archive documents, they'll appear here for review or permanent deletion.
+    </div>
+    <a href="{{ url_for('vault.index') }}" class="btn">
+      ← Back to Vault
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

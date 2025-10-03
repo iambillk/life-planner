@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}All Tasks{% endblock %}
+
+{# -------- Macro to build URLs without **kwargs (Jinja-safe) -------- #}
+{% macro tasks_url(page=None, source=None) -%}
+{{ url_for(
+  'tasks.index',
+  q=f.q,
+  source=(source if source is not none else f.source),
+  priority=f.priority,
+  status=f.status,
+  due=f.due,
+  sort=f.sort,
+  page=(page if page is not none else f.page),
+  per_page=f.per_page
+) }}
+{%- endmacro %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --pd-bg:#0b0f1a; --pd-panel:#121a2a; --pd-card:#0f1625; --pd-sub:#0c1322;
+    --pd-line:#1f2a3d; --pd-text:#e6eaf2; --pd-muted:#9fb0c8; --pd-primary:#6ea8ff;
+    --pd-radius:16px; --pd-shadow:0 10px 24px rgba(0,0,0,.35);
+  }
+  body{ background:var(--pd-bg); }
+  .wrap{ max-width:1200px; margin:0 auto; padding:16px; }
+  .panel{ background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius); box-shadow:var(--pd-shadow); }
+
+  .toolbar{ display:grid; grid-template-columns: 1fr auto; gap:12px; padding:12px; border-bottom:1px dashed var(--pd-line); }
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .chip{ padding:6px 10px; border:1px solid var(--pd-line); border-radius:999px; background:var(--pd-sub); color:var(--pd-muted); cursor:pointer; text-decoration:none; }
+  .chip.is-active{ color:#0a0f1a; background:var(--pd-primary); border-color:transparent; }
+  .search{ flex:1; min-width:220px; }
+  .search input{ width:100%; background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:10px; padding:10px; }
+  .select{ background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:10px; padding:8px 10px; }
+
+  .list{ padding:12px; max-height:calc(100vh - 260px); overflow:auto; }
+  .row{ display:grid; grid-template-columns: 36px 1fr 160px 130px 120px 100px; gap:8px; align-items:center; padding:8px; border-bottom:1px dashed var(--pd-line); }
+  .row:hover{ background:rgba(255,255,255,.03); }
+  .hdr{ font-size:.85rem; color:var(--pd-muted); text-transform:uppercase; letter-spacing:.06em; }
+  .title{ font-weight:700; color:var(--pd-text); text-decoration:none; }
+  .title a{ color:var(--pd-text); text-decoration:none; }
+  .title a:hover{ text-decoration:underline; }
+  .proj{ font-size:.85rem; color:var(--pd-muted); }
+  .proj a{ color:var(--pd-muted); text-decoration:none; }
+  .proj a:hover{ text-decoration:underline; }
+  .prio{ font-size:.85rem; }
+  .prio.low{ color:#7dd3fc; }
+  .prio.medium{ color:#93c5fd; }
+  .prio.high{ color:#fca5a5; }
+  .prio.critical{ color:#f87171; font-weight:800; }
+  .due.overdue{ color:#f87171; font-weight:700; }
+  .src{ font-size:.85rem; color:var(--pd-muted); }
+  .btn-icon{ background:transparent; border:1px solid var(--pd-line); color:var(--pd-text); border-radius:10px; padding:6px 8px; font-size:.9rem; cursor:pointer; }
+  .btn-icon:hover{ border-color:var(--pd-primary); }
+
+  .footer{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-top:1px dashed var(--pd-line); }
+  .pager a{ color:var(--pd-muted); text-decoration:none; padding:6px 10px; border:1px solid var(--pd-line); border-radius:8px; }
+  .pager a.is-active{ background:var(--pd-primary); color:#0a0f1a; border-color:transparent; }
+
+  /* Inline add (Standalone) */
+  .inline-add{ display:flex; gap:8px; flex-wrap:wrap; }
+  .inline-add input, .inline-add select, .inline-add textarea{ background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:10px; padding:10px; }
+  .inline-add button{ border:1px solid var(--pd-line); border-radius:10px; padding:10px 14px; background:#0c1322; color:var(--pd-text); cursor:pointer; }
+  .inline-add button:hover{ border-color:var(--pd-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="panel">
+    <div class="toolbar">
+      <div class="filters">
+        <!-- Source chips (use macro to preserve filters) -->
+        <a class="chip {% if f.source=='all' %}is-active{% endif %}" href="{{ tasks_url(page=1, source='all') }}">All</a>
+        <a class="chip {% if f.source=='personal' %}is-active{% endif %}" href="{{ tasks_url(page=1, source='personal') }}">Personal</a>
+        <a class="chip {% if f.source=='tch' %}is-active{% endif %}" href="{{ tasks_url(page=1, source='tch') }}">TCH</a>
+        <a class="chip {% if f.source=='standalone' %}is-active{% endif %}" href="{{ tasks_url(page=1, source='standalone') }}">Standalone</a>
+
+        <!-- Search -->
+        <form method="get" action="{{ url_for('tasks.index') }}" class="search">
+          <input type="hidden" name="source" value="{{ f.source }}">
+          <input type="hidden" name="priority" value="{{ f.priority }}">
+          <input type="hidden" name="status" value="{{ f.status }}">
+          <input type="hidden" name="due" value="{{ f.due }}">
+          <input type="hidden" name="sort" value="{{ f.sort }}">
+          <input type="hidden" name="per_page" value="{{ f.per_page }}">
+          <input type="text" name="q" value="{{ f.q }}" placeholder="Search title or project...">
+        </form>
+
+        <!-- Filter selects -->
+        <form method="get" action="{{ url_for('tasks.index') }}" style="display:flex; gap:8px;">
+          <input type="hidden" name="q" value="{{ f.q }}">
+          <input type="hidden" name="source" value="{{ f.source }}">
+          <input type="hidden" name="per_page" value="{{ f.per_page }}">
+          <select name="priority" class="select" onchange="this.form.submit()">
+            {% for opt in ['all','low','medium','high','critical'] %}
+              <option value="{{ opt }}" {% if f.priority==opt %}selected{% endif %}>Priority: {{ opt|title }}</option>
+            {% endfor %}
+          </select>
+          <select name="status" class="select" onchange="this.form.submit()">
+            {% for opt in ['open','completed','all'] %}
+              <option value="{{ opt }}" {% if f.status==opt %}selected{% endif %}>Status: {{ opt|title }}</option>
+            {% endfor %}
+          </select>
+          <select name="due" class="select" onchange="this.form.submit()">
+            {% for opt in ['all','overdue','today','week'] %}
+              <option value="{{ opt }}" {% if f.due==opt %}selected{% endif %}>Due: {{ opt|title }}</option>
+            {% endfor %}
+          </select>
+          <select name="sort" class="select" onchange="this.form.submit()">
+            {% for opt,label in [('due_asc','Due ↑'),('due_desc','Due ↓'),('prio','Priority'),('newest','Newest'),('oldest','Oldest')] %}
+              <option value="{{ opt }}" {% if f.sort==opt %}selected{% endif %}>Sort: {{ label }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
+      {% if f.source in ['all','standalone'] %}
+      <form class="inline-add" onsubmit="return addStandalone(event)">
+        <input type="text" name="title" placeholder="Quick add standalone task…" required>
+        <select name="priority">
+          {% for p in ['low','medium','high','critical'] %}
+            <option value="{{ p }}" {% if p=='medium' %}selected{% endif %}>{{ p|title }}</option>
+          {% endfor %}
+        </select>
+        <input type="date" name="due_date">
+        <button type="submit">Add</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="list">
+      <div class="row hdr">
+        <div></div>
+        <div>Task</div>
+        <div>Project</div>
+        <div>Priority</div>
+        <div>Due</div>
+        <div>Source</div>
+      </div>
+
+      {% for r in rows %}
+      {# crude overdue flag using current date; safe if r.due_date is a date #}
+      {% set overdue = r.due_date and (r.due_date < today) %}
+
+      <div class="row">
+        <div>
+          <button class="btn-icon" title="Toggle" onclick="toggleTask('{{ r.uid }}', this)">{{ '☑' if r.completed else '☐' }}</button>
+        </div>
+        <div class="title">
+          {% if r.source=='tch' %}
+            <a href="{{ url_for('projects.edit_task', task_id=r.raw_id) }}">{{ r.title }}</a>
+          {% elif r.source=='personal' %}
+            <a href="{{ url_for('persprojects.edit_task', task_id=r.raw_id) }}">{{ r.title }}</a>
+          {% else %}
+            {{ r.title }}
+          {% endif %}
+        </div>
+        <div class="proj">
+          {% if r.project_id %}
+            {% if r.source=='tch' %}
+              <a href="{{ url_for('projects.detail', id=r.project_id) }}">{{ r.project_name }}</a>
+            {% elif r.source=='personal' %}
+              <a href="{{ url_for('persprojects.detail', id=r.project_id) }}">{{ r.project_name }}</a>
+            {% endif %}
+          {% else %}
+            Inbox
+          {% endif %}
+        </div>
+        <div class="prio {{ r.priority or 'medium' }}">{{ (r.priority or 'medium')|title }}</div>
+        <div class="due {% if overdue and not r.completed %}overdue{% endif %}">{{ r.due_date or '—' }}</div>
+        <div class="src">{{ r.source|title }}</div>
+      </div>
+      {% else %}
+      <p style="color:var(--pd-muted); padding:12px;">No tasks match these filters.</p>
+      {% endfor %}
+    </div>
+
+    <div class="footer">
+      <div>{{ total }} total</div>
+      <div class="pager">
+        {% set pages = (total // f.per_page) + (1 if total % f.per_page else 0) %}
+        {% for p in range(1, pages+1) %}
+          <a class="{% if p==f.page %}is-active{% endif %}" href="{{ tasks_url(page=p) }}">{{ p }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function toggleTask(uid, btn){
+  try{
+    const res = await fetch("{{ url_for('tasks.toggle') }}", {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({uid})
+    });
+    const data = await res.json();
+    if(!data.ok){ alert(data.error || 'Toggle failed'); return; }
+    btn.textContent = (btn.textContent==='☐') ? '☑' : '☐';
+  }catch(err){ alert('Network error'); }
+}
+
+async function addStandalone(e){
+  e.preventDefault();
+  const form = e.target;
+  const res = await fetch("{{ url_for('tasks.add_standalone') }}", { method:'POST', body:new FormData(form) });
+  const data = await res.json();
+  if(!data.ok){ alert(data.error || 'Add failed'); return; }
+  window.location.href = "{{ tasks_url(source='standalone', page=1) }}";
+}
+</script>
+{% endblock %}

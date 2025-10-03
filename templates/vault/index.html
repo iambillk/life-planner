@@ -437,11 +437,34 @@
       <h2>Document Vault</h2>
     </div>
     <div class="header-actions">
+      <!-- Archive Button - NEW -->
+      <a href="{{ url_for('vault.archived_documents') }}" class="btn" style="position: relative;">
+        <span>📦</span><span>Archive</span>
+        {% if archived_count and archived_count > 0 %}
+        <span style="
+          position: absolute; 
+          top: -8px; 
+          right: -8px; 
+          background: var(--warning, #f59e0b); 
+          color: #000; 
+          border-radius: 10px; 
+          padding: 2px 6px; 
+          font-size: 10px; 
+          font-weight: bold;
+          min-width: 18px;
+          text-align: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        ">{{ archived_count }}</span>
+        {% endif %}
+      </a>
+      
       <!-- Hidden upload input wired to backend (File A behavior) -->
       <input type="file" id="upload-input" class="upload-input" accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.svg,.py,.js,.html,.css,.json,.yaml,.yml,.sh,.sql,.csv,.xml" style="display:none;">
       <button class="btn" onclick="document.getElementById('upload-input').click()">
         <span>📤</span><span>Upload</span>
       </button>
+      
+      <!-- New Document button (only one!) -->
       <a href="{{ url_for('vault.create_document') }}" class="btn btn-primary">
         <span>➕</span><span>New Document</span>
       </a>
@@ -744,5 +767,42 @@
       searchResults.classList.remove('active');
     }
   });
+</script>
+<script>
+// Display-only renames for folder labels (no backend changes)
+const FOLDER_NAME_OVERRIDES = new Map([
+  ['Personal_project', 'Personal Projects'],
+  ['Project', 'TCH Projects'],
+]);
+
+function applyFolderNameOverrides(root = document) {
+  // Pick the second <span> inside each .folder-item (icon, then name, then count)
+  root.querySelectorAll('.folder-list .folder-item').forEach(a => {
+    const nameEl = a.querySelector(':scope > span:nth-child(2)');
+    if (!nameEl) return;
+    const original = (nameEl.textContent || '').trim();
+    const key = FOLDER_NAME_OVERRIDES.has(original)
+      ? original
+      : Array.from(FOLDER_NAME_OVERRIDES.keys()).find(k => k.toLowerCase() === original.toLowerCase()); // case-insensitive fallback
+
+    if (key) {
+      nameEl.dataset.originalName = original;        // keep the original around
+      nameEl.textContent = FOLDER_NAME_OVERRIDES.get(key); // display-only label
+      if (!a.title) a.title = original;              // hover shows original backend name (optional)
+    }
+  });
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', () => {
+  applyFolderNameOverrides();
+
+  // If your folder list ever updates dynamically, keep it fresh:
+  const list = document.querySelector('.folder-list');
+  if (list) {
+    const mo = new MutationObserver(() => applyFolderNameOverrides(list));
+    mo.observe(list, { childList: true, subtree: true, characterData: true });
+  }
+});
 </script>
 {% endblock %}

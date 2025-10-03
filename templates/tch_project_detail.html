@@ -1,3 +1,21 @@
+{# =============================================================================
+  FILE: templates/tch_project_detail.html
+  PURPOSE: TCH Project — Detail (Tasks left; RHS stacked cards with full-screen modals)
+  TEMPLATE VERSION: v3.5.1
+  LAST UPDATED: 2025-09-27
+
+  v3.5.1
+  - Wire Task Category select to TASK_CATEGORIES (per-project constant, passed from route)
+  - Render Task Priority filter pills from PRIORITY_LEVELS + JS filter handler update
+
+  v3.5.0
+  - Fix: Left/right column bottom alignment (grid stretch + task card fills row)
+  - UX: "Add Task" opens full-screen modal form (no backend changes)
+  - Docs: List view only (removed Grid toggle)
+  - Order: Notes → Documents → Ideas → Milestones
+  - Removed footer/changelog
+============================================================================= #}
+
 {% extends "base.html" %}
 
 {% block title %}{{ project.name }}{% endblock %}
@@ -5,1814 +23,628 @@
 
 {% block extra_css %}
 <style>
-  /* Override parent container constraints */
-  .container, .content, .main-content, main, body > div {
-    max-width: none !important;
-    width: 100% !important;
-  }
-
-  :root {
-    --pd-bg: #0a0d15;
-    --pd-surface: #0f1420;
-    --pd-surface-light: #141825;
-    --pd-surface-hover: #1a1f30;
-    --pd-border: #1e2435;
-    --pd-border-light: #252b40;
-    --pd-text: #e8ecf5;
-    --pd-text-dim: #8b95b0;
-    --pd-text-muted: #5a6580;
-    
-    --pd-accent: #4d7fff;
-    --pd-accent-hover: #6089ff;
-    --pd-accent-glow: rgba(77, 127, 255, 0.25);
-    
-    --pd-success: #10b981;
-    --pd-success-bg: rgba(16, 185, 129, 0.1);
-    --pd-warning: #f59e0b;
-    --pd-warning-bg: rgba(245, 158, 11, 0.1);
-    --pd-danger: #ef4444;
-    --pd-danger-bg: rgba(239, 68, 68, 0.1);
-    
-    --pd-priority-low: #6b7280;
-    --pd-priority-medium: #f59e0b;
-    --pd-priority-high: #ef4444;
-    --pd-priority-critical: #dc2626;
-  }
-
-  /* Main Container - Full Width */
-  .project-workspace {
-    min-height: 100vh;
-    background: var(--pd-bg);
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Hero Header Section - COMPACT */
-  .project-hero {
-    background: linear-gradient(135deg, #0f1420 0%, #1a1f35 100%);
-    border-bottom: 1px solid var(--pd-border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .hero-content {
-    padding: 1rem 2rem;
-    width: 100%;
-    max-width: none; /* Remove width restriction */
-  }
-
-  .hero-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .project-title-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  .project-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--pd-text);
-    margin: 0;
-  }
-
-  .project-description {
-    font-size: 0.95rem;
-    color: var(--pd-text-dim);
-    margin: 0;
-    max-width: 400px;
-  }
-
-  .hero-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-    border: 1px solid var(--pd-border);
-    background: var(--pd-surface);
-    color: var(--pd-text);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-  }
-
-  .btn:hover {
-    background: var(--pd-surface-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
-
-  .btn-primary {
-    background: var(--pd-accent);
-    border-color: var(--pd-accent);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: var(--pd-accent-hover);
-    box-shadow: 0 4px 20px var(--pd-accent-glow);
-  }
-
-  /* Metadata Bar */
-  .project-meta-bar {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .meta-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.9rem;
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 999px;
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-  }
-
-  .meta-chip.status-planning { border-color: #6b7280; color: #9ca3af; }
-  .meta-chip.status-active { border-color: var(--pd-accent); color: var(--pd-accent); background: rgba(77, 127, 255, 0.1); }
-  .meta-chip.status-on-hold { border-color: var(--pd-warning); color: var(--pd-warning); background: var(--pd-warning-bg); }
-  .meta-chip.status-completed { border-color: var(--pd-success); color: var(--pd-success); background: var(--pd-success-bg); }
-
-  .meta-chip.priority-low { border-color: var(--pd-priority-low); }
-  .meta-chip.priority-medium { border-color: var(--pd-priority-medium); color: var(--pd-priority-medium); }
-  .meta-chip.priority-high { border-color: var(--pd-priority-high); color: var(--pd-priority-high); }
-  .meta-chip.priority-critical { 
-    border-color: var(--pd-priority-critical); 
-    color: white; 
-    background: var(--pd-priority-critical);
-    animation: criticalPulse 2s ease-in-out infinite;
-  }
-
-  @keyframes criticalPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  /* Progress Section - Inline Compact */
-  .progress-section {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-top: 1rem;
-  }
-
-  .progress-stats {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-  }
-
-  .progress-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .progress-stat-label {
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  .progress-stat-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--pd-text);
-  }
-
-  .progress-bar-container {
-    flex: 1;
-    max-width: 300px;
-    height: 1.5rem;
-    background: var(--pd-surface);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    border: 1px solid var(--pd-border);
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--pd-accent), var(--pd-accent-hover));
-    border-radius: inherit;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 0.5rem;
-  }
-
-  .progress-percentage {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
-  }
-
-  /* Main Content Area */
-  .project-content {
-    flex: 1;
-    padding: 2rem 3rem;
-    max-width: 1800px;
-    margin: 0 auto;
-    width: 100%;
-  }
-
-  /* Combined Goals Bar */
-  .goals-bar {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--pd-border);
-  }
-
-  .goal-item {
-    flex: 1;
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-  }
-
-  .goal-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--pd-accent-glow);
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-  }
-
-  .goal-content-wrapper {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .goal-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--pd-text-muted);
-    margin-bottom: 0.25rem;
-  }
-
-  .goal-text {
-    font-size: 0.875rem;
-    color: var(--pd-text);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* Main Dashboard Grid */
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 2rem;
-    margin-top: 2rem;
-  }
-
-  /* Tasks Section - Primary Focus */
-  .tasks-section {
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 1rem;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 400px; /* Ensure minimum height */
-  }
-
-  .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: var(--pd-surface-light);
-    border-bottom: 1px solid var(--pd-border);
-    flex-shrink: 0; /* Header never shrinks */
-  }
-
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--pd-text);
-  }
-
-  .section-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .btn-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-  }
-
-  /* Task Categories */
-  .tasks-container {
-    padding: 1.5rem;
-    flex: 1;
-    overflow-y: auto; /* Scrollable when content exceeds height */
-    overflow-x: hidden;
-    min-height: 0; /* Important for flexbox overflow */
-    scroll-behavior: smooth;
-  }
-
-  /* Visual indicator when scrollable */
-  .tasks-container::-webkit-scrollbar {
-    width: 10px;
-  }
-
-  .tasks-container::-webkit-scrollbar-track {
-    background: var(--pd-surface);
-    border-radius: 5px;
-  }
-
-  .tasks-container::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 5px;
-    border: 2px solid var(--pd-surface);
-  }
-
-  .tasks-container::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Shadow indicators for scroll */
-  .tasks-section {
-    position: relative;
-  }
-
-  .tasks-container {
-    /* Add subtle shadows when scrolling */
-    background:
-      linear-gradient(var(--pd-surface) 30%, transparent),
-      linear-gradient(transparent, var(--pd-surface) 70%) 0 100%,
-      linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 30%),
-      linear-gradient(0deg, rgba(0,0,0,0.1) 0%, transparent 30%) 0 100%;
-    background-attachment: local, local, scroll, scroll;
-    background-size: 100% 40px, 100% 40px, 100% 10px, 100% 10px;
-    background-repeat: no-repeat;
-  }
-
-  .task-category {
-    margin-bottom: 2rem;
-  }
-
-  .task-category-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--pd-border);
-  }
-
-  .category-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--pd-text);
-  }
-
-  .category-count {
-    background: var(--pd-accent-glow);
-    color: var(--pd-accent);
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-
-  /* Individual Tasks */
-  .task-item {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--pd-surface-light);
-    border: 1px solid var(--pd-border);
-    border-radius: 0.75rem;
-    margin-bottom: 0.75rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
-  }
-
-  .task-item:hover {
-    background: var(--pd-surface-hover);
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-
-  .task-item.completed {
-    opacity: 0.5;
-    background: var(--pd-surface);
-  }
-
-  .task-item.completed .task-title {
-    text-decoration: line-through;
-    color: var(--pd-text-muted);
-  }
-
-  .task-checkbox {
-    width: 20px;
-    height: 20px;
-    border-radius: 0.375rem;
-    border: 2px solid var(--pd-border-light);
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  .task-checkbox:checked {
-    background: var(--pd-success);
-    border-color: var(--pd-success);
-  }
-
-  .task-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .task-title {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--pd-text);
-    margin-bottom: 0.25rem;
-  }
-
-  .task-description {
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-    margin-bottom: 0.5rem;
-    line-height: 1.4;
-  }
-
-  .task-meta {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .task-priority {
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .task-priority.priority-low {
-    background: var(--pd-priority-low);
-    color: white;
-    opacity: 0.8;
-  }
-
-  .task-priority.priority-medium {
-    background: var(--pd-priority-medium);
-    color: white;
-  }
-
-  .task-priority.priority-high {
-    background: var(--pd-priority-high);
-    color: white;
-  }
-
-  .task-due {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-  }
-
-  .task-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .task-item:hover .task-actions {
-    opacity: 1;
-  }
-
-  .btn-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    border: 1px solid var(--pd-border);
-    background: var(--pd-surface);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .btn-icon:hover {
-    background: var(--pd-accent-glow);
-    border-color: var(--pd-accent);
-  }
-
-  /* Sidebar Sections */
-  .sidebar-column {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    height: 100%;
-    overflow-y: auto;
-  }
-
-  .sidebar-section {
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 1rem;
-    overflow: hidden;
-    flex-shrink: 0;
-    height: 280px; /* Fixed height for all cards */
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar-content {
-    padding: 1rem;
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-    min-height: 0; /* Important for flexbox scrolling */
-  }
-
-  /* Remove special height for notes since all are same now */
-  .notes-content {
-    /* Same as other content areas */
-  }
-
-  /* Styled scrollbar for all sidebar content */
-  .sidebar-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 3px;
-  }
-
-  .sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Visual scroll indicators for all sidebar sections */
-  .sidebar-content {
-    /* Subtle shadow at top/bottom when scrollable */
-    background:
-      linear-gradient(var(--pd-surface) 10%, transparent 30%),
-      linear-gradient(transparent 70%, var(--pd-surface) 90%) 0 100%;
-    background-attachment: local, local;
-    background-size: 100% 30px, 100% 30px;
-    background-repeat: no-repeat;
-  }
-
-  /* Ideas */
-  .idea-item {
-    padding: 0.75rem;
-    background: var(--pd-surface-light);
-    border-left: 3px solid var(--pd-accent);
-    border-radius: 0.5rem;
-    margin-bottom: 0.75rem;
-    transition: all 0.2s ease;
-  }
-
-  .idea-item:hover {
-    background: var(--pd-surface-hover);
-    transform: translateX(2px);
-  }
-
-  .idea-content {
-    font-size: 0.875rem;
-    color: var(--pd-text);
-    margin-bottom: 0.5rem;
-    line-height: 1.4;
-  }
-
-  .idea-status {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .idea-status.status-new { background: var(--pd-accent-glow); color: var(--pd-accent); }
-  .idea-status.status-considering { background: var(--pd-warning-bg); color: var(--pd-warning); }
-  .idea-status.status-implemented { background: var(--pd-success-bg); color: var(--pd-success); }
-  .idea-status.status-rejected { background: var(--pd-danger-bg); color: var(--pd-danger); }
-
-  /* Milestones */
-  .milestone-item {
-    padding: 1rem;
-    background: var(--pd-surface-light);
-    border-radius: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid var(--pd-border);
-    position: relative;
-    transition: all 0.2s ease;
-  }
-
-  .milestone-item:hover {
-    border-color: var(--pd-accent);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-
-  .milestone-item.completed {
-    background: var(--pd-success-bg);
-    border-color: var(--pd-success);
-  }
-
-  .milestone-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--pd-text);
-    margin-bottom: 0.25rem;
-  }
-
-  .milestone-date {
-    font-size: 0.875rem;
-    color: var(--pd-text-dim);
-  }
-
-  /* Notes */
-  .note-item {
-    padding: 0.75rem;
-    background: var(--pd-surface-light);
-    border-radius: 0.5rem;
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--pd-border);
-    transition: all 0.2s ease;
-  }
-
-  .note-item:hover {
-    background: var(--pd-surface-hover);
-  }
-
-  .note-content {
-    font-size: 0.875rem;
-    color: var(--pd-text);
-    line-height: 1.5;
-  }
-
-  .note-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  /* Files Section */
-  .files-grid {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: var(--pd-surface-light);
-    border: 1px solid var(--pd-border);
-    border-radius: 0.5rem;
-    transition: all 0.2s ease;
-  }
-
-  .file-item:hover {
-    background: var(--pd-surface-hover);
-    border-color: var(--pd-accent);
-  }
-
-  .file-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--pd-accent-glow);
-    border-radius: 0.375rem;
-  }
-
-  .file-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .file-name {
-    font-size: 0.875rem;
-    color: var(--pd-accent);
-    font-weight: 500;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    text-decoration: none;
-  }
-
-  .file-name:hover {
-    color: var(--pd-accent-hover);
-    text-decoration: underline;
-  }
-
-  .file-size {
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  .file-actions {
-    display: flex;
-    gap: 0.25rem;
-  }
-
-  .file-size {
-    font-size: 0.75rem;
-    color: var(--pd-text-muted);
-  }
-
-  /* Timeline Bar (moved to top) */
-  .timeline-bar {
-    background: linear-gradient(135deg, var(--pd-surface) 0%, var(--pd-surface-light) 100%);
-    border-bottom: 1px solid var(--pd-border);
-    padding: 1rem 2rem;
-  }
-
-  .timeline-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    max-width: none;
-  }
-
-  .timeline-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .timeline-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--pd-accent-glow);
-    border-radius: 0.5rem;
-    font-size: 1.25rem;
-  }
-
-  .timeline-details {
-    flex: 1;
-  }
-
-  .timeline-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--pd-text-muted);
-    margin-bottom: 0.125rem;
-  }
-
-  .timeline-value {
-    font-size: 0.95rem;
-    color: var(--pd-text);
-    font-weight: 500;
-  }
-
-  /* Inline Editable Selects */
-  .editable-chip {
-    position: relative;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .inline-select {
-    background: transparent;
-    border: none;
-    color: inherit;
-    font: inherit;
-    padding: 0.4rem 0.9rem;
-    cursor: pointer;
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1em;
-    padding-right: 2rem;
-  }
-
-  .inline-select:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 999px;
-  }
-
-  .inline-select:focus {
-    outline: 2px solid var(--pd-accent);
-    outline-offset: 2px;
-    border-radius: 999px;
-  }
-
-  /* Modal Styles */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-  }
-
-  .modal-content {
-    background: var(--pd-surface);
-    border: 1px solid var(--pd-border);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-content h3 {
-    margin: 0 0 1rem 0;
-    color: var(--pd-text);
-  }
-
-  .modal-content input,
-  .modal-content textarea,
-  .modal-content select {
-    width: 100%;
-    background: var(--pd-surface-light);
-    color: var(--pd-text);
-    border: 1px solid var(--pd-border);
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
-  }
-
-  .modal-content textarea {
-    resize: vertical;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-  }
-
-  /* Empty States */
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: var(--pd-text-muted);
-  }
-
-  .empty-state-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-
-  .empty-state-text {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .empty-state-hint {
-    font-size: 0.875rem;
-    color: var(--pd-text-muted);
-  }
-
-  /* Scrollbar Styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--pd-surface);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--pd-border-light);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--pd-accent);
-  }
-
-  /* Responsive Design */
-  @media (max-width: 1400px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr 350px;
-    }
-  }
-
-  @media (max-width: 1200px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr;
-      height: auto;
-    }
-
-    .sidebar-column {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 1rem;
-      height: auto;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .hero-content {
-      padding: 1rem;
-    }
-
-    .project-content {
-      padding: 1rem;
-    }
-
-    .hero-top {
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .project-title {
-      font-size: 1.25rem;
-    }
-
-    .sidebar-column {
-      grid-template-columns: 1fr;
-    }
-
-    .dashboard-grid {
-      grid-template-columns: 1fr;
-    }
+  :root{
+    --pd-bg:#0b0f1a; --pd-panel:#121a2a; --pd-card:#0f1625; --pd-sub:#0c1322;
+    --pd-line:#1f2a3d; --pd-text:#e6eaf2; --pd-muted:#9fb0c8;
+    --pd-primary:#6ea8ff; --pd-primary-700:#3f7fe6;
+    --pd-success:#22c55e; --pd-warn:#f59e0b; --pd-danger:#ef4444;
+    --pd-radius:16px; --pd-radius-sm:12px;
+    --pd-shadow:0 10px 24px rgba(0,0,0,.35);
+  }
+
+  .project-page{ padding:16px; }
+  .project-wrap{ max-width:1400px; margin:0 auto; display:grid; gap:16px; padding-bottom:16px; }
+
+  /* Sticky header */
+  .project-header{
+    position:sticky; top:12px; z-index:6;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--pd-line); border-radius:var(--pd-radius);
+    box-shadow:var(--pd-shadow); padding:12px; backdrop-filter:blur(6px);
+  }
+  .project-header__top{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-bottom:8px; }
+  .project-title{ margin:0; font-size:1.3rem; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .chip{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:.85rem; background:var(--pd-sub); color:var(--pd-muted); border:1px solid var(--pd-line); white-space:nowrap; }
+  .chip strong{ color:var(--pd-text); }
+  .chip-status{ background:#0c1529; border-color:transparent; color:#0a0f1a; }
+  .chip-status.status-active{ background:#3b82f6; }
+  .chip-status.status-planning{ background:#64748b; }
+  .chip-status.status-on_hold{ background:#f59e0b; }
+  .chip-status.status-completed{ background:#22c55e; }
+  .chip-priority.priority-low{ background:#4b5563; color:#0a0f1a; }
+  .chip-priority.priority-medium{ background:#3b82f6; color:#0a0f1a; }
+  .chip-priority.priority-high{ background:#f59e0b; color:#0a0f1a; }
+  .chip-priority.priority-critical{ background:#ef4444; color:#0a0f1a; }
+
+  .project-desc{ background:var(--pd-sub); border-left:3px solid var(--pd-primary); padding:8px 10px; border-radius:10px; margin-bottom:8px; color:var(--pd-muted); }
+  .header-progress{ display:flex; align-items:center; gap:12px; }
+  .progress-track{ flex:1; height:10px; border-radius:999px; overflow:hidden; background:var(--pd-sub); border:1px solid var(--pd-line); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--pd-primary),var(--pd-primary-700)); transition:width .3s; }
+  .progress-label{ font-size:.85rem; color:var(--pd-muted); min-width:80px; text-align:right; }
+
+  .anchor-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .anchor{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:.85rem; background:var(--pd-sub); color:var(--pd-muted); border:1px solid var(--pd-line); text-decoration:none; }
+  .anchor:hover{ border-color:var(--pd-primary); color:var(--pd-text); }
+
+  /* Buttons */
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; background:#0c1322; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:var(--pd-radius-sm); cursor:pointer; text-decoration:none; transition:.2s; font-size:.95rem; }
+  .btn:hover{ border-color:var(--pd-primary); transform:translateY(-1px); }
+  .btn-primary{ background:rgba(110,168,255,.18); border-color:rgba(110,168,255,.45); }
+  .btn-outline{ background:transparent; }
+  .btn-success{ background:#16351f; border-color:#1f6f3a; }
+  .btn-sm{ padding:6px 10px; font-size:.85rem; border-radius:10px; }
+  .btn-icon{ background:transparent; border:1px solid var(--pd-line); color:var(--pd-text); border-radius:10px; padding:6px 8px; font-size:.9rem; cursor:pointer; }
+  .btn-icon:hover{ border-color:var(--pd-primary); }
+  .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
+  .inline-actions{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .inline-actions form{ display:inline; }
+
+  /* Grid layout (alignment fix: stretch both columns) */
+  .layout{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    align-items:stretch;  /* <— stretch items to the tallest column */
+  }
+
+  /* Left: Tasks card stretches full column height; internal area scrolls */
+  .tasks-card{
+    background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius);
+    box-shadow:var(--pd-shadow); display:flex; flex-direction:column;
+    height:100%;               /* <— fill grid row height */
+    min-height:480px;
+  }
+  .section-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 12px 8px; border-bottom:1px dashed var(--pd-line); flex-shrink:0; }
+  .section-header h2{ margin:0; font-size:1.1rem; }
+
+  .split-actions{ position:relative; display:flex; gap:2px; }
+  .add-btn, .caret-btn{ border:none; cursor:pointer; }
+  .add-btn{ padding:6px 10px; background:var(--pd-primary); color:#0a0f1a; border-radius:8px; font-size:.85rem; font-weight:700; }
+  .caret-btn{ display:none; } /* no inline dropdown for tasks; we use full-screen modal instead */
+  .menu{ display:none; }
+
+  .add-panel{ display:none; } /* hide inline add panels for tasks */
+
+  /* Task filters */
+  .task-toolbar{ display:flex; gap:8px; align-items:center; padding:0 12px 8px; border-bottom:1px dashed var(--pd-line); }
+  .pill{ padding:6px 10px; border:1px solid var(--pd-line); border-radius:999px; font-size:.85rem; color:var(--pd-muted); background:var(--pd-sub); cursor:pointer; }
+  .pill.is-active{ color:#0a0f1a; background:var(--pd-primary); border-color:transparent; }
+
+  /* Make task list scroll independently; max-height keeps it usable on tall RHS */
+  .tasks-scroll{
+    flex:1; min-height:0; overflow:auto; padding:12px;
+    /* reasonable max-height so it’s always scrolly even if the RHS column grows */
+    max-height:calc(100vh - 260px);
+  }
+  .tasks-scroll::-webkit-scrollbar{ width:8px; }
+  .tasks-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.2); border-radius:4px; }
+
+  .task-category{ margin:10px 0; }
+  .task-category h3{ margin:4px 0 8px; font-size:.95rem; color:var(--pd-text); }
+  .task-list{ display:grid; gap:8px; }
+  .task-item{ display:flex; gap:10px; align-items:flex-start; background:var(--pd-sub); border:1px solid var(--pd-line); border-radius:12px; padding:10px; }
+  .task-item.completed{ opacity:.6; }
+  .task-item.completed .task-title{ text-decoration:line-through; }
+  .task-item[draggable="true"]{ cursor:grab; }
+  .task-item.dragging{ opacity:.5; outline:1px dashed var(--pd-primary); }
+  .task-checkbox{ flex-shrink:0; margin-top:2px; accent-color:var(--pd-primary); cursor:pointer; }
+  .task-content{ flex:1; min-width:0; }
+  .task-title{ font-weight:700; margin-bottom:2px; font-size:.95rem; }
+  .task-description{ color:var(--pd-muted); font-size:.85rem; margin-bottom:4px; }
+  .task-meta{ display:flex; gap:10px; color:var(--pd-muted); font-size:.78rem; }
+  .task-actions{ display:flex; gap:6px; flex-shrink:0; }
+
+  /* Right: stacked cards — fixed height + own scroll; same width as left */
+  .rhs{ display:grid; gap:16px; align-items:start; }
+  .card{
+    background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius);
+    box-shadow:var(--pd-shadow); overflow:hidden; display:flex; flex-direction:column;
+    height:280px; min-height:280px;
+  }
+  .card__head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-bottom:1px dashed var(--pd-line); flex-shrink:0; }
+  .card__body{ padding:12px; overflow:auto; flex:1; min-height:0; }
+  .card__body::-webkit-scrollbar{ width:8px; }
+  .card__body::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.2); border-radius:4px; }
+
+  .empty-state{ text-align:center; padding:10px; color:var(--pd-muted); font-size:.9rem; }
+
+  .idea-item{ background:var(--pd-sub); border:1px solid var(--pd-line); border-left:3px solid var(--pd-primary); border-radius:10px; padding:8px; margin-bottom:8px; }
+  .idea-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .idea-footer select{ background:#0b1120; color:var(--pd-text); border:1px solid var(--pd-line); padding:4px 8px; border-radius:6px; font-size:.85rem; }
+  .idea-date{ color:var(--pd-muted); font-size:.78rem; }
+
+  .milestone-item{ background:var(--pd-sub); border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:8px; }
+  .milestone-item.completed{ opacity:.75; }
+  .milestone-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .milestone-header h4{ margin:0; font-size:.95rem; color:var(--pd-text); }
+  .milestone-item p{ margin:4px 0; color:var(--pd-muted); font-size:.85rem; }
+  .milestone-date{ color:var(--pd-muted); font-size:.78rem; }
+  .completed-badge{ background:var(--pd-success); color:#0a0f1a; padding:2px 8px; border-radius:999px; font-size:.72rem; font-weight:800; }
+
+  .note-item{ background:var(--pd-sub); border:1px solid var(--pd-line); border-radius:10px; padding:8px; margin-bottom:8px; }
+  .note-header{ display:flex; justify-content:space-between; margin-bottom:4px; font-size:.78rem; color:var(--pd-muted); }
+  .note-category{ background:var(--pd-primary); color:#0a0f1a; padding:2px 6px; border-radius:6px; font-weight:700; font-size:.72rem; }
+
+  /* Docs list-only */
+  .doc-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .vault-docs-list{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+  .vault-docs-list tr{ background:var(--pd-sub); }
+  .vault-docs-list td{ padding:10px; border-top:1px solid var(--pd-line); border-bottom:1px solid var(--pd-line); vertical-align:middle; }
+  .vault-docs-list tr td:first-child{ border-left:1px solid var(--pd-line); border-radius:10px 0 0 10px; }
+  .vault-docs-list tr td:last-child{ border-right:1px solid var(--pd-line); border-radius:0 10px 10px 0; }
+  .doc-name-cell{ font-weight:700; color:var(--pd-text); }
+  .doc-type{ color:var(--pd-muted); font-size:.85rem; }
+
+  /* Full-screen (centered) modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.65);
+    display:none; z-index:100; align-items:center; justify-content:center;
+  }
+  .modal-content{
+    width:min(980px,92vw); max-height:92vh; overflow:auto;
+    background:var(--pd-card); border:1px solid var(--pd-line);
+    border-radius:16px; box-shadow:var(--pd-shadow); padding:16px;
+  }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .modal-header h3{ margin:0; }
+  .close-btn{ border:none; background:transparent; color:var(--pd-text); font-size:1.3rem; cursor:pointer; }
+  .modal-content form input, .modal-content form textarea, .modal-content form select{
+    width:100%; background:#0b1120; color:var(--pd-text);
+    border:1px solid var(--pd-line); border-radius:10px; padding:10px; margin-bottom:10px; font-size:.95rem;
+  }
+
+  @media (max-width:980px){
+    .layout{ grid-template-columns:1fr; }
+    .tasks-card{ min-height:420px; }
+    .card{ height:auto; min-height:280px; }
+    .modal-content{ width:92vw; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="project-workspace">
-  <!-- Compact Hero Header -->
-  <header class="project-hero">
-    <div class="hero-content">
-      <div class="hero-top">
-        <div class="project-title-section">
-          <h1 class="project-title">{{ project.name }}</h1>
-          {% if project.description %}
-          <p class="project-description">{{ project.description }}</p>
-          {% endif %}
-        </div>
-        
-        <!-- Metadata Bar -->
-        <div class="project-meta-bar">
-          <span class="meta-chip">📁 {{ project.category }}</span>
-          
-          <!-- Editable Status -->
-          <div class="meta-chip status-{{ project.status }} editable-chip">
-            <select id="status-select" class="inline-select" onchange="updateStatus(this.value)">
-              <option value="planning" {% if project.status == 'planning' %}selected{% endif %}>Planning</option>
-              <option value="active" {% if project.status == 'active' %}selected{% endif %}>Active</option>
-              <option value="on_hold" {% if project.status == 'on_hold' %}selected{% endif %}>On Hold</option>
-              <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>Completed</option>
-            </select>
-          </div>
-          
-          <!-- Editable Priority -->
-          <div class="meta-chip priority-{{ project.priority }} editable-chip">
-            <select id="priority-select" class="inline-select" onchange="updatePriority(this.value)">
-              <option value="low" {% if project.priority == 'low' %}selected{% endif %}>Low Priority</option>
-              <option value="medium" {% if project.priority == 'medium' %}selected{% endif %}>Medium Priority</option>
-              <option value="high" {% if project.priority == 'high' %}selected{% endif %}>High Priority</option>
-              <option value="critical" {% if project.priority == 'critical' %}selected{% endif %}>Critical Priority</option>
-            </select>
-          </div>
-          
-          {% if project.deadline %}
-          <span class="meta-chip">📅 Due {{ project.deadline.strftime('%b %d, %Y') }}</span>
-          {% endif %}
-        </div>
+<div class="project-page">
+  <div class="project-wrap">
 
-        <!-- Progress Section -->
-        <div class="progress-section">
-          <div class="progress-stats">
-            <div class="progress-stat">
-              <span class="progress-stat-label">Tasks:</span>
-              <span class="progress-stat-value">
-                {{ project.tasks|selectattr('completed')|list|length }}/{{ project.tasks|length }}
-              </span>
-            </div>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: {{ project.progress }}%">
-              <span class="progress-percentage">{{ project.progress }}%</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="hero-actions">
-          <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn">
-            ✏️ Edit
-          </a>
-          <a href="{{ url_for('projects.tch_index') }}" class="btn">
-            ← Back
-          </a>
+    <!-- Sticky Header -->
+    <div class="project-header">
+      <div class="project-header__top">
+        <h1 class="project-title">{{ project.name }}</h1>
+        <div class="header-actions">
+          <a href="{{ url_for('projects.edit_tch', id=project.id) }}" class="btn">✏️ Edit</a>
+          <a href="{{ url_for('projects.tch_index') }}" class="btn btn-outline">← Back</a>
         </div>
       </div>
 
-      <!-- Combined Goals Bar -->
-      {% if project.goal or project.motivation or project.strategy %}
-      <div class="goals-bar">
-        {% if project.goal %}
-        <div class="goal-item">
-          <div class="goal-icon">🎯</div>
-          <div class="goal-content-wrapper">
-            <div class="goal-label">Goal</div>
-            <div class="goal-text">{{ project.goal }}</div>
-          </div>
-        </div>
-        {% endif %}
-        
-        {% if project.motivation %}
-        <div class="goal-item">
-          <div class="goal-icon">🔥</div>
-          <div class="goal-content-wrapper">
-            <div class="goal-label">Motivation</div>
-            <div class="goal-text">{{ project.motivation }}</div>
-          </div>
-        </div>
-        {% endif %}
-        
-        {% if project.strategy %}
-        <div class="goal-item">
-          <div class="goal-icon">♟️</div>
-          <div class="goal-content-wrapper">
-            <div class="goal-label">Strategy</div>
-            <div class="goal-text">{{ project.strategy }}</div>
-          </div>
-        </div>
-        {% endif %}
+      <div class="chip-row">
+        <span class="chip"><strong>Category:</strong> {{ project.category }}</span>
+        <span class="chip chip-status status-{{ project.status }}">{{ project.status|replace('_',' ')|title }}</span>
+        <span class="chip chip-priority priority-{{ project.priority }}">{{ project.priority|title }} Priority</span>
       </div>
+
+      {% if project.description %}
+        <div class="project-desc">{{ project.description }}</div>
       {% endif %}
-    </div>
-  </header>
 
-  <!-- Timeline Stats Bar (moved up!) -->
-  <div class="timeline-bar">
-    <div class="timeline-grid">
-      <div class="timeline-item">
-        <div class="timeline-icon">🗓️</div>
-        <div class="timeline-details">
-          <div class="timeline-label">Started</div>
-          <div class="timeline-value">
-            {{ project.start_date.strftime('%b %d, %Y') if project.start_date else 'Not set' }}
-          </div>
-        </div>
+      <div class="header-progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" style="width: {{ project.progress }}%"></div></div>
+        <div class="progress-label">{{ project.progress }}% complete</div>
       </div>
-      
-      {% if project.deadline %}
-      <div class="timeline-item">
-        <div class="timeline-icon">⏰</div>
-        <div class="timeline-details">
-          <div class="timeline-label">Deadline</div>
-          <div class="timeline-value">
-            {{ project.deadline.strftime('%b %d, %Y') }}
-            {% set now = datetime.now().date() %}
-            {% if project.deadline < now and project.status != 'completed' %}
-              <span style="color: var(--pd-danger); font-size: 0.75rem;"> (OVERDUE)</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-      
-      <div class="timeline-item">
-        <div class="timeline-icon">📊</div>
-        <div class="timeline-details">
-          <div class="timeline-label">Duration</div>
-          <div class="timeline-value">
-            {% if project.start_date %}
-              {{ (datetime.now().date() - project.start_date).days }} days
-            {% else %}
-              Not tracked
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      
-      <div class="timeline-item">
-        <div class="timeline-icon">📈</div>
-        <div class="timeline-details">
-          <div class="timeline-label">Velocity</div>
-          <div class="timeline-value">
-            {% set completed_count = project.tasks|selectattr('completed')|list|length %}
-            {% if project.start_date %}
-              {% set days_active = (datetime.now().date() - project.start_date).days or 1 %}
-              {% set weeks_active = (days_active / 7) or 1 %}
-              {{ (completed_count / weeks_active)|round(1) }} tasks/week
-              <div style="font-size: 0.7rem; color: var(--pd-text-muted);">
-                ({{ completed_count }} done in {{ days_active }} days)
-              </div>
-            {% else %}
-              {{ completed_count }} completed
-            {% endif %}
-          </div>
-        </div>
+
+      <div class="anchor-row" aria-label="Jump to section">
+        <a class="anchor" href="#tasks">✅ Tasks</a>
+        <a class="anchor" href="#notes">📝 Notes</a>
+        <a class="anchor" href="#documents">📁 Documents</a>
+        <a class="anchor" href="#ideas">💡 Ideas</a>
+        <a class="anchor" href="#milestones">🏁 Milestones</a>
       </div>
     </div>
-  </div>
 
-  <!-- Main Content -->
-  <main class="project-content">
-    <!-- Main Dashboard Grid -->
-    <div class="dashboard-grid">
-      <!-- Tasks Section (Primary) -->
-      <section class="tasks-section">
+    <!-- Main layout -->
+    <div class="layout">
+
+      <!-- LEFT: TASKS -->
+      <section class="tasks-card" id="tasks" aria-labelledby="tasks-title">
         <div class="section-header">
-          <h2 class="section-title">
-            <span>✅</span>
-            <span>Tasks</span>
-          </h2>
-          <div class="section-actions">
-            <button class="btn btn-sm">🔍 Filter</button>
-            <button class="btn btn-primary btn-sm" onclick="openModal('add-task-form')">➕ Add Task</button>
+          <h2 id="tasks-title">✅ Tasks</h2>
+          <div class="split-actions" data-section="tasks">
+            <button type="button" class="add-btn" onclick="openModal('task-modal')">➕ Add Task</button>
           </div>
         </div>
-        
-        <div class="tasks-container">
-          {% if tasks_by_category %}
-            {% for category, tasks in tasks_by_category.items() %}
-            <div class="task-category">
-              <div class="task-category-header">
-                <span class="category-name">{{ category }}</span>
-                <span class="category-count">{{ tasks|length }}</span>
-              </div>
-              
+
+        <!-- Filters (priority pills from PRIORITY_LEVELS) -->
+        <div class="task-toolbar" role="toolbar" aria-label="Task filters">
+          <button class="pill is-active" data-filter="all" type="button">All</button>
+          <button class="pill" data-filter="due" type="button">Due</button>
+          {% for p in priority_levels %}
+            <button class="pill" data-filter="priority-{{ p }}" type="button">{{ p|title }} Priority</button>
+          {% endfor %}
+          <button class="pill" data-filter="completed" type="button">Completed</button>
+        </div>
+
+        <!-- Scrollable tasks -->
+        <div class="tasks-scroll" id="taskList" aria-live="polite">
+          {% for category, tasks in tasks_by_category.items() %}
+          <div class="task-category">
+            {% if category != 'Uncategorized' %}<h3>{{ category }}</h3>{% endif %}
+            <div class="task-list" data-category="{{ category }}">
               {% for task in tasks %}
-              <div class="task-item {% if task.completed %}completed{% endif %}">
-                <input type="checkbox" 
-                       class="task-checkbox"
-                       data-task-id="{{ task.id }}"
+              <div class="task-item {% if task.completed %}completed{% endif %}"
+                   draggable="true"
+                   data-task-id="{{ task.id }}"
+                   data-priority="{{ task.priority or 'medium' }}"
+                   data-completed="{{ '1' if task.completed else '0' }}"
+                   data-due="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}">
+                <input type="checkbox" class="task-checkbox"
+                       data-endpoint="{{ url_for('projects.toggle_task', task_id=task.id) }}"
                        {% if task.completed %}checked{% endif %}>
-                
                 <div class="task-content">
                   <div class="task-title">{{ task.title }}</div>
-                  {% if task.description %}
-                  <div class="task-description">{{ task.description }}</div>
-                  {% endif %}
+                  {% if task.description %}<div class="task-description">{{ task.description }}</div>{% endif %}
                   <div class="task-meta">
-                    <span class="task-priority priority-{{ task.priority }}">
-                      {{ task.priority }}
-                    </span>
-                    {% if task.due_date %}
-                    <span class="task-due">
-                      📅 {{ task.due_date.strftime('%b %d') }}
-                    </span>
-                    {% endif %}
+                    {% if task.due_date %}<span>📅 {{ task.due_date.strftime('%b %d') }}</span>{% endif %}
+                    {% if task.priority %}<span class="priority-{{ task.priority }}">{{ task.priority|title }}</span>{% endif %}
                   </div>
                 </div>
-                
                 <div class="task-actions">
-                  <button class="btn-icon" title="Edit">✏️</button>
-                  <button class="btn-icon" title="Delete">🗑️</button>
+                  <a href="{{ url_for('projects.edit_tch_task', task_id=task.id) }}" class="btn-icon" title="Edit">✏️</a>
+                  <form method="POST" action="{{ url_for('projects.delete_tch_task', task_id=task.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-icon btn-delete" title="Delete" onclick="return confirm('Delete this task?')">🗑️</button>
+                  </form>
                 </div>
               </div>
               {% endfor %}
             </div>
-            {% endfor %}
+          </div>
           {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">📋</div>
-              <div class="empty-state-text">No tasks yet</div>
-              <div class="empty-state-hint">Click "Add Task" to get started</div>
-            </div>
-          {% endif %}
+          <p class="empty-state">No tasks yet. Click “Add Task”.</p>
+          {% endfor %}
         </div>
       </section>
 
-      <!-- Sidebar Column -->
-      <div class="sidebar-column">
-        <!-- Files Section (at top) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>📎</span>
-              <span>Files</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-file-form')">📤</button>
-            </div>
-          </div>
-          
-          <div class="sidebar-content">
-            <div class="files-grid">
-              {% for file in files %}
-              <div class="file-item">
-                <div class="file-icon">📄</div>
-                <div class="file-info">
-                  <a href="/static/project_files/tch/{{ project.id }}/{{ file.filename }}" 
-                     target="_blank" 
-                     class="file-name"
-                     title="Open {{ file.original_name or file.filename }}">
-                    {{ file.original_name or file.filename }}
-                  </a>
-                  <div class="file-size">{{ file.uploaded_at.strftime('%b %d') }}</div>
-                </div>
-                <div class="file-actions" style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('projects.download_file', project_id=project.id, file_id=file.id) }}" 
-                     class="btn-icon" 
-                     title="Download"
-                     style="text-decoration: none;">
-                    ⬇️
-                  </a>
-                  <button class="btn-icon" onclick="deleteFile({{ file.id }})" title="Delete">🗑️</button>
-                </div>
-              </div>
-              {% else %}
-              <div class="empty-state">
-                <div class="empty-state-icon">📎</div>
-                <div class="empty-state-text">No files attached</div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-        </section>
+      <!-- RIGHT: NOTES → DOCUMENTS → IDEAS → MILESTONES -->
+      <aside class="rhs">
 
-        <!-- Notes Section (moved up to second position!) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>📝</span>
-              <span>Notes</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-note-form')">➕</button>
-            </div>
+        <!-- NOTES -->
+        <div class="card" id="notes" aria-labelledby="notes-title">
+          <div class="card__head">
+            <h2 id="notes-title">📝 Notes</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('note-modal')">➕ Add</button>
           </div>
-          
-          <div class="sidebar-content notes-content">
+          <div class="card__body">
             {% for note in project.notes %}
             <div class="note-item">
+              <div class="note-header">
+                <span class="note-category">{{ note.category|title }}</span>
+                <span class="note-date">{{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+              </div>
               <div class="note-content">{{ note.content }}</div>
-              <div class="note-meta" style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; color: var(--pd-text-muted);">
-                  {{ note.category }} • {{ note.created_at.strftime('%b %d') }}
-                </span>
-                <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('projects.edit_tch_note', note_id=note.id) }}" 
-                     class="btn-icon" 
-                     title="Edit note"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteNote({{ note.id }})" 
-                          title="Delete note"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
-                </div>
+              <div class="inline-actions" style="margin-top:6px;">
+                <a href="{{ url_for('projects.edit_tch_note', note_id=note.id) }}" class="btn-icon" title="Edit Note">✏️</a>
+                <form method="POST" action="{{ url_for('projects.delete_tch_note', note_id=note.id) }}">
+                  <button type="submit" class="btn-icon btn-delete" title="Delete Note" onclick="return confirm('Delete this note?')">🗑️</button>
+                </form>
               </div>
             </div>
             {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">📝</div>
-              <div class="empty-state-text">No notes yet</div>
-            </div>
+            <p class="empty-state">No notes yet. Click Add.</p>
             {% endfor %}
           </div>
-        </section>
+        </div>
 
-        <!-- Ideas Section (now third) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>💡</span>
-              <span>Ideas</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-idea-form')">➕</button>
+        <!-- DOCUMENTS (List-only) -->
+        <div class="card" id="documents" aria-labelledby="documents-title">
+          <div class="card__head">
+            <h2 id="documents-title">📁 Project Documents</h2>
+            <div class="doc-toolbar">
+              <span style="opacity:.65; font-size:.9rem;">List view</span>
+              <button class="btn btn-primary btn-sm" onclick="openModal('doc-modal')">➕ Add</button>
             </div>
           </div>
-          
-          <div class="sidebar-content">
+          <div class="card__body">
+            {% if vault_documents %}
+              <table class="vault-docs-list" id="docsList">
+                <tbody>
+                {% for doc in vault_documents %}
+                  <tr>
+                    <td class="doc-name-cell">
+                      {% if doc.doc_type == 'image' %}🖼️{% elif doc.doc_type == 'contract' %}📜{% elif doc.doc_type in ['invoice','receipt'] %}🧾{% elif doc.doc_type == 'spreadsheet' %}📊{% elif doc.doc_type == 'note' %}📝{% elif 'pdf' in (doc.mime_type or '') %}📕{% else %}📄{% endif %}
+                      {{ doc.title }}
+                      <div class="doc-type">{{ doc.doc_type|title }} • {{ doc.created_at.strftime('%b %d, %Y') }}</div>
+                    </td>
+                    <td class="doc-actions">
+                      <a href="{{ url_for('vault.view_document', id=doc.id) }}" class="btn-icon" title="View">👁️</a>
+                      {% if doc.file_path %}
+                      <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="btn-icon" title="Download">⬇</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="empty-state">No documents yet. Click Add.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- IDEAS -->
+        <div class="card" id="ideas" aria-labelledby="ideas-title">
+          <div class="card__head">
+            <h2 id="ideas-title">💡 Ideas</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('idea-modal')">➕ Add</button>
+          </div>
+          <div class="card__body">
             {% for idea in project.ideas %}
-            <div class="idea-item">
+            <div class="idea-item status-{{ idea.status }}">
               <div class="idea-content">{{ idea.content }}</div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <select class="idea-status status-{{ idea.status }}" 
-                        onchange="updateIdeaStatus({{ idea.id }}, this.value)"
-                        style="background: var(--pd-surface); border: 1px solid var(--pd-border); 
-                               padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.7rem;
-                               color: var(--pd-text); cursor: pointer;">
-                  <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
-                  <option value="considering" {% if idea.status == 'considering' %}selected{% endif %}>Considering</option>
-                  <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
-                  <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
-                </select>
-                <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('projects.edit_tch_idea', idea_id=idea.id) }}" 
-                     class="btn-icon" 
-                     title="Edit idea"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteIdea({{ idea.id }})" 
-                          title="Delete idea"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
+              <div class="idea-footer">
+                <form method="POST" action="{{ url_for('projects.update_idea_status', idea_id=idea.id) }}">
+                  <select name="status" onchange="this.form.submit()">
+                    <option value="new" {% if idea.status == 'new' %}selected{% endif %}>New</option>
+                    <option value="considering" {% if idea.status == 'considering' %}selected{% endif %}>Considering</option>
+                    <option value="implemented" {% if idea.status == 'implemented' %}selected{% endif %}>Implemented</option>
+                    <option value="rejected" {% if idea.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                  </select>
+                </form>
+                <div class="inline-actions">
+                  <a href="{{ url_for('projects.edit_tch_idea', idea_id=idea.id) }}" class="btn-icon" title="Edit Idea">✏️</a>
+                  <form method="POST" action="{{ url_for('projects.delete_tch_idea', idea_id=idea.id) }}">
+                    <button type="submit" class="btn-icon btn-delete" title="Delete Idea" onclick="return confirm('Delete this idea?')">🗑️</button>
+                  </form>
+                  <span class="idea-date">{{ idea.created_at.strftime('%b %d') }}</span>
                 </div>
               </div>
             </div>
             {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">💡</div>
-              <div class="empty-state-text">No ideas yet</div>
-            </div>
+            <p class="empty-state">No ideas yet. Click Add.</p>
             {% endfor %}
           </div>
-        </section>
+        </div>
 
-        <!-- Milestones Section (now fourth/last) -->
-        <section class="sidebar-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <span>🏁</span>
-              <span>Milestones</span>
-            </h2>
-            <div class="section-actions">
-              <button class="btn btn-primary btn-sm" onclick="openModal('add-milestone-form')">➕</button>
-            </div>
+        <!-- MILESTONES -->
+        <div class="card" id="milestones" aria-labelledby="milestones-title">
+          <div class="card__head">
+            <h2 id="milestones-title">🏁 Milestones</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('milestone-modal')">➕ Add</button>
           </div>
-          
-          <div class="sidebar-content">
+          <div class="card__body">
             {% for milestone in project.milestones %}
             <div class="milestone-item {% if milestone.completed %}completed{% endif %}">
-              <div class="milestone-title">{{ milestone.title }}</div>
-              {% if milestone.target_date %}
-              <div class="milestone-date">📅 {{ milestone.target_date.strftime('%b %d, %Y') }}</div>
-              {% endif %}
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                {% if not milestone.completed %}
-                <button class="btn-icon" 
-                        onclick="completeMilestone({{ milestone.id }})"
-                        title="Mark complete"
-                        style="background: var(--pd-success-bg); color: var(--pd-success); font-size: 0.75rem;">
-                  ✓ Complete
-                </button>
-                {% else %}
-                <span style="color: var(--pd-success); font-size: 0.75rem;">✓ Completed</span>
-                {% endif %}
-                <div style="display: flex; gap: 0.25rem;">
-                  <a href="{{ url_for('projects.edit_tch_milestone', milestone_id=milestone.id) }}" 
-                     class="btn-icon" 
-                     title="Edit milestone"
-                     style="text-decoration: none; font-size: 0.875rem;">
-                    ✏️
-                  </a>
-                  <button class="btn-icon" 
-                          onclick="deleteMilestone({{ milestone.id }})" 
-                          title="Delete milestone"
-                          style="font-size: 0.875rem;">
-                    🗑️
-                  </button>
+              <div class="milestone-header">
+                <h4>{{ milestone.title }}</h4>
+                <div class="inline-actions">
+                  {% if not milestone.completed %}
+                  <form method="POST" action="{{ url_for('projects.complete_milestone', milestone_id=milestone.id) }}">
+                    <button type="submit" class="btn-icon" title="Mark Complete">✅</button>
+                  </form>
+                  {% else %}
+                  <span class="completed-badge">Completed</span>
+                  {% endif %}
+                  <a href="{{ url_for('projects.edit_tch_milestone', milestone_id=milestone.id) }}" class="btn-icon" title="Edit Milestone">✏️</a>
+                  <form method="POST" action="{{ url_for('projects.delete_tch_milestone', milestone_id=milestone.id) }}">
+                    <button type="submit" class="btn-icon btn-delete" title="Delete Milestone" onclick="return confirm('Delete this milestone?')">🗑️</button>
+                  </form>
                 </div>
               </div>
+              {% if milestone.description %}<p>{{ milestone.description }}</p>{% endif %}
+              {% if milestone.target_date %}
+              <div class="milestone-date">📅 Target: {{ milestone.target_date.strftime('%b %d, %Y') }}</div>
+              {% endif %}
             </div>
             {% else %}
-            <div class="empty-state">
-              <div class="empty-state-icon">🏁</div>
-              <div class="empty-state-text">No milestones set</div>
-            </div>
+            <p class="empty-state">No milestones yet. Click Add.</p>
             {% endfor %}
           </div>
-        </section>
-      </div>
+        </div>
+
+      </aside>
     </div>
-  </main>
+
+  </div>
 </div>
 
-<!-- Add Forms (Hidden by default) -->
-<div id="add-task-form" class="modal-overlay" style="display: none;">
+<!-- ================= MODALS (full-screen forms) ================= -->
+
+<!-- TASK: Add -->
+<div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
   <div class="modal-content">
-    <h3>Add New Task</h3>
+    <div class="modal-header">
+      <h3 id="task-modal-title">Add Task</h3>
+      <button class="close-btn" onclick="closeModal('task-modal')" aria-label="Close">✖</button>
+    </div>
     <form method="POST" action="{{ url_for('projects.add_tch_task', project_id=project.id) }}">
       <input type="text" name="title" placeholder="Task title" required>
-      <textarea name="description" placeholder="Description (optional)" rows="3"></textarea>
+      <textarea name="description" rows="8" placeholder="Description"></textarea>
+
+      {# Category: wired to TASK_CATEGORIES passed from route #}
       <select name="category" required>
-        <option value="" disabled selected>Select Category</option>
-        <option>Development</option><option>Design</option><option>Testing</option>
-        <option>Documentation</option><option>Research</option><option>Other</option>
+        <option value="" disabled selected>Select category…</option>
+        {% for c in task_categories %}
+          <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
       </select>
+
       <select name="priority">
-        <option value="low">Low Priority</option>
-        <option value="medium" selected>Medium Priority</option>
-        <option value="high">High Priority</option>
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="critical">Critical</option>
       </select>
+
       <input type="date" name="due_date" placeholder="Due date">
-      <div class="modal-actions">
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('task-modal')">Cancel</button>
         <button type="submit" class="btn btn-primary">Create Task</button>
-        <button type="button" class="btn" onclick="closeModal('add-task-form')">Cancel</button>
       </div>
     </form>
   </div>
 </div>
 
-<div id="add-idea-form" class="modal-overlay" style="display: none;">
+<!-- NOTES: Add -->
+<div id="note-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
   <div class="modal-content">
-    <h3>Add New Idea</h3>
-    <form method="POST" action="{{ url_for('projects.add_tch_idea', project_id=project.id) }}">
-      <textarea name="content" placeholder="Describe your idea..." rows="4" required></textarea>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Add Idea</button>
-        <button type="button" class="btn" onclick="closeModal('add-idea-form')">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="add-milestone-form" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <h3>Add New Milestone</h3>
-    <form method="POST" action="{{ url_for('projects.add_tch_milestone', project_id=project.id) }}">
-      <input type="text" name="title" placeholder="Milestone title" required>
-      <textarea name="description" placeholder="Description (optional)" rows="3"></textarea>
-      <input type="date" name="target_date" placeholder="Target date">
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Create Milestone</button>
-        <button type="button" class="btn" onclick="closeModal('add-milestone-form')">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="add-file-form" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <h3>Upload Files</h3>
-    <form method="POST" action="{{ url_for('projects.edit_tch', id=project.id) }}" enctype="multipart/form-data">
-      <!-- Hidden fields to preserve existing project data -->
-      <input type="hidden" name="name" value="{{ project.name }}">
-      <input type="hidden" name="category" value="{{ project.category }}">
-      <input type="hidden" name="description" value="{{ project.description or '' }}">
-      <input type="hidden" name="goal" value="{{ project.goal or '' }}">
-      <input type="hidden" name="motivation" value="{{ project.motivation or '' }}">
-      <input type="hidden" name="strategy" value="{{ project.strategy or '' }}">
-      <input type="hidden" name="priority" value="{{ project.priority }}">
-      <input type="hidden" name="status" value="{{ project.status }}">
-      <input type="hidden" name="start_date" value="{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else '' }}">
-      <input type="hidden" name="deadline" value="{{ project.deadline.strftime('%Y-%m-%d') if project.deadline else '' }}">
-      
-      <!-- File upload input -->
-      <div style="border: 2px dashed var(--pd-border); border-radius: 0.5rem; padding: 2rem; text-align: center; margin-bottom: 1rem;">
-        <input type="file" name="attachments" multiple id="file-input" style="display: none;" onchange="updateFileList()">
-        <label for="file-input" style="cursor: pointer;">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
-          <div style="color: var(--pd-text);">Click to select files or drag and drop</div>
-          <div style="color: var(--pd-text-muted); font-size: 0.875rem; margin-top: 0.5rem;">Multiple files allowed</div>
-        </label>
-      </div>
-      <div id="selected-files" style="margin-bottom: 1rem;"></div>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Upload Files</button>
-        <button type="button" class="btn" onclick="closeModal('add-file-form')">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="add-note-form" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <h3>Add New Note</h3>
+    <div class="modal-header">
+      <h3 id="note-modal-title">Add Note</h3>
+      <button class="close-btn" onclick="closeModal('note-modal')" aria-label="Close">✖</button>
+    </div>
     <form method="POST" action="{{ url_for('projects.add_tch_note', project_id=project.id) }}">
-      <textarea name="content" placeholder="Note content..." rows="4" required></textarea>
-      <select name="category">
+      <select name="category" required>
         <option value="general">General</option>
         <option value="meeting">Meeting</option>
         <option value="technical">Technical</option>
         <option value="idea">Idea</option>
       </select>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Add Note</button>
-        <button type="button" class="btn" onclick="closeModal('add-note-form')">Cancel</button>
+      <textarea name="content" rows="8" placeholder="Write your note…" required></textarea>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('note-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Note</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- JavaScript -->
+<!-- DOCUMENTS: Add (Vault) -->
+<div id="doc-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="doc-modal-title">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="doc-modal-title">Add Document</h3>
+      <button class="close-btn" onclick="closeModal('doc-modal')" aria-label="Close">✖</button>
+    </div>
+    <form method="POST" action="{{ url_for('projects.upload_tch_vault_document', id=project.id) }}" enctype="multipart/form-data">
+      <input type="file" name="file" required accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.png,.jpg,.jpeg,.gif">
+      <input type="text" name="title" placeholder="Document title (optional)">
+      <select name="doc_type">
+        <option value="document">Document</option>
+        <option value="contract">Contract</option>
+        <option value="invoice">Invoice</option>
+        <option value="receipt">Receipt</option>
+        <option value="image">Image</option>
+        <option value="spreadsheet">Spreadsheet</option>
+        <option value="note">Note</option>
+        <option value="other">Other</option>
+      </select>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('doc-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- IDEAS: Add -->
+<div id="idea-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="idea-modal-title">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="idea-modal-title">Add Idea</h3>
+      <button class="close-btn" onclick="closeModal('idea-modal')" aria-label="Close">✖</button>
+    </div>
+    <form method="POST" action="{{ url_for('projects.add_tch_idea', project_id=project.id) }}">
+      <textarea name="content" rows="8" placeholder="Describe the idea…" required></textarea>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('idea-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Idea</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MILESTONES: Add -->
+<div id="milestone-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="milestone-modal-title">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="milestone-modal-title">Add Milestone</h3>
+      <button class="close-btn" onclick="closeModal('milestone-modal')" aria-label="Close">✖</button>
+    </div>
+    <form method="POST" action="{{ url_for('projects.add_tch_milestone', project_id=project.id) }}">
+      <input type="text" name="title" placeholder="Milestone title" required>
+      <textarea name="description" rows="6" placeholder="Description"></textarea>
+      <input type="date" name="target_date" placeholder="Target date">
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('milestone-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Milestone</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Modal functions
-function openModal(modalId) {
-  document.getElementById(modalId).style.display = 'flex';
-}
+/* Helpers */
+function qsa(root, sel){ return Array.from((root || document).querySelectorAll(sel)); }
 
-function closeModal(modalId) {
-  document.getElementById(modalId).style.display = 'none';
-}
+/* Modals */
+function openModal(id){ const m=document.getElementById(id); if(!m) return; m.style.display='flex'; document.body.style.overflow='hidden'; }
+function closeModal(id){ const m=document.getElementById(id); if(!m) return; m.style.display='none'; document.body.style.overflow=''; }
+document.addEventListener('click', e => { const ov=e.target.closest('.modal-overlay'); if(ov && e.target===ov){ ov.style.display='none'; document.body.style.overflow=''; }});
+document.addEventListener('keydown', e => { if(e.key==='Escape'){ qsa(document,'.modal-overlay').forEach(m=>m.style.display='none'); document.body.style.overflow=''; }});
 
-// File upload preview
-function updateFileList() {
-  const input = document.getElementById('file-input');
-  const fileList = document.getElementById('selected-files');
-  fileList.innerHTML = '';
-  
-  if (input.files.length > 0) {
-    const list = document.createElement('div');
-    list.style.color = 'var(--pd-text-dim)';
-    list.style.fontSize = '0.875rem';
-    list.innerHTML = '<strong>Selected files:</strong>';
-    
-    for (let i = 0; i < input.files.length; i++) {
-      const file = input.files[i];
-      const size = (file.size / 1024).toFixed(1) + ' KB';
-      list.innerHTML += `<div style="margin-top: 0.25rem;">• ${file.name} (${size})</div>`;
-    }
-    fileList.appendChild(list);
-  }
-}
-
-// Delete file
-function deleteFile(fileId) {
-  if (confirm('Delete this file?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/projects/tch/{{ project.id }}/file/${fileId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-
-// Update Status
-function updateStatus(newStatus) {
-  // Create a complete form with all existing data
-  const formData = new FormData();
-  formData.append('name', '{{ project.name }}');
-  formData.append('category', '{{ project.category }}');
-  formData.append('description', '{{ project.description or "" }}');
-  formData.append('goal', '{{ project.goal or "" }}');
-  formData.append('motivation', '{{ project.motivation or "" }}');
-  formData.append('strategy', '{{ project.strategy or "" }}');
-  formData.append('priority', '{{ project.priority }}');
-  formData.append('status', newStatus);  // The new status
-  formData.append('start_date', '{{ project.start_date.strftime("%Y-%m-%d") if project.start_date else "" }}');
-  formData.append('deadline', '{{ project.deadline.strftime("%Y-%m-%d") if project.deadline else "" }}');
-  
-  fetch(`{{ url_for('projects.edit_tch', id=project.id) }}`, {
-    method: 'POST',
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      // Update the chip class
-      const chip = document.getElementById('status-select').closest('.editable-chip');
-      chip.className = `meta-chip status-${newStatus} editable-chip`;
-      
-      // Show success feedback
-      showToast('Status updated successfully!');
-    }
+/* Task checkbox -> POST toggle */
+(function(){
+  const boxes=document.querySelectorAll('.task-checkbox'); if(!boxes.length) return;
+  boxes.forEach(cb=>{
+    cb.addEventListener('change', async function(){
+      const endpoint=this.getAttribute('data-endpoint'); if(!endpoint) return;
+      try{
+        const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'}});
+        const data=await res.json();
+        if(data && typeof data.completed!=='undefined'){
+          this.checked=!!data.completed;
+          this.closest('.task-item')?.classList.toggle('completed',!!data.completed);
+        }else{ this.checked=!this.checked; }
+      }catch(err){ this.checked=!this.checked; }
+    });
   });
-}
+})();
 
-// Update Priority
-function updatePriority(newPriority) {
-  // Create a complete form with all existing data
-  const formData = new FormData();
-  formData.append('name', '{{ project.name }}');
-  formData.append('category', '{{ project.category }}');
-  formData.append('description', '{{ project.description or "" }}');
-  formData.append('goal', '{{ project.goal or "" }}');
-  formData.append('motivation', '{{ project.motivation or "" }}');
-  formData.append('strategy', '{{ project.strategy or "" }}');
-  formData.append('priority', newPriority);  // The new priority
-  formData.append('status', '{{ project.status }}');
-  formData.append('start_date', '{{ project.start_date.strftime("%Y-%m-%d") if project.start_date else "" }}');
-  formData.append('deadline', '{{ project.deadline.strftime("%Y-%m-%d") if project.deadline else "" }}');
-  
-  fetch(`{{ url_for('projects.edit_tch', id=project.id) }}`, {
-    method: 'POST',
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      // Update the chip class
-      const chip = document.getElementById('priority-select').closest('.editable-chip');
-      chip.className = `meta-chip priority-${newPriority} editable-chip`;
-      
-      // Show success feedback
-      showToast('Priority updated successfully!');
-    }
-  });
-}
+/* Task filters (driven by PRIORITY_LEVELS) */
+(function(){
+  const toolbar=document.querySelector('.task-toolbar'); if(!toolbar) return;
+  function setActive(btn){ qsa(toolbar,'.pill').forEach(p=>p.classList.remove('is-active')); btn.classList.add('is-active'); }
+  function isDue(iso){ if(!iso) return false; const t=new Date(); t.setHours(0,0,0,0); const d=new Date(iso+'T00:00:00'); return d<=t; }
 
-// Toast notification
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  toast.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--pd-success);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    z-index: 10000;
-    animation: slideIn 0.3s ease;
-  `;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
+  toolbar.addEventListener('click',e=>{
+    const btn=e.target.closest('.pill'); if(!btn) return;
+    setActive(btn); const f=btn.dataset.filter;
 
-// Close modal when clicking outside
-document.querySelectorAll('.modal-overlay').forEach(modal => {
-  modal.addEventListener('click', function(e) {
-    if (e.target === this) {
-      this.style.display = 'none';
-    }
-  });
-});
+    qsa(document,'.task-item').forEach(el=>{
+      const done = el.dataset.completed==='1';
+      const pri  = (el.dataset.priority||'medium').toLowerCase();
+      const due  = el.dataset.due||'';
+      let show   = true;
 
-// Task checkbox toggle functionality
-document.querySelectorAll('.task-checkbox').forEach(checkbox => {
-  checkbox.addEventListener('change', async function() {
-    const taskId = this.dataset.taskId;
-    const taskItem = this.closest('.task-item');
-    
-    // Toggle completed class
-    taskItem.classList.toggle('completed');
-    
-    // Send update to server using correct route
-    try {
-      const response = await fetch(`/projects/tch/task/${taskId}/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        showToast(data.completed ? 'Task completed!' : 'Task marked incomplete');
-      } else {
-        // Revert on error
-        this.checked = !this.checked;
-        taskItem.classList.toggle('completed');
+      if (f==='all')            show = true;
+      else if (f==='due')       show = isDue(due) && !done;
+      else if (f==='completed') show = done;
+      else if (f && f.startsWith('priority-')) {
+        const want = f.slice('priority-'.length);
+        show = pri===want && !done;
       }
-    } catch (error) {
-      // Revert on error
-      this.checked = !this.checked;
-      taskItem.classList.toggle('completed');
-    }
+
+      el.style.display = show ? '' : 'none';
+    });
   });
-});
+})();
 
-// Edit and Delete buttons for tasks
-document.querySelectorAll('.task-actions .btn-icon').forEach(btn => {
-  btn.addEventListener('click', function(e) {
-    const taskId = this.closest('.task-item').querySelector('.task-checkbox').dataset.taskId;
-    if (this.textContent.includes('✏️')) {
-      // Edit task - redirect to edit page with correct route
-      window.location.href = `/projects/tch/task/${taskId}/edit`;
-    } else if (this.textContent.includes('🗑️')) {
-      // Delete task with correct route
-      if (confirm('Delete this task?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/projects/tch/task/${taskId}/delete`;
-        document.body.appendChild(form);
-        form.submit();
-      }
-    }
+/* Drag & Drop (client-side only) */
+(function(){
+  const lists=qsa(document,'.task-list'); if(!lists.length) return;
+  let dragging=null;
+  lists.forEach(list=>{
+    list.addEventListener('dragstart',e=>{ const item=e.target.closest('.task-item'); if(!item) return; dragging=item; item.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    list.addEventListener('dragover',e=>{ e.preventDefault(); const after=getAfter(list,e.clientY); if(!dragging) return; if(after==null) list.appendChild(dragging); else list.insertBefore(dragging,after); });
+    list.addEventListener('drop',()=>{ if(!dragging) return; dragging.classList.remove('dragging'); dragging=null; });
+    list.addEventListener('dragend',()=>{ if(dragging) dragging.classList.remove('dragging'); dragging=null; });
   });
-});
-
-// Progress animation on page load
-window.addEventListener('load', () => {
-  const progressFill = document.querySelector('.progress-bar-fill');
-  if (progressFill) {
-    progressFill.style.transition = 'width 1s cubic-bezier(0.4, 0, 0.2, 1)';
+  function getAfter(container,y){
+    const els=qsa(container,'.task-item:not(.dragging)'); let closest={offset:Number.NEGATIVE_INFINITY,el:null};
+    els.forEach(el=>{ const r=el.getBoundingClientRect(); const off=y-(r.top+r.height/2); if(off<0 && off>closest.offset) closest={offset:off,el}; });
+    return closest.el;
   }
-});
-
-// Ideas Management
-function updateIdeaStatus(ideaId, newStatus) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = `/projects/tch/idea/${ideaId}/status`;
-  const input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'status';
-  input.value = newStatus;
-  form.appendChild(input);
-  document.body.appendChild(form);
-  form.submit();
-}
-
-function deleteIdea(ideaId) {
-  if (confirm('Delete this idea?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/projects/tch/idea/${ideaId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-
-// Milestones Management
-function completeMilestone(milestoneId) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = `/projects/tch/milestone/${milestoneId}/complete`;
-  document.body.appendChild(form);
-  form.submit();
-}
-
-function deleteMilestone(milestoneId) {
-  if (confirm('Delete this milestone?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/projects/tch/milestone/${milestoneId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-
-// Notes Management
-function deleteNote(noteId) {
-  if (confirm('Delete this note?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/projects/tch/note/${noteId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-
-// Add animation keyframes
-if (!document.getElementById('toast-animations')) {
-  const style = document.createElement('style');
-  style.id = 'toast-animations';
-  style.textContent = `
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(style);
-}
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% set active = 'realestate' %}
+{% block title %}Add Company — {{ property.name }}{% endblock %}
+{% block header %}Add Company to {{ property.name }}{% endblock %}
+
+{% block content %}
+<section class="kcard">
+  <div class="kcard-head"><div class="kcard-title">Link a Rolodex Company</div></div>
+  <div class="kcard-body">
+    <form method="POST">
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="company_id">Company</label>
+        <select id="company_id" name="company_id" required style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+          {% for co in companies %}
+            <option value="{{ co.id }}">{{ co.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="role">Role</label>
+        <select id="role" name="role" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+          <option value="">(none)</option>
+          <option>vendor</option><option>hvac</option><option>electric</option>
+          <option>plumbing</option><option>landscaping</option><option>roofing</option>
+          <option>lender</option><option>insurance</option><option>other</option>
+        </select>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="label">Label (optional)</label>
+        <input id="label" name="label" type="text" placeholder="e.g., Primary HVAC Vendor"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);">
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label><input type="checkbox" name="is_primary" value="1"> Mark as Primary for this role</label>
+      </div>
+
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3"
+                  style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <a class="kbtn" href="{{ url_for('realestate.property_detail', id=property.id) }}">Cancel</a>
+        <button class="kbtn kbtn-primary" type="submit">Link Company</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

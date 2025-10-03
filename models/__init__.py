@@ -9,6 +9,7 @@ v1.0.0 (Original)
 - Initial model imports for all existing modules
 """
 from .base import db
+from .standalone import StandaloneTask
 from .rolodex import Contact, Company
 
 from .equipment import (

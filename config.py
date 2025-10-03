@@ -35,3 +35,9 @@ class Config:
     # App settings
     APP_NAME = os.environ.get('APP_NAME', 'Billas Planner 1.0 Beta')
     ITEMS_PER_PAGE = int(os.environ.get('ITEMS_PER_PAGE', 20))
+
+    # LibreNMS Integration (local lab)
+    LIBRENMS_BASE_URL = "http://192.168.1.250"
+    LIBRENMS_API_TOKEN = "9c323b0b9ce872f007041870b5c2d248"
+    LIBRENMS_CACHE_TTL = 60
+    LIBRENMS_TIMEOUT = 15

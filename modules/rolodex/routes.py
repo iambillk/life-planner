@@ -1,12 +1,54 @@
+# modules/rolodex/routes.py — imports
+
 from flask import render_template, request, redirect, url_for, flash
-from werkzeug.utils import secure_filename
 from sqlalchemy import or_, func
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import os
+
 from . import rolodex_bp
-from models import db, Contact, Company
+
+# ✅ Use the same pattern as the rest of the app
+from models.base import db
+from models.rolodex import Contact, Company
+from models.realestate import Property
+from models.rolodex_link import ContactLink          # people↔property links
+from models.company_link import CompanyLink           # company↔property links
+
+# Import flow (VCF/CSV)
+from .routes_import import *  # registers /rolodex/import and /rolodex/import/commit
+
+# Link services (people + companies)
+from modules.rolodex.service_links import (
+    link_contact, unlink_contact, set_primary, links_for_contact, links_for_target
+)
+from modules.rolodex.service_company_links import (
+    link_company, unlink_company as unlink_company_link, set_company_primary, company_links_for_target
+)
+
+# Convert Contact → Company
+from modules.rolodex.service_convert import convert_contact_to_company
+
 
 # ---------- helpers ----------
+
+def _contact_property_links(contact_id: int):
+    links = ContactLink.query.filter_by(contact_id=contact_id, target_type="property").all()
+    prop_ids = [l.target_id for l in links] or []
+    props_by_id = {p.id: p for p in Property.query.filter(Property.id.in_(prop_ids)).all()} if prop_ids else {}
+    # order: role asc, primary first, then property name
+    links.sort(key=lambda l: ((l.role or "~"), -int(bool(l.is_primary)), props_by_id.get(l.target_id).name if props_by_id.get(l.target_id) else ""))
+    return links, props_by_id
+
+def _company_property_links(company_id: int):
+    links = CompanyLink.query.filter_by(company_id=company_id, target_type="property").all()
+    prop_ids = [l.target_id for l in links] or []
+    props_by_id = {p.id: p for p in Property.query.filter(Property.id.in_(prop_ids)).all()} if prop_ids else {}
+    links.sort(key=lambda l: ((l.role or "~"), -int(bool(l.is_primary)), props_by_id.get(l.target_id).name if props_by_id.get(l.target_id) else ""))
+    return links, props_by_id
+
+
+
 def _norm(s: str | None) -> str:
     return (s or '').strip()
 
@@ -75,24 +117,44 @@ def contacts():
         base = base.order_by(Contact.display_name.asc())
 
     paginated = base.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Keep this for resolving company names for items on the current page
     companies_map = {}
     if paginated.items:
-        # fetch companies in one go to avoid N+1 in template
         cids = {c.company_id for c in paginated.items if c.company_id}
         if cids:
             for c in Company.query.filter(Company.id.in_(cids)).all():
                 companies_map[c.id] = c
 
-    return render_template('rolodex/contacts_list.html',
-                           contacts=paginated,
-                           q=q, sort=sort, show_archived=show_archived,
-                           companies_map=companies_map)
+    # ✅ NEW: real company counts (use whichever you want on the card)
+    total_companies_active = Company.query.filter(Company.archived.is_(False)).count()
+    total_companies_all = Company.query.count()
+
+    return render_template(
+        'rolodex/contacts_list.html',
+        contacts=paginated,
+        q=q, sort=sort, show_archived=show_archived,
+        companies_map=companies_map,
+        # expose both so the template can pick:
+        total_companies_active=total_companies_active,
+        total_companies_all=total_companies_all
+    )
+
 
 # ---------- contacts: detail ----------
-@rolodex_bp.route('/contacts/<int:id>')
+@rolodex_bp.route("/contacts/<int:id>")
 def contact_detail(id):
     contact = Contact.query.get_or_404(id)
-    return render_template('rolodex/contact_detail.html', contact=contact)
+
+    # NEW: load linked properties for this contact
+    prop_links, properties_by_id = _contact_property_links(id)
+
+    return render_template(
+        "rolodex/contact_detail.html",
+        contact=contact,
+        property_links=prop_links,
+        properties_by_id=properties_by_id,
+    )
 
 # ---------- contacts: new/edit ----------
 @rolodex_bp.route('/contacts/new', methods=['GET', 'POST'])
@@ -370,7 +432,17 @@ def companies():
 @rolodex_bp.route('/companies/<int:id>')
 def company_detail(id):
     company = Company.query.get_or_404(id)
-    return render_template('rolodex/company_detail.html', company=company)
+
+    # Load linked properties for this company
+    property_links, properties_by_id = _company_property_links(id)
+
+    return render_template(
+        'rolodex/company_detail.html',
+        company=company,
+        property_links=property_links,
+        properties_by_id=properties_by_id,
+    )
+
 
 @rolodex_bp.route('/companies/new', methods=['GET', 'POST'])
 def company_new():
@@ -491,3 +563,79 @@ def company_delete(id):
     db.session.commit()
     flash('Company deleted.', 'success')
     return redirect(url_for('rolodex.companies'))
+
+# imports near the top
+from flask import request, redirect, url_for, flash
+from modules.rolodex.service_convert import convert_contact_to_company
+from models.rolodex import Contact, Company
+
+# ... your existing routes ...
+
+@rolodex_bp.route("/contacts/<int:id>/convert-to-company", methods=["POST"])
+def contact_convert_to_company(id):
+    try:
+        move_links = bool(request.form.get("move_links", "1"))  # default: move links
+        company, created = convert_contact_to_company(id, move_links=move_links)
+        msg = f"Converted to company '{company.name}'." if created else f"Merged into existing company '{company.name}'."
+        flash(msg, "success")
+        return redirect(url_for("rolodex.company_detail", id=company.id))
+    except Exception as e:
+        flash(f"Conversion failed: {e}", "error")
+        return redirect(url_for("rolodex.contact_edit", id=id))
+
+
+@rolodex_bp.route("/contacts/<int:id>/link/property", methods=["GET", "POST"])
+def contact_link_property(id):
+    contact = Contact.query.get_or_404(id)
+    if request.method == "POST":
+        property_id = int(request.form["property_id"])
+        role  = (request.form.get("role") or "").strip() or None
+        label = (request.form.get("label") or "").strip() or None
+        is_primary = bool(request.form.get("is_primary"))
+        notes = (request.form.get("notes") or "").strip() or None
+        link_contact(contact_id=id, target_type="property", target_id=property_id,
+                     role=role, label=label, is_primary=is_primary, notes=notes)
+        flash("Linked to property.", "success")
+        return redirect(url_for("rolodex.contact_detail", id=id))
+    props = Property.query.order_by(Property.name.asc()).all()
+    return render_template("rolodex/contact_link_property.html", contact=contact, properties=props)
+
+@rolodex_bp.route("/contacts/<int:id>/link/<int:link_id>/primary", methods=["POST"])
+def contact_make_primary(id, link_id):
+    set_primary(link_id)
+    flash("Primary updated.", "success")
+    return redirect(url_for("rolodex.contact_detail", id=id))
+
+@rolodex_bp.route("/contacts/<int:id>/link/<int:link_id>/remove", methods=["POST"])
+def contact_unlink_property(id, link_id):
+    unlink_contact(link_id)
+    flash("Link removed.", "success")
+    return redirect(url_for("rolodex.contact_detail", id=id))
+
+@rolodex_bp.route("/companies/<int:id>/link/property", methods=["GET", "POST"])
+def company_link_property(id):
+    company = Company.query.get_or_404(id)
+    if request.method == "POST":
+        property_id = int(request.form["property_id"])
+        role  = (request.form.get("role") or "").strip() or None
+        label = (request.form.get("label") or "").strip() or None
+        is_primary = bool(request.form.get("is_primary"))
+        notes = (request.form.get("notes") or "").strip() or None
+        link_company(company_id=id, target_type="property", target_id=property_id,
+                     role=role, label=label, is_primary=is_primary, notes=notes)
+        flash("Linked to property.", "success")
+        return redirect(url_for("rolodex.company_detail", id=id))
+    props = Property.query.order_by(Property.name.asc()).all()
+    return render_template("rolodex/company_link_property.html", company=company, properties=props)
+
+@rolodex_bp.route("/companies/<int:id>/link/<int:link_id>/primary", methods=["POST"])
+def company_make_primary(id, link_id):
+    set_company_primary(link_id)
+    flash("Primary updated.", "success")
+    return redirect(url_for("rolodex.company_detail", id=id))
+
+@rolodex_bp.route("/companies/<int:id>/link/<int:link_id>/remove", methods=["POST"])
+def company_unlink_property(id, link_id):
+    unlink_company_link(link_id)
+    flash("Link removed.", "success")
+    return redirect(url_for("rolodex.company_detail", id=id))

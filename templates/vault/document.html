@@ -11,45 +11,26 @@
   }
   
   .document-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
-    margin-bottom: 30px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
   }
   
-  .doc-title-section {
-    flex: 1;
-  }
-  
-  .doc-title {
+  .document-title {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
   
-  .doc-title h1 {
-    font-size: 28px;
-    color: var(--text);
-    margin: 0;
-  }
-  
-  .doc-icon {
-    font-size: 32px;
-  }
-  
-  .pin-indicator {
-    color: var(--warning);
-    font-size: 24px;
-  }
-  
-  .doc-meta {
+  .document-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    color: var(--muted);
-    font-size: 14px;
+    gap: 16px;
+    color: var(--text-muted);
+    font-size: 13px;
   }
   
   .meta-item {
@@ -58,212 +39,160 @@
     gap: 6px;
   }
   
-  .doc-actions {
-    display: flex;
-    gap: 10px;
-  }
-  
-  .action-btn {
-    padding: 8px 16px;
-    background: rgba(110,168,255,0.1);
-    color: var(--primary);
-    border: 1px solid var(--primary);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-  }
-  
-  .action-btn:hover {
-    background: var(--primary);
-    color: var(--bg);
-  }
-  
-  .action-btn.danger {
-    background: rgba(255,87,87,0.1);
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-  
-  .action-btn.danger:hover {
-    background: var(--danger);
-    color: white;
-  }
-  
-  .content-grid {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 30px;
-  }
-  
-  .main-content {
+  .document-content {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 10px;
-    overflow: hidden;
+    padding: 24px;
+    margin-bottom: 24px;
   }
   
-  .content-header {
-    padding: 16px 20px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .content-title {
-    font-size: 16px;
-    color: var(--text);
-    font-weight: 500;
-  }
-  
-  .content-body {
-    padding: 20px;
-  }
-  
-  .document-content {
-    color: var(--text);
-    line-height: 1.6;
+  .content-text {
     white-space: pre-wrap;
-    word-wrap: break-word;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 14px;
-    max-height: 600px;
-    overflow-y: auto;
-    background: rgba(0,0,0,0.2);
-    padding: 16px;
-    border-radius: 6px;
-  }
-  
-  .file-preview {
-    text-align: center;
-    padding: 40px;
-    color: var(--muted);
-  }
-  
-  .file-preview-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-  }
-  
-  .file-info {
-    background: rgba(0,0,0,0.2);
-    padding: 16px;
-    border-radius: 6px;
-    margin-top: 16px;
-  }
-  
-  .file-info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  
-  .file-info-row:last-child {
-    border-bottom: none;
-  }
-  
-  .file-info-label {
-    color: var(--muted);
-    font-size: 14px;
-  }
-  
-  .file-info-value {
+    line-height: 1.6;
     color: var(--text);
-    font-size: 14px;
-    font-weight: 500;
   }
   
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .sidebar-card {
-    background: var(--card);
+  .code-content {
+    background: rgba(0,0,0,0.3);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 16px;
+    overflow-x: auto;
   }
   
-  .sidebar-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .tags-list {
+  .document-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin-top: 16px;
   }
   
   .tag {
+    display: inline-block;
     padding: 4px 10px;
     background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 16px;
     color: var(--primary);
-    border-radius: 12px;
-    font-size: 13px;
+    font-size: 12px;
     text-decoration: none;
-    transition: all 0.2s;
   }
   
   .tag:hover {
     background: rgba(110,168,255,0.2);
   }
   
-  .info-list {
+  .document-actions {
     display: flex;
-    flex-direction: column;
     gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
   }
   
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-  }
-  
-  .info-label {
-    color: var(--muted);
-  }
-  
-  .info-value {
-    color: var(--text);
+  .action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 500;
-  }
-  
-  .folder-link {
-    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.2s;
     text-decoration: none;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   
-  .folder-link:hover {
-    text-decoration: underline;
+  .btn-edit {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-edit:hover {
+    background: var(--primary-700);
+  }
+  
+  .btn-download {
+    background: var(--success);
+    color: white;
+  }
+  
+  .btn-download:hover {
+    opacity: 0.9;
+  }
+  
+  .btn-pin {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  
+  .btn-pin:hover {
+    background: rgba(251,191,36,0.1);
+    border-color: #fbbf24;
+    color: #fbbf24;
+  }
+  
+  .btn-pin.pinned {
+    background: rgba(251,191,36,0.1);
+    border-color: #fbbf24;
+    color: #fbbf24;
+  }
+  
+  .btn-delete {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  
+  .btn-delete:hover {
+    background: var(--danger);
+    color: white;
+  }
+  
+  .file-preview {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  .file-icon-large {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  
+  .file-info {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  
+  .related-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
   }
   
   .related-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
   }
   
   .related-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.2);
+    border: 1px solid var(--line);
     border-radius: 6px;
     text-decoration: none;
     color: var(--text);
@@ -272,311 +201,172 @@
   
   .related-item:hover {
     background: rgba(110,168,255,0.1);
+    border-color: var(--primary);
   }
   
-  .related-icon {
-    font-size: 20px;
-  }
-  
-  .related-title {
-    flex: 1;
-    font-size: 14px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .version-history {
-    margin-top: 30px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 20px;
-  }
-  
-  .version-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 16px;
-  }
-  
-  .version-list {
+  .breadcrumb {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .version-item {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 12px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 6px;
-  }
-  
-  .version-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .version-number {
-    font-weight: 500;
-    color: var(--text);
-  }
-  
-  .version-note {
-    font-size: 13px;
-    color: var(--muted);
-  }
-  
-  .version-date {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  
-  .version-actions {
-    display: flex;
     gap: 8px;
-  }
-  
-  .version-btn {
-    padding: 4px 8px;
-    font-size: 12px;
-    background: rgba(110,168,255,0.1);
-    color: var(--primary);
-    border: 1px solid var(--primary);
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-  
-  .version-btn:hover {
-    background: var(--primary);
-    color: var(--bg);
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 20px;
-    color: var(--muted);
+    margin-bottom: 20px;
+    color: var(--text-muted);
     font-size: 14px;
   }
   
-  @media (max-width: 768px) {
-    .content-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .document-header {
-      flex-direction: column;
-    }
-    
-    .doc-actions {
-      width: 100%;
-      justify-content: flex-start;
-    }
+  .breadcrumb a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  
+  .breadcrumb a:hover {
+    color: var(--primary);
   }
 </style>
 
 <div class="document-container">
-  <!-- Header -->
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('vault.index') }}">📁 Vault</a>
+    <span>›</span>
+    {% if doc.folder %}
+      <a href="{{ url_for('vault.search', folder=doc.folder.id) }}">{{ doc.folder.icon }} {{ doc.folder.name }}</a>
+      <span>›</span>
+    {% endif %}
+    <span>{{ doc.title }}</span>
+  </div>
+  
+  <!-- Document Header -->
   <div class="document-header">
-    <div class="doc-title-section">
-      <div class="doc-title">
-        <span class="doc-icon">{{ file_icon }}</span>
-        <h1>{{ doc.title }}</h1>
-        {% if doc.pinned %}
-        <span class="pin-indicator" title="Pinned">📌</span>
-        {% endif %}
-      </div>
-      
-      <div class="doc-meta">
-        <div class="meta-item">
-          <span>📅</span>
-          <span>Created {{ doc.created_at|time_ago }}</span>
-        </div>
-        <div class="meta-item">
-          <span>✏️</span>
-          <span>Updated {{ doc.updated_at|time_ago }}</span>
-        </div>
-        {% if doc.accessed_at %}
-        <div class="meta-item">
-          <span>👁️</span>
-          <span>Accessed {{ doc.accessed_at|time_ago }}</span>
-        </div>
-        {% endif %}
-        {% if doc.file_size %}
-        <div class="meta-item">
-          <span>💾</span>
-          <span>{{ (doc.file_size / 1024)|round(1) }} KB</span>
-        </div>
-        {% endif %}
-      </div>
+    <div class="document-title">
+      <span style="font-size: 32px;">{{ file_icon }}</span>
+      <h1 style="margin: 0; font-size: 24px; color: var(--text);">{{ doc.title }}</h1>
+      {% if doc.pinned %}
+        <span style="color: #fbbf24; font-size: 20px;">📌</span>
+      {% endif %}
     </div>
     
-    <div class="doc-actions">
-      <a href="{{ url_for('vault.edit_document', id=doc.id) }}" class="action-btn">
+    <div class="document-meta">
+      <div class="meta-item">
+        <span>📅</span>
+        <span>Created: {{ doc.created_at.strftime('%B %d, %Y') }}</span>
+      </div>
+      <div class="meta-item">
+        <span>🔄</span>
+        <span>Updated: {{ doc.updated_at|time_ago }}</span>
+      </div>
+      <div class="meta-item">
+        <span>👁️</span>
+        <span>Accessed: {{ doc.accessed_at|time_ago }}</span>
+      </div>
+      {% if doc.file_size %}
+      <div class="meta-item">
+        <span>📊</span>
+        <span>Size: {{ (doc.file_size / 1024)|round(2) }} KB</span>
+      </div>
+      {% endif %}
+      {% if doc.versions %}
+      <div class="meta-item">
+        <span>📚</span>
+        <span>{{ doc.versions|length }} versions</span>
+      </div>
+      {% endif %}
+    </div>
+    
+    {% if doc.tags %}
+    <div class="document-tags">
+      {% for tag in doc.tags %}
+        <a href="{{ url_for('vault.search', tag=tag.name) }}" class="tag">
+          #{{ tag.name }}
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="document-actions">
+      <a href="{{ url_for('vault.edit_document', id=doc.id) }}" class="action-btn btn-edit">
         ✏️ Edit
       </a>
+      
       {% if doc.file_path %}
-      <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="action-btn">
-        ⬇️ Download
+      <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="action-btn btn-download">
+        📥 Download
       </a>
       {% endif %}
-      <button onclick="togglePin({{ doc.id }})" class="action-btn" id="pin-btn">
-        {% if doc.pinned %}📌 Unpin{% else %}📌 Pin{% endif %}
+      
+      <button onclick="togglePin({{ doc.id }})" class="action-btn btn-pin {% if doc.pinned %}pinned{% endif %}" id="pin-btn">
+        📌 {% if doc.pinned %}Unpin{% else %}Pin{% endif %}
       </button>
-      <form action="{{ url_for('vault.archive_document', id=doc.id) }}" method="POST" style="display:inline;">
-        <button type="submit" class="action-btn danger" onclick="return confirm('Archive this document?')">
+      
+      <form method="POST" action="{{ url_for('vault.archive_document', id=doc.id) }}" style="display: inline;">
+        <button type="submit" class="action-btn" style="background: transparent; border: 1px solid var(--line); color: var(--text);">
           📦 Archive
+        </button>
+      </form>
+      
+      <form method="POST" action="{{ url_for('vault.delete_document', id=doc.id) }}" 
+            style="display: inline;" 
+            onsubmit="return confirm('Are you sure you want to delete this document? This cannot be undone.');">
+        <button type="submit" class="action-btn btn-delete">
+          🗑️ Delete
         </button>
       </form>
     </div>
   </div>
   
-  <!-- Main Content -->
-  <div class="content-grid">
-    <div class="main-content">
-      <div class="content-header">
-        <span class="content-title">Document Content</span>
-        {% if doc.doc_type %}
-        <span class="tag">{{ doc.doc_type }}</span>
-        {% endif %}
-      </div>
-      
-      <div class="content-body">
-        {% if doc.content %}
-        <pre class="document-content">{{ doc.content }}</pre>
-        {% elif doc.file_path %}
-        <div class="file-preview">
-          <div class="file-preview-icon">{{ file_icon }}</div>
-          <h3>{{ doc.file_name or 'File Attached' }}</h3>
-          <p>This document contains an attached file.</p>
-          <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="action-btn" style="margin-top:20px;">
-            ⬇️ Download File
-          </a>
-          
-          <div class="file-info">
-            <div class="file-info-row">
-              <span class="file-info-label">Filename:</span>
-              <span class="file-info-value">{{ doc.file_name }}</span>
-            </div>
-            <div class="file-info-row">
-              <span class="file-info-label">Type:</span>
-              <span class="file-info-value">{{ doc.mime_type or 'Unknown' }}</span>
-            </div>
-            <div class="file-info-row">
-              <span class="file-info-label">Size:</span>
-              <span class="file-info-value">{{ (doc.file_size / 1024)|round(1) }} KB</span>
-            </div>
-          </div>
+  <!-- Document Content -->
+  <div class="document-content">
+    {% if doc.content %}
+      {% if doc.doc_type in ['code', 'script', 'config'] %}
+        <div class="code-content">
+          <pre class="content-text">{{ doc.content }}</pre>
         </div>
-        {% else %}
-        <div class="empty-state">
-          No content available for this document.
-        </div>
-        {% endif %}
-      </div>
-    </div>
+      {% else %}
+        <div class="content-text">{{ doc.content }}</div>
+      {% endif %}
+    {% endif %}
     
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Tags -->
-      {% if doc.tags %}
-      <div class="sidebar-card">
-        <div class="sidebar-title">Tags</div>
-        <div class="tags-list">
-          {% for tag in doc.tags %}
-          <a href="{{ url_for('vault.search', tag=tag.name) }}" class="tag">
-            {{ tag.name }}
-          </a>
-          {% endfor %}
+    {% if doc.file_path and not doc.content %}
+      <div class="file-preview">
+        <div class="file-icon-large">{{ file_icon }}</div>
+        <h3 style="margin: 0 0 8px 0; color: var(--text);">{{ doc.file_name }}</h3>
+        <div class="file-info">
+          Type: {{ doc.mime_type or 'Unknown' }}<br>
+          Size: {{ (doc.file_size / 1024)|round(2) }} KB
         </div>
+        <a href="{{ url_for('vault.download_file', id=doc.id) }}" class="action-btn btn-download" style="margin-top: 16px;">
+          📥 Download File
+        </a>
       </div>
-      {% endif %}
-      
-      <!-- Document Info -->
-      <div class="sidebar-card">
-        <div class="sidebar-title">Information</div>
-        <div class="info-list">
-          <div class="info-item">
-            <span class="info-label">Type:</span>
-            <span class="info-value">{{ doc.doc_type|title }}</span>
-          </div>
-          {% if doc.folder %}
-          <div class="info-item">
-            <span class="info-label">Folder:</span>
-            <a href="{{ url_for('vault.search', folder_id=doc.folder.id) }}" class="folder-link">
-              {{ doc.folder.icon }} {{ doc.folder.name }}
-            </a>
-          </div>
-          {% endif %}
-          <div class="info-item">
-            <span class="info-label">ID:</span>
-            <span class="info-value">#{{ doc.id }}</span>
-          </div>
-          {% if doc.links %}
-          <div class="info-item">
-            <span class="info-label">Links:</span>
-            <span class="info-value">{{ doc.links|length }}</span>
-          </div>
-          {% endif %}
-        </div>
+    {% endif %}
+    
+    {% if not doc.content and not doc.file_path %}
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+        <p>No content available</p>
+        <a href="{{ url_for('vault.edit_document', id=doc.id) }}" class="action-btn btn-edit" style="margin-top: 12px;">
+          Add Content
+        </a>
       </div>
-      
-      <!-- Related Documents -->
-      {% if related %}
-      <div class="sidebar-card">
-        <div class="sidebar-title">Related Documents</div>
-        <div class="related-list">
-          {% for rel_doc in related %}
-          <a href="{{ url_for('vault.view_document', id=rel_doc.id) }}" class="related-item">
-            <span class="related-icon">{{ rel_doc.doc_type|file_icon }}</span>
-            <span class="related-title">{{ rel_doc.title }}</span>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-      
-      <!-- External Links -->
-      {% if doc.links %}
-      <div class="sidebar-card">
-        <div class="sidebar-title">External Links</div>
-        <div class="related-list">
-          {% for link in doc.links %}
-          <a href="{{ link.url }}" target="_blank" class="related-item">
-            <span class="related-icon">🔗</span>
-            <span class="related-title">{{ link.title or link.url }}</span>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
+    {% endif %}
   </div>
   
-  <!-- Version History -->
-  {% if doc.versions %}
-  <div class="version-history">
-    <div class="version-title">Version History</div>
-    <div class="version-list">
-      {% for version in doc.versions|sort(attribute='version_number', reverse=True) %}
-      <div class="version-item">
-        <div class="version-info">
-          <span class="version-number">Version {{ version.version_number }}</span>
-          <span class="version-note">{{ version.change_note }}</span>
-          <span class="version-date">{{ version.created_at|time_ago }}</span>
+  <!-- Related Documents -->
+  {% if related %}
+  <div class="related-section">
+    <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text);">
+      📂 Related Documents
+    </h3>
+    <div class="related-list">
+      {% for rel_doc in related %}
+      <a href="{{ url_for('vault.view_document', id=rel_doc.id) }}" class="related-item">
+        <span style="font-size: 20px;">{{ rel_doc.doc_type|file_icon }}</span>
+        <div style="flex: 1;">
+          <div style="font-weight: 500;">{{ rel_doc.title }}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            Updated {{ rel_doc.updated_at|time_ago }}
+          </div>
         </div>
-        <div class="version-actions">
-          <a href="#" onclick="viewVersion({{ version.id }})" class="version-btn">View</a>
-          <a href="#" onclick="restoreVersion({{ version.id }})" class="version-btn">Restore</a>
-        </div>
-      </div>
+      </a>
       {% endfor %}
     </div>
   </div>
@@ -584,51 +374,33 @@
 </div>
 
 <script>
-// Toggle pin status
-async function togglePin(docId) {
-  try {
-    const response = await fetch(`/vault/document/${docId}/pin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      const btn = document.getElementById('pin-btn');
-      btn.innerHTML = data.pinned ? '📌 Unpin' : '📌 Pin';
-      
-      // Update pin indicator in title
-      const pinIndicator = document.querySelector('.pin-indicator');
-      if (data.pinned && !pinIndicator) {
-        const title = document.querySelector('.doc-title');
-        const pin = document.createElement('span');
-        pin.className = 'pin-indicator';
-        pin.title = 'Pinned';
-        pin.textContent = '📌';
-        title.appendChild(pin);
-      } else if (!data.pinned && pinIndicator) {
-        pinIndicator.remove();
-      }
+function togglePin(docId) {
+  fetch(`/vault/document/${docId}/pin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     }
-  } catch (err) {
-    console.error('Error toggling pin:', err);
-  }
+  })
+  .then(response => response.json())
+  .then(data => {
+    const btn = document.getElementById('pin-btn');
+    if (data.pinned) {
+      btn.classList.add('pinned');
+      btn.innerHTML = '📌 Unpin';
+    } else {
+      btn.classList.remove('pinned');
+      btn.innerHTML = '📌 Pin';
+    }
+  });
 }
 
-// View version (placeholder)
-function viewVersion(versionId) {
-  alert('Version view will open version #' + versionId);
-  // You can implement a modal or redirect to view the version
-}
-
-// Restore version (placeholder)
-function restoreVersion(versionId) {
-  if (confirm('Restore this version? Current content will be saved as a new version.')) {
-    alert('Version #' + versionId + ' will be restored');
-    // Implement version restore functionality
+// Syntax highlighting for code blocks (optional - you can add Prism.js or highlight.js)
+document.addEventListener('DOMContentLoaded', function() {
+  const codeContent = document.querySelector('.code-content pre');
+  if (codeContent) {
+    // Basic syntax highlighting could go here
+    // For now, just ensure proper formatting
   }
-}
+});
 </script>
 {% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active = 'rolodex' %}
+{% block title %}Rolodex · Preview Import{% endblock %}
+{% block header %}Preview Import{% endblock %}
+
+{% block content %}
+<section class="kcard">
+  <div class="kcard-head">
+    <div class="kcard-title">Results</div>
+  </div>
+  <div class="kcard-body">
+    <p><strong>Total in file:</strong> {{ totals.total }} (showing first {{ totals.previewed }})</p>
+    <p>
+      <span class="kchip">New: {{ totals.new }}</span>
+      <span class="kchip">Updates: {{ totals.update }}</span>
+      <span class="kchip">Archived matches: {{ totals.archived_match }}</span>
+      {% if totals.errors %}<span class="kchip" style="border-color:#ef4444;color:#fecaca">Parse errors: {{ totals.errors }}</span>{% endif %}
+    </p>
+
+    {% if errors %}
+      <details class="kaccordion"><summary>Parser notes</summary>
+        <div class="kcard-body">
+          <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        </div>
+      </details>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('rolodex.rolodex_import_commit') }}">
+      <div style="overflow:auto;border:1px solid var(--line);border-radius:12px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:rgba(255,255,255,.03)">
+              <th style="padding:8px;border-bottom:1px solid var(--line);">Import</th>
+              <th style="padding:8px;border-bottom:1px solid var(--line);text-align:left;">Name</th>
+              <th style="padding:8px;border-bottom:1px solid var(--line);text-align:left;">Email</th>
+              <th style="padding:8px;border-bottom:1px solid var(--line);text-align:left;">Phone</th>
+              <th style="padding:8px;border-bottom:1px solid var(--line);text-align:left;">Company / Title</th>
+              <th style="padding:8px;border-bottom:1px solid var(--line);text-align:left;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+              <tr>
+                <td style="padding:8px;border-bottom:1px solid var(--line);text-align:center;">
+                  <input type="checkbox" name="row" value="{{ r.src_index }}" checked>
+                </td>
+                <td style="padding:8px;border-bottom:1px solid var(--line);">
+                  <strong>{{ r.display_name }}</strong>
+                </td>
+                <td style="padding:8px;border-bottom:1px solid var(--line);">{{ r.email or '—' }}</td>
+                <td style="padding:8px;border-bottom:1px solid var(--line);">{{ r.phone or '—' }}</td>
+                <td style="padding:8px;border-bottom:1px solid var(--line);">
+                  {{ r.company_name or '—' }}{% if r.title %}{% if r.company_name %} — {% endif %}{{ r.title }}{% endif %}
+                </td>
+                <td style="padding:8px;border-bottom:1px solid var(--line);">
+                  {% if r.match_type == 'new' %}
+                    <span class="kchip">New</span>
+                  {% elif r.match_type == 'update' %}
+                    <span class="kchip" style="background:rgba(110,168,255,.18);border-color:rgba(110,168,255,.45);">Update</span>
+                  {% else %}
+                    <span class="kchip" style="background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.55);">Archived match</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+        <a class="kbtn" href="{{ url_for('rolodex.rolodex_import') }}">Back</a>
+        <button class="kbtn kbtn-primary" type="submit">Import Selected</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,890 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Device' if mode=='new' else 'Edit ' + device.name }}{% endblock %}
+{% block header %}Network Device Configuration{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ==================== THEME VARIABLES ==================== */
+  :root {
+    --df-bg: var(--bg, #0b0f1a);
+    --df-panel: var(--panel, #121a2a);
+    --df-card: var(--card, #0f1625);
+    --df-line: var(--line, #1f2a3d);
+    --df-text: var(--text, #e6eaf2);
+    --df-muted: var(--text-muted, #9fb0c8);
+    --df-primary: var(--primary, #6ea8ff);
+    --df-primary-700: var(--primary-700, #3f7fe6);
+    --df-success: var(--success, #22c55e);
+    --df-warning: var(--warning, #f59e0b);
+    --df-danger: var(--danger, #ef4444);
+    --df-info: var(--info, #38bdf8);
+    --df-radius: var(--radius, 14px);
+    --df-radius-sm: var(--radius-sm, 10px);
+    --df-shadow: 0 8px 24px rgba(0,0,0,.35);
+    --df-glow-blue: 0 0 20px rgba(110,168,255,.4);
+    --df-glow-green: 0 0 20px rgba(34,197,94,.4);
+  }
+
+  /* ==================== LAYOUT ==================== */
+  .form-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  /* ==================== HERO HEADER ==================== */
+  .form-hero {
+    background: linear-gradient(135deg, var(--df-card) 0%, rgba(110,168,255,.08) 100%);
+    border: 1px solid var(--df-line);
+    border-radius: var(--df-radius);
+    padding: 2rem;
+    box-shadow: var(--df-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .form-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--df-primary) 0%, transparent 70%);
+    opacity: 0.1;
+    animation: heroFloat 6s ease-in-out infinite;
+  }
+
+  @keyframes heroFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--df-text) 0%, var(--df-primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .hero-icon {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.4));
+    animation: iconPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes iconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .hero-subtitle {
+    color: var(--df-muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    animation: modeBadgeGlow 2s ease-in-out infinite;
+  }
+
+  .mode-badge.new {
+    background: linear-gradient(135deg, var(--df-success) 0%, #16a34a 100%);
+    color: white;
+    box-shadow: var(--df-glow-green);
+  }
+
+  .mode-badge.edit {
+    background: linear-gradient(135deg, var(--df-info) 0%, #0284c7 100%);
+    color: white;
+    box-shadow: var(--df-glow-blue);
+  }
+
+  @keyframes modeBadgeGlow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  /* ==================== FORM SECTIONS ==================== */
+  .form-section {
+    background: var(--df-card);
+    border: 1px solid var(--df-line);
+    border-radius: var(--df-radius);
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .form-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--df-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .form-section:hover::before {
+    opacity: 1;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--df-line);
+  }
+
+  .section-icon {
+    font-size: 1.75rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--df-text);
+  }
+
+  .section-subtitle {
+    font-size: 0.875rem;
+    color: var(--df-muted);
+    margin-top: 0.25rem;
+  }
+
+  /* ==================== FORM GRID ==================== */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* ==================== FORM CONTROLS ==================== */
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--df-text);
+    margin-bottom: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .label-icon {
+    font-size: 1rem;
+    opacity: 0.8;
+  }
+
+  .required-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--df-danger);
+    border-radius: 50%;
+    margin-left: auto;
+    animation: requiredPulse 2s infinite;
+  }
+
+  @keyframes requiredPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  input[type="text"],
+  input[type="date"],
+  input[type="url"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--df-panel);
+    color: var(--df-text);
+    border: 2px solid var(--df-line);
+    border-radius: var(--df-radius-sm);
+    font-size: 0.925rem;
+    transition: all 0.3s;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--df-muted);
+    opacity: 0.5;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--df-primary);
+    background: rgba(110,168,255,.05);
+    box-shadow: 0 0 0 3px rgba(110,168,255,.15);
+  }
+
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: rgba(110,168,255,.5);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.5;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239fb0c8' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+  }
+
+  /* Monospace inputs */
+  input.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  /* ==================== CHECKBOX STYLING ==================== */
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--df-panel);
+    border: 2px solid var(--df-line);
+    border-radius: var(--df-radius-sm);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .checkbox-group:hover {
+    border-color: var(--df-primary);
+    background: rgba(110,168,255,.05);
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--df-primary);
+  }
+
+  .checkbox-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+
+  /* ==================== HELP TEXT ==================== */
+  .help-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(110,168,255,.05);
+    border: 1px solid rgba(110,168,255,.2);
+    border-radius: var(--df-radius-sm);
+    font-size: 0.85rem;
+    color: var(--df-primary);
+  }
+
+  .help-icon {
+    font-size: 1rem;
+    margin-top: 0.125rem;
+  }
+
+  .tip-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(245,158,11,.05);
+    border: 1px solid rgba(245,158,11,.2);
+    border-radius: var(--df-radius-sm);
+    font-size: 0.875rem;
+    color: var(--df-warning);
+    margin-top: 1rem;
+  }
+
+  .tip-icon {
+    font-size: 1.25rem;
+  }
+
+  /* ==================== BUTTONS ==================== */
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 1.5rem;
+    background: var(--df-card);
+    border: 1px solid var(--df-line);
+    border-radius: var(--df-radius);
+    box-shadow: var(--df-shadow);
+    position: sticky;
+    bottom: 1rem;
+    z-index: 10;
+  }
+
+  .action-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--df-radius-sm);
+    font-size: 0.925rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--df-primary) 0%, var(--df-primary-700) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(110,168,255,.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(110,168,255,.4);
+  }
+
+  .btn-secondary {
+    background: var(--df-panel);
+    color: var(--df-text);
+    border: 2px solid var(--df-line);
+  }
+
+  .btn-secondary:hover {
+    background: var(--df-card);
+    border-color: var(--df-primary);
+    box-shadow: 0 0 0 3px rgba(110,168,255,.1);
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, var(--df-danger) 0%, #dc2626 100%);
+    color: white;
+  }
+
+  .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239,68,68,.4);
+  }
+
+  /* ==================== FIELD FOCUS INDICATORS ==================== */
+  .form-group.focused label {
+    color: var(--df-primary);
+  }
+
+  /* ==================== VALIDATION STATES ==================== */
+  .form-group.error input,
+  .form-group.error select,
+  .form-group.error textarea {
+    border-color: var(--df-danger);
+  }
+
+  .form-group.success input,
+  .form-group.success select,
+  .form-group.success textarea {
+    border-color: var(--df-success);
+  }
+
+  /* ==================== RESPONSIVE ==================== */
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .hero-title {
+      font-size: 1.5rem;
+    }
+    
+    .form-actions {
+      position: static;
+      flex-direction: column;
+    }
+    
+    .action-group {
+      width: 100%;
+    }
+    
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="form-container">
+  {# ==================== HERO HEADER ==================== #}
+  <div class="form-hero">
+    <div class="hero-content">
+      <div class="hero-title">
+        <span class="hero-icon">
+          {% if mode == 'new' %}✨{% else %}🔧{% endif %}
+        </span>
+        <span>{{ 'Configure New Device' if mode=='new' else 'Modify Device Configuration' }}</span>
+      </div>
+      <div class="hero-subtitle">
+        {% if mode == 'new' %}
+          Add a new device to your network infrastructure
+        {% else %}
+          Update configuration for <strong>{{ device.name }}</strong>
+        {% endif %}
+      </div>
+      <div class="hero-actions">
+        <span class="mode-badge {{ mode }}">
+          {% if mode == 'new' %}
+            <span>➕</span>
+            <span>Creating New Device</span>
+          {% else %}
+            <span>✏️</span>
+            <span>Editing Existing Device</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {# ==================== IDENTITY & ACCESS SECTION ==================== #}
+  <div class="form-section">
+    <div class="section-header">
+      <span class="section-icon">🎯</span>
+      <div>
+        <div class="section-title">Device Identity & Access</div>
+        <div class="section-subtitle">Core identification and management settings</div>
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">📝</span>
+          <span>Device Name</span>
+          <span class="required-dot" title="Required"></span>
+        </label>
+        <input type="text" name="name" value="{{ device.name if device else '' }}" 
+               placeholder="e.g., core-router-01" required>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🚦</span>
+          <span>Status</span>
+        </label>
+        <select name="status">
+          {% for s in status_choices %}
+            <option value="{{ s }}" {% if device and device.status == s %}selected{% endif %}>
+              {% if s == 'active' %}✅{% elif s == 'inactive' %}⚠️{% else %}🔧{% endif %} {{ s|title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏷️</span>
+          <span>Device Role</span>
+        </label>
+        <select name="role">
+          {% for r in role_choices %}
+            <option value="{{ r }}" {% if device and device.role == r %}selected{% endif %}>
+              {% if r == 'router' %}🌐
+              {% elif r == 'switch' %}🔀
+              {% elif r == 'firewall' %}🛡️
+              {% elif r == 'server' %}🖥️
+              {% elif r == 'storage' %}💾
+              {% elif r == 'access_point' %}📡
+              {% elif r == 'printer' %}🖨️
+              {% elif r == 'camera' %}📹
+              {% elif r == 'iot' %}📱
+              {% elif r == 'workstation' %}💻
+              {% else %}📟
+              {% endif %}
+              {{ r|replace('_',' ')|title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">📍</span>
+          <span>Location</span>
+        </label>
+        <select name="location">
+          <option value="">— Select Location —</option>
+          {% for loc in location_choices %}
+            <option value="{{ loc }}" {% if device and device.location == loc %}selected{% endif %}>
+              📍 {{ loc }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🌍</span>
+          <span>Management IP</span>
+        </label>
+        <input type="text" name="mgmt_ip" class="mono" 
+               value="{{ device.mgmt_ip if device else '' }}" 
+               placeholder="192.168.1.1">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🔗</span>
+          <span>Management URL</span>
+        </label>
+        <input type="url" name="mgmt_url" 
+               value="{{ device.mgmt_url if device else '' }}" 
+               placeholder="https://192.168.1.1/admin">
+      </div>
+
+      <div class="form-group full-width">
+        <label>
+          <span class="label-icon">🔐</span>
+          <span>Credential Reference</span>
+        </label>
+        <input type="text" name="credential_ref" 
+               value="{{ device.credential_ref if device else '' }}" 
+               placeholder="Bitwarden/1Password vault reference">
+        <div class="help-text">
+          <span class="help-icon">ℹ️</span>
+          <span>Store the reference to your password manager entry (not the actual password)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ==================== HARDWARE & LIFECYCLE SECTION ==================== #}
+  <div class="form-section">
+    <div class="section-header">
+      <span class="section-icon">🖥️</span>
+      <div>
+        <div class="section-title">Hardware & Lifecycle</div>
+        <div class="section-subtitle">Physical device information and warranty tracking</div>
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏭</span>
+          <span>Vendor</span>
+        </label>
+        <input type="text" name="vendor" 
+               value="{{ device.vendor if device else '' }}" 
+               placeholder="e.g., Ubiquiti, Cisco, Dell">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">📦</span>
+          <span>Model</span>
+        </label>
+        <input type="text" name="model" 
+               value="{{ device.model if device else '' }}" 
+               placeholder="e.g., USG-3P, Catalyst 2960">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🔢</span>
+          <span>Serial Number</span>
+        </label>
+        <input type="text" name="serial" class="mono"
+               value="{{ device.serial if device else '' }}" 
+               placeholder="SN1234567890">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💻</span>
+          <span>Operating System</span>
+        </label>
+        <input type="text" name="os_name" 
+               value="{{ device.os_name if device else '' }}" 
+               placeholder="e.g., TrueNAS SCALE, UniFi OS">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏷️</span>
+          <span>OS Version</span>
+        </label>
+        <input type="text" name="os_version" 
+               value="{{ device.os_version if device else '' }}" 
+               placeholder="e.g., 24.04.2, 7.5.174">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🛒</span>
+          <span>Purchase Date</span>
+        </label>
+        <input type="date" name="purchase_date" 
+               value="{{ device.purchase_date if device and device.purchase_date else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🛡️</span>
+          <span>Warranty Expiry</span>
+        </label>
+        <input type="date" name="warranty_expiry" 
+               value="{{ device.warranty_expiry if device and device.warranty_expiry else '' }}">
+      </div>
+    </div>
+  </div>
+
+  {# ==================== NETWORK CLASSIFICATION SECTION ==================== #}
+  <div class="form-section">
+    <div class="section-header">
+      <span class="section-icon">🌐</span>
+      <div>
+        <div class="section-title">Network Classification</div>
+        <div class="section-subtitle">VLAN, subnet assignments and device tags</div>
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🔌</span>
+          <span>Primary Subnet</span>
+        </label>
+        <select name="primary_subnet_id">
+          <option value="">— No Subnet Assigned —</option>
+          {% for s in subnets %}
+            <option value="{{ s.id }}" {% if device and device.primary_subnet_id == s.id %}selected{% endif %}>
+              📡 {{ s.cidr }} ({{ s.purpose or 'General' }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏷️</span>
+          <span>Primary VLAN</span>
+        </label>
+        <select name="primary_vlan_id">
+          <option value="">— No VLAN Assigned —</option>
+          {% for v in vlans %}
+            <option value="{{ v.id }}" {% if device and device.primary_vlan_id == v.id %}selected{% endif %}>
+              🔖 VLAN {{ v.vlan_id }} ({{ v.name or 'Unnamed' }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group full-width">
+        <label>
+          <span class="label-icon">🏷️</span>
+          <span>Tags</span>
+        </label>
+        <input type="text" name="tags" 
+               value="{{ device.tags if device else '' }}" 
+               placeholder="critical, production, rack-01, basement">
+        <div class="help-text">
+          <span class="help-icon">💡</span>
+          <span>Separate multiple tags with commas. Use tags to categorize and filter devices.</span>
+        </div>
+      </div>
+
+      <div class="form-group full-width">
+        <label>
+          <span class="label-icon">📝</span>
+          <span>Notes</span>
+        </label>
+        <textarea name="notes" rows="5" 
+                  placeholder="Additional notes, special configurations, or important details about this device...">{{ device.notes if device else '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  {# ==================== MONITORING INTEGRATIONS SECTION ==================== #}
+  <div class="form-section">
+    <div class="section-header">
+      <span class="section-icon">📊</span>
+      <div>
+        <div class="section-title">Monitoring Integrations</div>
+        <div class="section-subtitle">Connect to external monitoring systems</div>
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">📈</span>
+          <span>LibreNMS Device ID</span>
+        </label>
+        <input type="text" name="librenms_device_id" 
+               value="{{ device.librenms_device_id if device and device.librenms_device_id is not none else '' }}" 
+               placeholder="e.g., 117">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🖥️</span>
+          <span>Unraid Host Label</span>
+        </label>
+        <input type="text" name="unraid_host" 
+               value="{{ device.unraid_host if device else '' }}" 
+               placeholder="e.g., fusion, tower">
+      </div>
+
+      <div class="form-group full-width">
+        <div class="checkbox-group">
+          <input type="checkbox" id="syslog-widget" name="widgets" value="syslog"
+                 {% if device and device.librenms_widgets and 'syslog' in device.librenms_widgets %}checked{% endif %}>
+          <label for="syslog-widget" class="checkbox-label">
+            <span>📜</span>
+            <span>Enable Syslog Display</span>
+            <span style="color: var(--df-muted); font-weight: 400;">(Shows last 50 entries on device detail page)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group full-width">
+        <div class="tip-box">
+          <span class="tip-icon">💡</span>
+          <div>
+            <strong>Pro Tip:</strong> To find your LibreNMS Device ID, open the device in LibreNMS. 
+            The URL typically ends with the numeric ID (e.g., <code>/device/117</code> means ID is 117).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ==================== FORM ACTIONS ==================== #}
+  <div class="form-actions">
+    <div class="action-group">
+      {% if mode == 'edit' %}
+        <a class="btn btn-secondary" href="{{ url_for('network.device_detail', id=device.id) }}">
+          <span>❌</span>
+          <span>Cancel</span>
+        </a>
+      {% else %}
+        <a class="btn btn-secondary" href="{{ url_for('network.devices') }}">
+          <span>❌</span>
+          <span>Cancel</span>
+        </a>
+      {% endif %}
+    </div>
+    
+    <div class="action-group">
+      {% if mode == 'edit' %}
+        <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+          <span>🗑️</span>
+          <span>Delete Device</span>
+        </button>
+      {% endif %}
+      
+      <button type="submit" class="btn btn-primary">
+        <span>💾</span>
+        <span>{{ 'Create Device' if mode == 'new' else 'Save Changes' }}</span>
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+// Add focus effects to form groups
+document.querySelectorAll('input, select, textarea').forEach(el => {
+  el.addEventListener('focus', () => {
+    el.closest('.form-group')?.classList.add('focused');
+  });
+  
+  el.addEventListener('blur', () => {
+    el.closest('.form-group')?.classList.remove('focused');
+  });
+});
+
+// Delete confirmation for edit mode
+function confirmDelete() {
+  if (confirm('⚠️ Are you sure you want to delete this device?\n\nDevice: {{ device.name if mode == "edit" else "" }}\n\nThis action cannot be undone.')) {
+    // Create a form and submit it as POST for security
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("network.device_delete", id=device.id) if mode == "edit" else "#" }}';
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+// Form validation feedback
+document.querySelector('form').addEventListener('submit', (e) => {
+  const nameInput = document.querySelector('input[name="name"]');
+  if (!nameInput.value.trim()) {
+    e.preventDefault();
+    nameInput.closest('.form-group').classList.add('error');
+    nameInput.focus();
+  }
+});
+</script>
+{% endblock %}

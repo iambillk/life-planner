@@ -1,0 +1,906 @@
+{% extends "base.html" %}
+{% block title %}{{ d.name }} - Network Device{% endblock %}
+{% block header %}Device Intelligence Center{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ==================== THEME VARIABLES ==================== */
+  :root {
+    --dd-bg: var(--bg, #0b0f1a);
+    --dd-panel: var(--panel, #121a2a);
+    --dd-card: var(--card, #0f1625);
+    --dd-line: var(--line, #1f2a3d);
+    --dd-text: var(--text, #e6eaf2);
+    --dd-muted: var(--text-muted, #9fb0c8);
+    --dd-primary: var(--primary, #6ea8ff);
+    --dd-primary-700: var(--primary-700, #3f7fe6);
+    --dd-success: var(--success, #22c55e);
+    --dd-warning: var(--warning, #f59e0b);
+    --dd-danger: var(--danger, #ef4444);
+    --dd-info: var(--info, #38bdf8);
+    --dd-radius: var(--radius, 14px);
+    --dd-radius-sm: var(--radius-sm, 10px);
+    --dd-shadow: 0 8px 24px rgba(0,0,0,.35);
+    --dd-glow-green: 0 0 20px rgba(34,197,94,.6);
+    --dd-glow-red: 0 0 20px rgba(239,68,68,.6);
+    --dd-glow-blue: 0 0 20px rgba(110,168,255,.4);
+    --dd-glow-amber: 0 0 20px rgba(245,158,11,.4);
+  }
+
+  /* ==================== LAYOUT ==================== */
+  .device-detail-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  /* ==================== HERO HEADER ==================== */
+  .hero-header {
+    background: linear-gradient(135deg, var(--dd-card) 0%, rgba(110,168,255,.08) 100%);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius);
+    padding: 2rem;
+    box-shadow: var(--dd-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--dd-primary) 0%, transparent 70%);
+    opacity: 0.1;
+    animation: heroFloat 6s ease-in-out infinite;
+  }
+  @keyframes heroFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-20px) scale(1.05); }
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .device-identity { flex: 1; }
+
+  /* Title + big emoji */
+  .device-name {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    /* keep the row clean so children (emoji) keep color */
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+  /* gradient only on the hostname text (2nd span) */
+  .device-name > span:last-child{
+    background: linear-gradient(90deg, var(--dd-text) 0%, var(--dd-primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .device-icon-large{
+    font-size: 2.5rem;
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",
+                 "EmojiOne Color","Twemoji Mozilla", system-ui, sans-serif !important;
+    color: inherit !important;
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+
+    /* critical fix: filter on color emoji can force monochrome */
+    filter: none !important;
+
+    /* visual depth without breaking color emoji */
+    text-shadow: 0 4px 8px rgba(0,0,0,.4);
+  }
+
+  .device-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .meta-chip:hover { border-color: var(--dd-primary); background: rgba(110,168,255,.08); }
+
+  /* Status Badge */
+  .status-badge {
+    padding: 0.625rem 1.25rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: statusPulse 2s infinite;
+  }
+  .status-badge.active { background: linear-gradient(135deg, var(--dd-success) 0%, #16a34a 100%); color: white; box-shadow: var(--dd-glow-green); }
+  .status-badge.inactive { background: linear-gradient(135deg, var(--dd-warning) 0%, #d97706 100%); color: white; box-shadow: var(--dd-glow-amber); }
+  .status-badge.maintenance { background: linear-gradient(135deg, var(--dd-info) 0%, #0284c7 100%); color: white; box-shadow: var(--dd-glow-blue); }
+  @keyframes statusPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+
+  /* Buttons */
+  .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--dd-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--dd-primary) 0%, var(--dd-primary-700) 100%); color: white; box-shadow: 0 4px 12px rgba(110,168,255,.3); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(110,168,255,.4); }
+  .btn-secondary { background: var(--dd-panel); color: var(--dd-text); border: 1px solid var(--dd-line); }
+  .btn-secondary:hover { background: var(--dd-card); border-color: var(--dd-primary); box-shadow: 0 0 0 3px rgba(110,168,255,.1); }
+  .btn-danger { background: linear-gradient(135deg, var(--dd-danger) 0%, #dc2626 100%); color: white; }
+  .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239,68,68,.4); }
+
+  /* ==================== QUICK STATS ==================== */
+  .quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, var(--dd-panel) 0%, rgba(255,255,255,.02) 100%);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 3px;
+    background: var(--dd-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+    transform-origin: left;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--dd-shadow); }
+  .stat-card:hover::after { transform: scaleX(1); }
+  .stat-icon { font-size: 2rem; }
+  .stat-content { flex: 1; }
+  .stat-value { font-size: 1.25rem; font-weight: 700; color: var(--dd-text); }
+  .stat-label { font-size: 0.75rem; color: var(--dd-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.125rem; }
+
+  /* ==================== MAIN GRID ==================== */
+  .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+  @media (max-width: 992px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ==================== CONTENT CARDS ==================== */
+  .content-card {
+    background: var(--dd-card);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius);
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    position: relative;
+    transition: all 0.3s;
+  }
+  .content-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--dd-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .content-card:hover::before { opacity: 1; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 1px solid var(--dd-line);
+  }
+  .card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--dd-text);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  .card-icon { font-size: 1.5rem; opacity: 0.9; }
+
+  /* ==================== INFO GRID ==================== */
+  .info-grid { display: grid; gap: 1.25rem; }
+  .info-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.625rem;
+    border-radius: var(--dd-radius-sm);
+    transition: background 0.2s;
+  }
+  .info-row:hover { background: rgba(110,168,255,.04); }
+  .info-label {
+    font-size: 0.875rem;
+    color: var(--dd-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .info-value { font-size: 0.925rem; color: var(--dd-text); font-weight: 500; }
+  .info-value.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.95rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: 0.375rem;
+    display: inline-block;
+  }
+  .info-value a {
+    color: var(--dd-primary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: all 0.2s;
+  }
+  .info-value a:hover { color: var(--dd-primary-700); text-decoration: underline; }
+
+  /* ==================== LIVE STATUS CARD ==================== */
+  .live-status-card { background: linear-gradient(135deg, var(--dd-card) 0%, rgba(34,197,94,.05) 100%); position: relative; }
+  .live-status-card.offline { background: linear-gradient(135deg, var(--dd-card) 0%, rgba(239,68,68,.05) 100%); }
+  .live-indicator {
+    position: absolute;
+    top: 1.5rem; right: 1.5rem;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--dd-success);
+    box-shadow: 0 0 0 3px rgba(34,197,94,.2);
+    animation: liveBlink 2s infinite;
+  }
+  .live-indicator.offline {
+    background: var(--dd-danger);
+    box-shadow: 0 0 0 3px rgba(239,68,68,.2);
+    animation: liveBlink 1s infinite;
+  }
+  @keyframes liveBlink { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } }
+
+  .status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .status-item {
+    padding: 1rem;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .status-item:hover { transform: translateY(-2px); border-color: var(--dd-primary); }
+  .status-icon-large { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .status-label { font-size: 0.75rem; color: var(--dd-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  .status-value { font-size: 1.125rem; font-weight: 700; color: var(--dd-text); }
+  .status-ok { color: var(--dd-success) !important; }
+  .status-warning { color: var(--dd-warning) !important; }
+  .status-error { color: var(--dd-danger) !important; }
+
+  /* ==================== BANDWIDTH GRAPH ==================== */
+  .graph-card { grid-column: 1 / -1; }
+  .graph-container {
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    padding: 1rem;
+    position: relative;
+  }
+  .graph-container img { width: 100%; height: auto; display: block; border-radius: var(--dd-radius-sm); }
+  .graph-overlay { position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; }
+  .graph-badge {
+    padding: 0.375rem 0.75rem;
+    background: rgba(15,22,37,.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--dd-line);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dd-text);
+  }
+
+  /* ==================== SYSLOG VIEWER ==================== */
+  .syslog-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    padding: 1rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .syslog-container::-webkit-scrollbar { width: 8px; }
+  .syslog-container::-webkit-scrollbar-track { background: var(--dd-card); border-radius: 4px; }
+  .syslog-container::-webkit-scrollbar-thumb { background: var(--dd-line); border-radius: 4px; }
+  .syslog-container::-webkit-scrollbar-thumb:hover { background: var(--dd-primary); }
+
+  .log-entry {
+    padding: 0.75rem;
+    border-bottom: 1px dashed var(--dd-line);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    transition: background 0.2s;
+  }
+  .log-entry:hover { background: rgba(110,168,255,.03); }
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-timestamp { color: var(--dd-muted); font-size: 0.8rem; white-space: nowrap; min-width: 150px; }
+  .log-priority {
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .priority-error { background: rgba(239,68,68,.2); color: var(--dd-danger); border: 1px solid rgba(239,68,68,.3); }
+  .priority-warning { background: rgba(245,158,11,.2); color: var(--dd-warning); border: 1px solid rgba(245,158,11,.3); }
+  .priority-info { background: rgba(110,168,255,.1); color: var(--dd-primary); border: 1px solid rgba(110,168,255,.2); }
+
+  .log-program { color: var(--dd-primary); font-weight: 600; }
+  .log-message { color: var(--dd-text); flex: 1; word-break: break-word; }
+
+  /* ==================== NOTES CARD ==================== */
+  .notes-content {
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    padding: 1rem;
+    min-height: 120px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--dd-text);
+    line-height: 1.6;
+  }
+  .empty-notes { color: var(--dd-muted); font-style: italic; text-align: center; padding: 2rem; }
+
+  /* ==================== TAG PILLS ==================== */
+  .tag-container { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    color: var(--dd-text);
+    transition: all 0.2s;
+  }
+  .tag-pill:hover { background: rgba(110,168,255,.08); border-color: var(--dd-primary); transform: translateY(-1px); }
+
+  /* ==================== ALERTS ==================== */
+  .alert {
+    padding: 1rem;
+    border-radius: var(--dd-radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .alert-warning { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); color: var(--dd-warning); }
+  .alert-success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: var(--dd-success); }
+  .alert-icon { font-size: 1.5rem; }
+
+  /* ==================== FOOTER ACTIONS ==================== */
+  .footer-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 1.5rem;
+    background: var(--dd-card);
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius);
+    margin-top: 2rem;
+  }
+
+  /* ==================== RESPONSIVE ==================== */
+  @media (max-width: 768px) {
+    .hero-top { flex-direction: column; }
+    .device-name { font-size: 1.5rem; }
+    .quick-stats { grid-template-columns: 1fr; }
+    .status-grid { grid-template-columns: 1fr; }
+    .info-row { grid-template-columns: 1fr; }
+    .footer-actions { flex-direction: column; align-items: stretch; }
+  }
+
+  /* ==================== GLOBAL EMOJI COLOR GUARANTEE ==================== */
+  .emoji,
+  .meta-chip > span:first-child,
+  .card-icon,
+  .stat-icon,
+  .status-icon-large,
+  .alert-icon,
+  .status-badge span:first-child,
+  .btn span:first-child {
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",
+                 "EmojiOne Color","Twemoji Mozilla", system-ui, sans-serif !important;
+    -webkit-text-fill-color: initial !important;
+    -webkit-background-clip: initial !important;
+    background: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+{# ---------- Location Macro (same as list template) ---------- #}
+{% macro show_location(d) -%}
+  {%- if d.location and d.location.name -%}
+    {{ d.location.name }}
+  {%- elif d.location_name -%}
+    {{ d.location_name }}
+  {%- elif d.location_str -%}
+    {{ d.location_str }}
+  {%- elif d.location -%}
+    {{ d.location }}
+  {%- else -%}
+    No location assigned
+  {%- endif -%}
+{%- endmacro %}
+
+{# ---------- Device Icon Macro ---------- #}
+{% macro get_device_icon(role) -%}
+  {%- if role == 'Router' -%}🌐
+  {%- elif role == 'Switch' -%}🔀
+  {%- elif role == 'firewall' -%}🛡️
+  {%- elif role == 'server' -%}🖥️
+  {%- elif role == 'storage' -%}💾
+  {%- elif role == 'access_point' or role == 'ap' -%}📡
+  {%- elif role == 'printer' -%}🖨️
+  {%- elif role == 'Camera' -%}📹
+  {%- elif role == 'iot' -%}📱
+  {%- elif role == 'Workstation' -%}💻
+  {%- else -%}📟
+  {%- endif -%}
+{%- endmacro %}
+
+<div class="device-detail-container">
+  {# ==================== HERO HEADER ==================== #}
+  <div class="hero-header">
+    <div class="hero-content">
+      <div class="hero-top">
+        <div class="device-identity">
+          <div class="device-name">
+            <span class="device-icon-large">{{ get_device_icon(d.role) }}</span>
+            <span>{{ d.name }}</span>
+          </div>
+          <div class="device-meta">
+            <span class="meta-chip">
+              <span>🏷️</span>
+              <span>{{ d.role|default('device', true)|replace('_',' ')|title }}</span>
+            </span>
+            <span class="meta-chip">
+              <span>📍</span>
+              <span>{{ show_location(d) }}</span>
+            </span>
+            {% if d.mgmt_ip %}
+            <span class="meta-chip">
+              <span>🌍</span>
+              <span class="mono">{{ d.mgmt_ip }}</span>
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="hero-actions">
+          <span class="status-badge {{ d.status|default('active', true) }}">
+            {% if d.status == 'active' %}✅{% elif d.status == 'inactive' %}⚠️{% else %}🔧{% endif %}
+            {{ d.status|default('active', true)|upper }}
+          </span>
+          <a class="btn btn-primary" href="{{ url_for('network.device_edit', id=d.id) }}">
+            <span>✏️</span>
+            <span>Edit Device</span>
+          </a>
+          {% if d.mgmt_url %}
+          <a class="btn btn-secondary" href="{{ d.mgmt_url }}" target="_blank" rel="noopener">
+            <span>🔗</span>
+            <span>Management UI</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Quick Stats Bar #}
+      <div class="quick-stats">
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {% if live.ok and live.uptime_seconds %}
+                {{ (live.uptime_seconds // 86400) }}d {{ ((live.uptime_seconds % 86400) // 3600) }}h
+              {% else %}
+                —
+              {% endif %}
+            </div>
+            <div class="stat-label">Uptime</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📡</div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {% if live.ok and live.status %}
+                {% if live.status == 'up' %}Online{% elif live.status == 'down' %}Offline{% else %}Unknown{% endif %}
+              {% else %}
+                Unknown
+              {% endif %}
+            </div>
+            <div class="stat-label">Live Status</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🏭</div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ d.vendor|default('Unknown', true) }}
+            </div>
+            <div class="stat-label">Vendor</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💻</div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ d.os_name|default('Unknown', true) }}
+            </div>
+            <div class="stat-label">Operating System</div>
+          </div>
+        </div>
+
+        {% if d.warranty_expiry %}
+        <div class="stat-card">
+          <div class="stat-icon">🛡️</div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ d.warranty_expiry }}
+            </div>
+            <div class="stat-label">Warranty Expires</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ==================== MAIN GRID ==================== #}
+  <div class="main-grid">
+    {# Left Column #}
+    <div>
+      {# Device Information Card #}
+      <div class="content-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">📋</span>
+            <span>Device Information</span>
+          </div>
+        </div>
+        <div class="info-grid">
+          <div class="info-row">
+            <div class="info-label">
+              <span>📍</span>
+              <span>Location</span>
+            </div>
+            <div class="info-value">
+              <span style="font-weight: 600; color: var(--dd-primary);">{{ show_location(d) }}</span>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <span>🌍</span>
+              <span>Management IP</span>
+            </div>
+            <div class="info-value mono">{{ d.mgmt_ip or 'Not Configured' }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <span>🔗</span>
+              <span>Management URL</span>
+            </div>
+            <div class="info-value">
+              {% if d.mgmt_url %}
+                <a href="{{ d.mgmt_url }}" target="_blank" rel="noopener">
+                  {{ d.mgmt_url }}
+                  <span>↗️</span>
+                </a>
+              {% else %}
+                <span style="color: var(--dd-muted);">Not Configured</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if d.vendor or d.model %}
+          <div class="info-row">
+            <div class="info-label">
+              <span>🏭</span>
+              <span>Hardware</span>
+            </div>
+            <div class="info-value">{{ d.vendor|default('', true) }} {{ d.model|default('', true) }}</div>
+          </div>
+          {% endif %}
+
+          {% if d.os_name %}
+          <div class="info-row">
+            <div class="info-label">
+              <span>💻</span>
+              <span>Operating System</span>
+            </div>
+            <div class="info-value">{{ d.os_name }} {{ d.os_version|default('', true) }}</div>
+          </div>
+          {% endif %}
+
+          {% if d.credential_ref %}
+          <div class="info-row">
+            <div class="info-label">
+              <span>🔐</span>
+              <span>Credential Ref</span>
+            </div>
+            <div class="info-value mono">{{ d.credential_ref }}</div>
+          </div>
+          {% endif %}
+
+          {% if d.tags %}
+          <div class="info-row">
+            <div class="info-label">
+              <span>🏷️</span>
+              <span>Tags</span>
+            </div>
+            <div class="info-value">
+              <div class="tag-container">
+                {% for tag in d.tags.split(',') %}
+                  {% if tag.strip() %}
+                    <span class="tag-pill">
+                      <span>🔖</span>
+                      <span>{{ tag.strip() }}</span>
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Live Status Card #}
+      <div class="content-card live-status-card {% if live.ok and live.status == 'down' %}offline{% endif %}" style="margin-top: 1.5rem;">
+        <span class="live-indicator {% if not live.ok or live.status == 'down' %}offline{% endif %}"></span>
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">📡</span>
+            <span>Live Monitoring (LibreNMS)</span>
+          </div>
+        </div>
+
+        {% if not live.ok %}
+          <div class="alert alert-warning">
+            <span class="alert-icon">⚠️</span>
+            <div>
+              <strong>Live monitoring unavailable</strong>
+              {% if live.error %}<br>Error: {{ live.error }}{% endif %}
+            </div>
+          </div>
+        {% else %}
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-icon-large">
+                {% if live.status == 'up' %}
+                  <span style="color: var(--dd-success);">🟢</span>
+                {% elif live.status == 'down' %}
+                  <span style="color: var(--dd-danger);">🔴</span>
+                {% else %}
+                  <span style="color: var(--dd-muted);">⚫</span>
+                {% endif %}
+              </div>
+              <div class="status-label">Connection Status</div>
+              <div class="status-value {% if live.status == 'up' %}status-ok{% elif live.status == 'down' %}status-error{% endif %}">
+                {% if live.status == 'up' %}Online{% elif live.status == 'down' %}Offline{% else %}Unknown{% endif %}
+              </div>
+            </div>
+
+            <div class="status-item">
+              <div class="status-icon-large">🌐</div>
+              <div class="status-label">Current IP</div>
+              <div class="status-value mono">{{ live.live_ip|default('—', true) }}</div>
+            </div>
+
+            <div class="status-item">
+              <div class="status-icon-large">⏱️</div>
+              <div class="status-label">Uptime</div>
+              <div class="status-value">
+                {% if live.uptime_seconds %}
+                  {{ (live.uptime_seconds // 86400) }}d {{ ((live.uptime_seconds % 86400) // 3600) }}h
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="status-item">
+              <div class="status-icon-large">🕐</div>
+              <div class="status-label">Last Polled</div>
+              <div class="status-value">{{ live.last_polled|default('Never', true) }}</div>
+            </div>
+          </div>
+
+          {# IP Drift Alert #}
+          {% if live.live_ip and d.mgmt_ip %}
+            {% if live.live_ip|string == d.mgmt_ip|string %}
+              <div class="alert alert-success">
+                <span class="alert-icon">✅</span>
+                <div>IP addresses match - Configuration is in sync</div>
+              </div>
+            {% else %}
+              <div class="alert alert-warning">
+                <span class="alert-icon">⚠️</span>
+                <div>
+                  <strong>IP Address Drift Detected</strong><br>
+                  Stored: {{ d.mgmt_ip }} → Live: {{ live.live_ip }}
+                </div>
+              </div>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {# Right Column #}
+    <div>
+      {# Notes Card #}
+      <div class="content-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">📝</span>
+            <span>Notes</span>
+          </div>
+        </div>
+        {% if d.notes %}
+          <div class="notes-content">{{ d.notes }}</div>
+        {% else %}
+          <div class="empty-notes">No notes added yet</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ==================== BANDWIDTH GRAPH ==================== #}
+  {% if d.librenms_device_id %}
+    {% set _base = (librenms.base_url or '') %}
+    {% if _base.endswith('/') %}{% set lnms_base = _base[:-1] %}{% else %}{% set lnms_base = _base %}{% endif %}
+    
+    <div class="content-card graph-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">📊</span>
+          <span>Bandwidth Usage ({{ librenms.period|default('-24h', true) }})</span>
+        </div>
+      </div>
+      
+      {% if lnms_base %}
+        <div class="graph-container">
+          <div class="graph-overlay">
+            <span class="graph-badge">📈 Traffic Analysis</span>
+            <span class="graph-badge">⏱️ {{ librenms.period|default('Last 24 Hours', true) }}</span>
+          </div>
+          <img src="{{ lnms_base }}/graph.php?device={{ d.librenms_device_id }}&type=device_bits&from={{ librenms.period|default('-24h', true) }}&to=now&width={{ librenms.img_width|default(900, true) }}&height={{ librenms.img_height|default(220, true) }}&legend=no"
+               alt="Bandwidth graph"
+               referrerpolicy="no-referrer">
+        </div>
+      {% else %}
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠️</span>
+          <div>LibreNMS base URL not configured. Set <code>LIBRENMS_BASE_URL</code> in config.</div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ==================== SYSLOG VIEWER ==================== #}
+  {% if syslog_entries %}
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="card-icon">📜</span>
+        <span>System Logs (Last 50 Entries)</span>
+      </div>
+    </div>
+    
+    <div class="syslog-container">
+      {% for row in syslog_entries %}
+        <div class="log-entry">
+          <span class="log-timestamp">{{ row.timestamp|default('', true) }}</span>
+          
+          {% set pri = (row.priority|default('info', true))|lower %}
+          <span class="log-priority priority-{% if 'err' in pri %}error{% elif 'warn' in pri %}warning{% else %}info{% endif %}">
+            {% if 'err' in pri %}ERROR{% elif 'warn' in pri %}WARN{% else %}INFO{% endif %}
+          </span>
+          
+          {% if row.program %}
+            <span class="log-program">{{ row.program }}:</span>
+          {% endif %}
+          
+          <span class="log-message">{{ row.msg }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ==================== FOOTER ACTIONS ==================== #}
+  <div class="footer-actions">
+    <div>
+      <a class="btn btn-secondary" href="{{ url_for('network.devices') }}">
+        <span>⬅️</span>
+        <span>Back to Devices</span>
+      </a>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a class="btn btn-primary" href="{{ url_for('network.device_edit', id=d.id) }}">
+        <span>✏️</span>
+        <span>Edit Device</span>
+      </a>
+      {% if d.mgmt_url %}
+      <a class="btn btn-secondary" href="{{ d.mgmt_url }}" target="_blank" rel="noopener">
+        <span>🔗</span>
+        <span>Open Management UI</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

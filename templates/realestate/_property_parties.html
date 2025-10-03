@@ -1,0 +1,88 @@
+<section class="kcard" id="property-parties">
+  <div class="kcard-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div class="kcard-title">👥 People & Companies</div>
+    <div style="display:flex;gap:8px;">
+      <a class="kbtn" href="{{ url_for('realestate.add_property_contact', property_id=property.id) }}">➕ Add Person</a>
+      <a class="kbtn kbtn-primary" href="{{ url_for('realestate.add_property_company', property_id=property.id) }}">➕ Add Company</a>
+    </div>
+  </div>
+
+  <div class="kcard-body" style="display:grid;gap:14px;">
+    <!-- People -->
+    <div>
+      <div class="kcard-title" style="font-weight:700;margin-bottom:8px;">People</div>
+      {% if contact_links %}
+        <div style="display:grid;gap:10px;">
+          {% for link in contact_links %}
+            {% set c = contacts_by_id.get(link.contact_id) %}
+            <article class="kmini" style="border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <strong>{{ c.display_name if c else ('Contact #' ~ link.contact_id) }}</strong>
+                  {% if link.role %}<span class="kchip">{{ link.role }}</span>{% endif %}
+                  {% if link.is_primary %}<span class="kchip" style="background:rgba(110,168,255,.18);border-color:rgba(110,168,255,.45);">Primary</span>{% endif %}
+                  {% if link.label %}<span class="kchip" title="{{ link.label }}">{{ link.label }}</span>{% endif %}
+                </div>
+                <div class="khint" style="margin-top:4px;">
+                  {% if c and c.phone %}📞 {{ c.phone }}{% endif %}
+                  {% if c and c.email %}{% if c and c.phone %} · {% endif %}✉️ {{ c.email }}{% endif %}
+                  {% if c and c.company %}{% if (c.phone or c.email) %} · {% endif %}🏢 {{ c.company.name }}{% endif %}
+                </div>
+                {% if link.notes %}<div class="khint" style="margin-top:4px;">{{ link.notes }}</div>{% endif %}
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                <a class="kbtn" href="{{ url_for('rolodex.contact_detail', id=c.id) if c else '#' }}">View</a>
+                <form method="POST" action="{{ url_for('realestate.make_property_contact_primary', property_id=property.id, link_id=link.id) }}">
+                  <button class="kbtn" {% if link.is_primary %}disabled{% endif %}>Make Primary</button>
+                </form>
+                <form method="POST" action="{{ url_for('realestate.remove_property_contact', property_id=property.id, link_id=link.id) }}">
+                  <button class="kbtn kbtn-danger" onclick="return confirm('Remove this person?')">Remove</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="kempty">No people linked.</div>
+      {% endif %}
+    </div>
+
+    <!-- Companies -->
+    <div>
+      <div class="kcard-title" style="font-weight:700;margin-bottom:8px;">Companies</div>
+      {% if company_links %}
+        <div style="display:grid;gap:10px;">
+          {% for link in company_links %}
+            {% set co = companies_by_id.get(link.company_id) %}
+            <article class="kmini" style="border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <strong>{{ co.name if co else ('Company #' ~ link.company_id) }}</strong>
+                  {% if link.role %}<span class="kchip">{{ link.role }}</span>{% endif %}
+                  {% if link.is_primary %}<span class="kchip" style="background:rgba(110,168,255,.18);border-color:rgba(110,168,255,.45);">Primary</span>{% endif %}
+                  {% if link.label %}<span class="kchip" title="{{ link.label }}">{{ link.label }}</span>{% endif %}
+                </div>
+                <div class="khint" style="margin-top:4px;">
+                  {% if co and co.phone %}📞 {{ co.phone }}{% endif %}
+                  {% if co and co.website %}{% if co and co.phone %} · {% endif %}🔗 {{ co.website }}{% endif %}
+                </div>
+                {% if link.notes %}<div class="khint" style="margin-top:4px;">{{ link.notes }}</div>{% endif %}
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                <a class="kbtn" href="{{ url_for('rolodex.company_detail', id=co.id) if co else '#' }}">View</a>
+                <form method="POST" action="{{ url_for('realestate.make_property_company_primary', property_id=property.id, link_id=link.id) }}">
+                  <button class="kbtn" {% if link.is_primary %}disabled{% endif %}>Make Primary</button>
+                </form>
+                <form method="POST" action="{{ url_for('realestate.remove_property_company', property_id=property.id, link_id=link.id) }}">
+                  <button class="kbtn kbtn-danger" onclick="return confirm('Remove this company?')">Remove</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="kempty">No companies linked.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>

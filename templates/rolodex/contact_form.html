@@ -419,5 +419,19 @@
       </a>
     </div>
   </form>
+
+  <!-- Convert to Company action -->
+  {% if mode == 'edit' and contact %}
+  <form method="POST" 
+        action="{{ url_for('rolodex.contact_convert_to_company', id=contact.id) }}" 
+        onsubmit="return confirm('Convert this contact into a company named \"{{ contact.first_name }}\"? This will move property links and archive the contact.');"
+        style="margin-top:20px; text-align:center;">
+    <input type="hidden" name="move_links" value="1">
+    <button class="kbtn kbtn-danger" type="submit"
+            {% if not contact.first_name %}disabled title="First name required to convert"{% endif %}>
+      🚀 Convert to Company
+    </button>
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

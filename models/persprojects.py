@@ -33,6 +33,9 @@ class PersonalTask(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('personal_projects.id'), nullable=False)
     content = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(50))
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high, critical
+    due_date = db.Column(db.Date)                          # add this too if you want to store deadlines
+    notes = db.Column(db.Text)
     completed = db.Column(db.Boolean, default=False)
     order_num = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

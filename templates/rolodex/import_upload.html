@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set active = 'rolodex' %}
+{% block title %}Rolodex · Import{% endblock %}
+{% block header %}Import Contacts{% endblock %}
+
+{% block content %}
+<section class="kcard">
+  <div class="kcard-head"><div class="kcard-title">Upload VCF or CSV</div></div>
+  <div class="kcard-body">
+    <form method="POST" enctype="multipart/form-data">
+      <div class="kfield" style="margin-bottom:12px;">
+        <label for="file">File</label>
+        <input id="file" name="file" type="file" accept=".vcf,.vcard,.csv" required
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02)">
+      </div>
+      <p class="khint">We’ll parse the file, show a preview, and nothing is saved until you confirm.</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <a class="kbtn" href="{{ url_for('rolodex.contacts') }}">Cancel</a>
+        <button class="kbtn kbtn-primary" type="submit">Preview</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
