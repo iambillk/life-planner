@@ -1,6 +1,6 @@
 <!--
 Operations Command Center - Dashboard Template
-Version: 1.0.0
+Version: 1.2.0
 Last Modified: 2024-01-XX
 Author: Billas
 Description: Main dashboard HTML template for Operations Command Center
@@ -8,6 +8,8 @@ Description: Main dashboard HTML template for Operations Command Center
 File: /templates/ops_center/dashboard.html
 
 CHANGELOG:
+- 1.2.0 (2024-01-XX): Added SFP/QSFP side panel for high-speed ports
+- 1.1.0 (2024-01-XX): Added enhanced switch grid with proper state display and legend
 - 1.0.0 (2024-01-XX): Initial implementation with mock display
 -->
 
@@ -43,6 +45,209 @@ CHANGELOG:
   .outlets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .outlet { background: #0a0f1a; border: 2px solid #1a2332; padding: 8px; text-align: center; border-radius: 4px; }
   .outlet.on { border-color: #22c55e; color: #22c55e; }
+  
+  /* Switch grid styles */
+  .switch-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+  
+  .switch-port {
+    aspect-ratio: 1;
+    background: #0a0f1a;
+    border: 2px solid #1a2332;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    padding: 2px;
+  }
+  
+  .switch-port:hover {
+    transform: scale(1.1);
+    z-index: 10;
+    border-color: #6ea8ff !important;
+  }
+  
+  /* Port state styles */
+  .switch-port.disabled {
+    background: #0a0f1a;
+    border-color: #2a3441;
+    opacity: 0.4;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.05) 3px,
+      rgba(255,255,255,0.05) 6px
+    );
+  }
+  
+  .switch-port.no-link {
+    background: rgba(127, 140, 141, 0.1);
+    border-color: #7f8c8d;
+  }
+  
+  .switch-port.active {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+  }
+  
+  .switch-port.error {
+    animation: pulse 2s infinite;
+    border-color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.1) !important;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  
+  .port-number {
+    font-size: 11px;
+    font-weight: bold;
+    color: #e6eaf2;
+    z-index: 1;
+    position: relative;
+    line-height: 1;
+  }
+  
+  .port-name {
+    font-size: 10px;
+    font-weight: bold; 
+    color: #9fb0c8;
+    z-index: 1;
+    position: relative;
+    line-height: 1;
+    margin-top: 2px;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 1px;
+  }
+  
+  /* Legend styles */
+  .switch-legend {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #2a3441;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+  
+  .legend-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .legend-box.disabled {
+    background: #0a0f1a;
+    border-color: #2a3441;
+    opacity: 0.4;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.1) 2px,
+      rgba(255,255,255,0.1) 4px
+    );
+  }
+  
+  .legend-box.no-link {
+    background: rgba(127, 140, 141, 0.1);
+    border-color: #7f8c8d;
+  }
+  
+  .legend-box.active {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+  }
+  
+  .legend-box.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    animation: pulse 2s infinite;
+  }
+
+  /* SFP Panel Styles */
+  .sfp-panel {
+    background: #0a0f1a;
+    border: 1px solid #2a3441;
+    border-radius: 8px;
+    padding: 15px;
+    min-width: 120px;
+  }
+  
+  .sfp-section {
+    margin-bottom: 15px;
+  }
+  
+  .sfp-label {
+    color: #6ea8ff;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  
+  .sfp-port, .qsfp-port {
+    width: 100%;
+    height: 40px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .qsfp-port {
+    height: 50px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 10px,
+      rgba(255,255,255,0.02) 10px,
+      rgba(255,255,255,0.02) 20px
+    );
+  }
+  
+  .port-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #e6eaf2;
+  }
+  
+  .sfp-port-name {
+    font-size: 10px;
+    font-weight: bold; 
+    color: #9fb0c8;
+    margin-top: 2px;
+  }
 </style>
 
 <div class="ops-dash">
@@ -122,6 +327,164 @@ CHANGELOG:
       {% for switch in switches %}
       <div>{{ switch.name }}: {{ switch.active }}/{{ switch.ports }} ports</div>
       {% endfor %}
+    </div>
+  </div>
+
+  <!-- MikroTik Switch Management Section -->
+  <div class="section">
+    <h3>🔌 Switch Management - {{ mikrotik_switch.model }}</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <div>
+        <span style="color: #22c55e;">{{ mikrotik_switch.stats.ports_up }}/{{ mikrotik_switch.stats.total_ports }}</span> ports up
+        {% if mikrotik_switch.stats.ports_errors > 0 %}
+        | <span style="color: #ef4444;">{{ mikrotik_switch.stats.ports_errors }} errors</span>
+        {% endif %}
+      </div>
+      <div style="font-size: 12px; color: #7f8c8d;">
+        Click port for details
+      </div>
+    </div>
+    
+    <!-- Main Container with Grid and Side Panel -->
+    <div style="display: flex; gap: 20px;">
+      <!-- Main 48-Port Grid -->
+      <div style="flex: 1;">
+        <div id="switch-grid" class="switch-grid">
+          {% for port in mikrotik_switch.ports %}
+          {% if port.id <= 48 %}
+          <div class="switch-port {% if not port.enabled %}disabled{% elif port.status == 'up' %}active{% else %}no-link{% endif %} {% if port.has_errors %}error{% endif %}" 
+               data-port-id="{{ port.id }}" 
+               data-port-name="{{ port.name }}"
+               data-enabled="{{ port.enabled|lower }}"
+               data-status="{{ port.status }}"
+               title="{{ port.name }} - {% if not port.enabled %}DISABLED{% elif port.status == 'up' %}ACTIVE{% else %}NO LINK{% endif %}">
+            <span class="port-number">{{ port.id }}</span>
+            <span class="port-name">{{ port.name|truncate(10, True, '') }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      
+      <!-- SFP/QSFP Side Panel -->
+      <div class="sfp-panel">
+        <div class="sfp-section">
+          <div class="sfp-label">SFP+ (10G)</div>
+          {% for port in mikrotik_switch.ports %}
+          {% if port.id >= 49 and port.id <= 52 %}
+          <div class="switch-port sfp-port {% if not port.enabled %}disabled{% elif port.status == 'up' %}active{% else %}no-link{% endif %} {% if port.has_errors %}error{% endif %}" 
+               data-port-id="{{ port.id }}" 
+               data-port-name="{{ port.name }}"
+               data-enabled="{{ port.enabled|lower }}"
+               data-status="{{ port.status }}"
+               title="{{ port.name }} - {% if not port.enabled %}DISABLED{% elif port.status == 'up' %}ACTIVE{% else %}NO LINK{% endif %}">
+            <span class="port-label">SFP{{ port.id - 48 }}</span>
+            <span class="sfp-port-name">{{ port.name|truncate(12, True, '') }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        
+        <div class="sfp-section" style="margin-top: 20px;">
+          <div class="sfp-label">QSFP+ (40G)</div>
+          {% for port in mikrotik_switch.ports %}
+          {% if port.id >= 53 and port.id <= 54 %}
+          <div class="switch-port qsfp-port {% if not port.enabled %}disabled{% elif port.status == 'up' %}active{% else %}no-link{% endif %} {% if port.has_errors %}error{% endif %}" 
+               data-port-id="{{ port.id }}" 
+               data-port-name="{{ port.name }}"
+               data-enabled="{{ port.enabled|lower }}"
+               data-status="{{ port.status }}"
+               title="{{ port.name }} - {% if not port.enabled %}DISABLED{% elif port.status == 'up' %}ACTIVE{% else %}NO LINK{% endif %}">
+            <span class="port-label">Q{{ port.id - 52 }}</span>
+            <span class="sfp-port-name">{{ port.name|truncate(12, True, '') }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Color Legend -->
+    <div class="switch-legend">
+      <div class="legend-item">
+        <div class="legend-box disabled"></div>
+        <span>Disabled</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box no-link"></div>
+        <span>No Link</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box active"></div>
+        <span>Active</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box error"></div>
+        <span>Errors</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Port Detail Modal -->
+<div id="portModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1002; align-items:center; justify-content:center;">
+  <div style="background:#1a2332; border:2px solid #6ea8ff; border-radius:12px; width:600px; max-height:500px; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h3 style="color:#6ea8ff; margin:0;">
+        Port <span id="portNumber">--</span> Details
+      </h3>
+      <button onclick="closePortModal()" style="background:transparent; border:none; color:#6ea8ff; font-size:24px; cursor:pointer;">✖</button>
+    </div>
+    
+    <div id="portContent">
+      <!-- Port Name -->
+      <div style="margin-bottom:20px;">
+        <label style="color:#7f8c8d; display:block; margin-bottom:5px;">Port Name:</label>
+        <div style="display:flex; gap:10px;">
+          <input id="portNameInput" type="text" style="flex:1; background:#0a0f1a; border:1px solid #2a3441; color:#e6eaf2; padding:8px; border-radius:4px;">
+          <button onclick="updatePortName()" style="background:#3498db; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Save</button>
+        </div>
+      </div>
+      
+      <!-- Port Status -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+        <div>
+          <div style="color:#7f8c8d; margin-bottom:5px;">Status:</div>
+          <div id="portStatus" style="font-size:18px; font-weight:bold;">--</div>
+        </div>
+        <div>
+          <div style="color:#7f8c8d; margin-bottom:5px;">Speed:</div>
+          <div id="portSpeed" style="font-size:18px;">--</div>
+        </div>
+      </div>
+      
+      <!-- Bandwidth -->
+      <div style="margin-bottom:20px;">
+        <div style="color:#7f8c8d; margin-bottom:10px;">Current Bandwidth:</div>
+        <div style="background:#0a0f1a; padding:15px; border-radius:4px;">
+          <div>↓ Download: <span id="portRxRate" style="color:#22c55e; font-weight:bold;">-- Mbps</span></div>
+          <div>↑ Upload: <span id="portTxRate" style="color:#3498db; font-weight:bold;">-- Mbps</span></div>
+        </div>
+      </div>
+      
+      <!-- Errors -->
+      <div id="portErrors" style="margin-bottom:20px; display:none;">
+        <div style="color:#ef4444; margin-bottom:10px;">⚠️ Port Errors Detected:</div>
+        <div style="background:rgba(239,68,68,0.1); padding:10px; border-radius:4px; border:1px solid #ef4444;">
+          RX Errors: <span id="portRxErrors">0</span> | 
+          TX Errors: <span id="portTxErrors">0</span>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div style="display:flex; gap:10px;">
+        <button id="portToggleBtn" onclick="togglePort()" style="flex:1; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">
+          Toggle Port
+        </button>
+        <button onclick="refreshPortDetails()" style="background:#7f8c8d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">
+          Refresh
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -284,6 +647,137 @@ document.addEventListener('DOMContentLoaded', function() {
     ipsBox.style.cursor = 'pointer';
     ipsBox.onclick = showIpsDetails;
   }
+});
+
+let currentPortId = null;
+
+// Show port details modal
+function showPortDetails(portId) {
+  currentPortId = portId;
+  document.getElementById('portModal').style.display = 'flex';
+  
+  // Load port details
+  fetch(`/ops/api/switch/port/${portId}`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('portNumber').textContent = data.id;
+      document.getElementById('portNameInput').value = data.name;
+      
+      // Show both admin and operational status
+      let statusText = '';
+      let statusColor = '';
+      
+      if (!data.enabled) {
+        statusText = 'DISABLED';
+        statusColor = '#7f8c8d';
+      } else if (data.status === 'up') {
+        statusText = 'UP';
+        statusColor = '#22c55e';
+      } else {
+        statusText = 'NO LINK';
+        statusColor = '#f59e0b';
+      }
+      
+      document.getElementById('portStatus').textContent = statusText;
+      document.getElementById('portStatus').style.color = statusColor;
+      document.getElementById('portSpeed').textContent = data.speed;
+      document.getElementById('portRxRate').textContent = data.rx_mbps + ' Mbps';
+      document.getElementById('portTxRate').textContent = data.tx_mbps + ' Mbps';
+      
+      // Show errors if any
+      if (data.rx_errors > 0 || data.tx_errors > 0) {
+        document.getElementById('portErrors').style.display = 'block';
+        document.getElementById('portRxErrors').textContent = data.rx_errors;
+        document.getElementById('portTxErrors').textContent = data.tx_errors;
+      } else {
+        document.getElementById('portErrors').style.display = 'none';
+      }
+      
+      // Update toggle button based on admin state
+      const toggleBtn = document.getElementById('portToggleBtn');
+      if (data.enabled) {
+        toggleBtn.textContent = 'Disable Port';
+        toggleBtn.style.background = '#ef4444';
+        toggleBtn.style.color = 'white';
+        toggleBtn.style.border = 'none';
+      } else {
+        toggleBtn.textContent = 'Enable Port';
+        toggleBtn.style.background = '#22c55e';
+        toggleBtn.style.color = 'white';
+        toggleBtn.style.border = 'none';
+      }
+    });
+}
+
+// Close port modal
+function closePortModal() {
+  document.getElementById('portModal').style.display = 'none';
+  currentPortId = null;
+}
+
+// Toggle port state
+function togglePort() {
+  if (!currentPortId) return;
+  
+  if (confirm('Are you sure you want to toggle this port?')) {
+    fetch(`/ops/api/switch/port/${currentPortId}/toggle`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          refreshPortDetails();
+          // Refresh the main grid too
+          location.reload();
+        }
+      });
+  }
+}
+
+// Update port name
+function updatePortName() {
+  if (!currentPortId) return;
+  
+  const newName = document.getElementById('portNameInput').value;
+  
+  fetch(`/ops/api/switch/port/${currentPortId}/name`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert('Port name updated');
+        // Update the grid tooltip
+        const portElement = document.querySelector(`[data-port-id="${currentPortId}"]`);
+        if (portElement) {
+          const status = portElement.dataset.enabled === 'false' ? 'DISABLED' :
+                         portElement.dataset.status === 'up' ? 'ACTIVE' : 'NO LINK';
+          portElement.title = `${newName} - ${status}`;
+          // Also update the port name display
+          const portNameElement = portElement.querySelector('.port-name') || portElement.querySelector('.sfp-port-name');
+          if (portNameElement) {
+            portNameElement.textContent = newName.substring(0, 10);
+          }
+        }
+      }
+    });
+}
+
+// Refresh port details
+function refreshPortDetails() {
+  if (currentPortId) {
+    showPortDetails(currentPortId);
+  }
+}
+
+// Add click handlers to all ports
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.switch-port').forEach(port => {
+    port.addEventListener('click', function() {
+      const portId = parseInt(this.dataset.portId);
+      showPortDetails(portId);
+    });
+  });
 });
 </script>
 

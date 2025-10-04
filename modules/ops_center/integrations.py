@@ -113,7 +113,7 @@ class OpsLibreNMS:
         # Graph dimensions for dashboard
         width = 400
         height = 100
-        time_period = '-2h'  # Last 2 hours
+        time_period = '-6h'  # Last x hours
         
         # WAN port IDs from LibreNMS
         wan1_port_id = 272

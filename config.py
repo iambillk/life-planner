@@ -41,3 +41,8 @@ class Config:
     LIBRENMS_API_TOKEN = "9c323b0b9ce872f007041870b5c2d248"
     LIBRENMS_CACHE_TTL = 60
     LIBRENMS_TIMEOUT = 15
+
+    # MikroTik CRS354 Switch Integration
+    MIKROTIK_HOST = "192.168.1.252"   # Replace XX with your switch IP
+    MIKROTIK_USER = "tchnoc"          # Your RouterOS username
+    MIKROTIK_PASS = "stUP66ey"        # Your RouterOS password
