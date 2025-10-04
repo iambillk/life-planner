@@ -124,6 +124,7 @@ def register_blueprints(app):
     from modules.vault import vault_bp
     from modules.tasks import tasks_bp
     from modules.network.routes import network_bp
+    from modules.ops_center.routes import ops_center_bp
 
         
     app.register_blueprint(daily_bp, url_prefix='/daily')
@@ -140,6 +141,7 @@ def register_blueprints(app):
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(tasks_bp)
     app.register_blueprint(network_bp)
+    app.register_blueprint(ops_center_bp)
 
     # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)

@@ -1,0 +1,290 @@
+<!--
+Operations Command Center - Dashboard Template
+Version: 1.0.0
+Last Modified: 2024-01-XX
+Author: Billas
+Description: Main dashboard HTML template for Operations Command Center
+
+File: /templates/ops_center/dashboard.html
+
+CHANGELOG:
+- 1.0.0 (2024-01-XX): Initial implementation with mock display
+-->
+
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<!-- Inline styles for Sprint 1 - will move to /static/ops_center/css/ later -->
+<style>
+  /* Dashboard container */
+  .ops-dash { padding: 20px; background: #0a0f1a; min-height: 100vh; }
+  
+  /* Header section */
+  .ops-header { display: flex; justify-content: space-between; padding: 15px; background: #1a2332; border: 1px solid #2a3441; border-radius: 8px; margin-bottom: 20px; }
+  .ops-title { font-size: 24px; font-weight: 900; color: #6ea8ff; text-transform: uppercase; }
+  .status { color: #22c55e; }
+  
+  /* Content sections */
+  .section { background: #0f1823; border: 1px solid #2a3441; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+  .section h3 { color: #6ea8ff; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; }
+  
+  /* WAN display */
+  .wan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .wan-card { background: #0a0f1a; padding: 10px; border-radius: 4px; }
+  
+  /* Alerts display */
+  .alerts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .alert-box { background: #0a0f1a; padding: 10px; border-radius: 4px; text-align: center; }
+  .alert-count { font-size: 24px; font-weight: bold; color: #ef4444; }
+  
+  /* PDU outlets display */
+  .outlets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .outlet { background: #0a0f1a; border: 2px solid #1a2332; padding: 8px; text-align: center; border-radius: 4px; }
+  .outlet.on { border-color: #22c55e; color: #22c55e; }
+</style>
+
+<div class="ops-dash">
+  <!-- Header Bar with System Status -->
+  <div class="ops-header">
+    <div class="ops-title">🎯 OPERATIONS COMMAND CENTER</div>
+    <div>Status: <span class="status">{{ system_status }}</span> | Last Refresh: <span id="last-refresh">{{ last_refresh }}</span></div>
+  </div>
+
+  <div class="section">
+  <h3>🌐 WAN Bandwidth</h3>
+  <div class="wan-grid">
+    <!-- WAN 1 -->
+    <div class="wan-card">
+      <strong>Spectrum WAN 1 - {{ wan1.port_name }}</strong><br>
+      <div style="margin: 10px 0;">
+        ↓ <span id="wan1-down">{{ wan1.download_mbps }}</span> Mbps | 
+        ↑ <span id="wan1-up">{{ wan1.upload_mbps }}</span> Mbps<br>
+        Status: <span style="color: {% if wan1.status == 'UP' %}#22c55e{% else %}#ef4444{% endif %}">{{ wan1.status }}</span>
+      </div>
+      <!-- LibreNMS Graph -->
+      <img src="{{ wan1_graph_url }}" alt="WAN1 Bandwidth Graph" style="width: 100%; height: auto; border-radius: 4px; margin-top: 10px; background: #e8e8e8; padding: 4px;">
+    </div>
+    
+    <!-- WAN 2 -->
+    <div class="wan-card">
+      <strong>Frontier WAN 2 - {{ wan2.port_name }}</strong><br>
+      <div style="margin: 10px 0;">
+        ↓ <span id="wan2-down">{{ wan2.download_mbps }}</span> Mbps | 
+        ↑ <span id="wan2-up">{{ wan2.upload_mbps }}</span> Mbps<br>
+        Status: <span style="color: {% if wan2.status == 'UP' %}#22c55e{% else %}#ef4444{% endif %}">{{ wan2.status }}</span>
+      </div>
+      <!-- LibreNMS Graph -->
+      <img src="{{ wan2_graph_url }}" alt="WAN2 Bandwidth Graph" style="width: 100%; height: auto; border-radius: 4px; margin-top: 10px; background: #e8e8e8; padding: 4px;">
+    </div>
+  </div>
+</div>
+
+  <!-- Alerts Section -->
+  <div class="section">
+    <h3>🚨 Alerts</h3>
+    <div class="alerts-grid">
+      <div class="alert-box">
+        <div class="alert-count" id="ips-count">{{ alerts.ips_count }}</div>
+        <div>IPS Alerts (Last 24h)</div>
+        <small>{{ alerts.ips_latest }}</small>
+      </div>
+      <div class="alert-box">
+        <div class="alert-count" style="color:#f59e0b;">{{ alerts.firewalla_count }}</div>
+        <div>Firewalla</div>
+        <small>{{ alerts.firewalla_latest }}</small>
+      </div>
+      <div class="alert-box">
+        <div class="alert-count" style="color:#22c55e;">{{ alerts.syslogs_count }}</div>
+        <div>Sys Logs</div>
+        <small>All Clear</small>
+      </div>
+      <div class="alert-box">
+        <div style="color:#6ea8ff;">WAN1</div>
+        <div>Hostmon</div>
+        <small>{{ alerts.hostmon_downtime }}</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Power & Control Section -->
+  <div class="section">
+    <h3>⚡ Power & Control</h3>
+    <div>{{ pdu.name }} - <span id="pdu-amps">{{ pdu.current_amps }}</span>A / {{ pdu.max_amps }}A</div>
+    <div class="outlets" style="margin-top:10px;">
+      {% for outlet in pdu.outlets %}
+      <div class="outlet {{ 'on' if outlet.on else '' }}">{{ outlet.id }}</div>
+      {% endfor %}
+    </div>
+    <!-- Switch status display -->
+    <div style="margin-top:20px;">
+      {% for switch in switches %}
+      <div>{{ switch.name }}: {{ switch.active }}/{{ switch.ports }} ports</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- IPS Alerts Modal -->
+<div id="ipsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#1a2332; border:2px solid #2a3441; border-radius:12px; width:90%; max-width:800px; max-height:80vh; overflow:auto; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="color:#ef4444; margin:0;">🚨 IPS Alerts - Live Feed</h2>
+      <button onclick="closeIpsModal()" style="background:transparent; border:none; color:#6ea8ff; font-size:24px; cursor:pointer;">✖</button>
+    </div>
+    <div id="ipsModalContent" style="font-family:monospace; font-size:12px; color:#9fb0c8;">
+      Loading...
+    </div>
+  </div>
+</div>
+
+<!-- WHOIS Lookup Modal -->
+<div id="whoisModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1001; align-items:center; justify-content:center;">
+  <div style="background:#1a2332; border:2px solid #6ea8ff; border-radius:12px; width:500px; max-height:400px; overflow:auto; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h3 style="color:#6ea8ff; margin:0;">🔍 IP Intelligence</h3>
+      <button onclick="closeWhoisModal()" style="background:transparent; border:none; color:#6ea8ff; font-size:20px; cursor:pointer;">✖</button>
+    </div>
+    <div id="whoisContent">Loading...</div>
+  </div>
+</div>
+
+<!-- JavaScript for all functionality -->
+<script>
+// Auto-refresh every 30 seconds
+setInterval(function() {
+  fetch('/ops/api/refresh')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('last-refresh').textContent = data.timestamp;
+      document.getElementById('wan1-down').textContent = data.wan1_down;
+      document.getElementById('wan1-up').textContent = data.wan1_up;
+      document.getElementById('wan2-down').textContent = data.wan2_down;
+      document.getElementById('wan2-up').textContent = data.wan2_up;
+      document.getElementById('ips-count').textContent = data.ips_count;
+      document.getElementById('pdu-amps').textContent = data.pdu_amps;
+    });
+}, 30000);
+
+// Show IPS details with analytics
+function showIpsDetails() {
+  document.getElementById('ipsModal').style.display = 'flex';
+  
+  fetch('/ops/api/ips-details')
+    .then(r => r.json())
+    .then(data => {
+      let content = '';
+      
+      if (data.analytics) {
+        content += `
+        <div style="background:#0f1823; border:2px solid #ef4444; border-radius:8px; padding:15px; margin-bottom:20px;">
+          <h3 style="color:#ef4444; margin:0 0 15px 0;">📊 24-Hour Threat Analytics</h3>
+          
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-bottom:15px;">
+            <div style="text-align:center;">
+              <div style="font-size:28px; color:#ef4444; font-weight:bold;">${data.analytics['24hr_total']}</div>
+              <div style="color:#6ea8ff; font-size:12px;">Total Blocks</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:28px; color:#f59e0b; font-weight:bold;">${data.analytics.hourly_rate}</div>
+              <div style="color:#6ea8ff; font-size:12px;">Per Hour</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:28px; color:#22c55e; font-weight:bold;">${data.analytics.top_attackers ? data.analytics.top_attackers.length : 0}</div>
+              <div style="color:#6ea8ff; font-size:12px;">Unique Attackers</div>
+            </div>
+          </div>
+          
+          <div style="margin-bottom:15px;">
+            <h4 style="color:#6ea8ff; margin:0 0 8px 0;">Top Attackers:</h4>
+            ${data.analytics.top_attackers && data.analytics.top_attackers.length > 0 ? 
+              data.analytics.top_attackers.map(([ip, count]) => 
+                `<div style="display:flex; justify-content:space-between; padding:4px; background:#0a0f1a; margin:2px 0; border-radius:4px;">
+                  <span style="color:#fff; font-family:monospace; cursor:pointer; text-decoration:underline;" onclick="lookupIP('${ip}')">${ip}</span>
+                  <span style="color:#ef4444;">${count} attacks</span>
+                </div>`
+              ).join('') : '<div style="color:#9fb0c8;">No attackers detected</div>'}
+          </div>
+          
+          <div>
+            <h4 style="color:#6ea8ff; margin:0 0 8px 0;">Attack Types:</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${data.analytics.attack_types ? Object.entries(data.analytics.attack_types).map(([type, count]) =>
+                `<span style="background:#1a2332; padding:4px 8px; border-radius:4px; font-size:12px;">
+                  ${type}: <span style="color:#f59e0b;">${count}</span>
+                </span>`
+              ).join('') : '<span style="color:#9fb0c8;">No attack types</span>'}
+            </div>
+          </div>
+        </div>`;
+      }
+      
+      content += '<h3 style="color:#6ea8ff; margin:20px 0 10px 0;">🔍 Recent IPS Alerts</h3>';
+      
+      if (data.alerts && data.alerts.length > 0) {
+        data.alerts.forEach(alert => {
+          content += `<div style="background:#0a0f1a; padding:10px; margin-bottom:10px; border-left:3px solid #ef4444; border-radius:4px;">
+            <div style="color:#6ea8ff; font-size:10px;">${alert.timestamp}</div>
+            <div style="color:#fff; margin-top:5px; word-wrap:break-word; font-size:11px;">${alert.message}</div>
+          </div>`;
+        });
+      } else {
+        content = '<div style="color:#22c55e;">No IPS alerts in recent logs</div>';
+      }
+      
+      document.getElementById('ipsModalContent').innerHTML = content;
+    });
+}
+
+// IP WHOIS lookup using local whois.exe
+function lookupIP(ip) {
+  document.getElementById('whoisModal').style.display = 'flex';
+  document.getElementById('whoisContent').innerHTML = 'Looking up ' + ip + '...';
+  
+  fetch('/ops/api/whois/' + ip)
+    .then(r => r.json())
+    .then(data => {
+      let content = `
+        <div style="background:#0a0f1a; border:1px solid #2a3441; border-radius:8px; padding:15px;">
+          <div style="font-size:20px; color:#ef4444; font-family:monospace; margin-bottom:15px;">${data.ip}</div>
+          <div style="display:grid; gap:8px; font-size:12px;">
+            <div><span style="color:#6ea8ff;">Organization:</span> <span style="color:#fff;">${data.org || 'Unknown'}</span></div>
+            <div><span style="color:#6ea8ff;">Country:</span> <span style="color:#fff;">${data.country || 'Unknown'}</span></div>
+            <div><span style="color:#6ea8ff;">Network:</span> <span style="color:#fff;">${data.network || 'Unknown'}</span></div>
+            <div><span style="color:#6ea8ff;">CIDR:</span> <span style="color:#fff; font-family:monospace;">${data.cidr || 'Unknown'}</span></div>
+            ${data.contact && data.contact !== 'Unknown' ? `<div><span style="color:#6ea8ff;">Contact:</span> <span style="color:#fff;">${data.contact}</span></div>` : ''}
+            ${data.address && data.address !== 'Unknown' ? `<div><span style="color:#6ea8ff;">Address:</span> <span style="color:#fff;">${data.address}</span></div>` : ''}
+            ${data.abuse_email && data.abuse_email !== 'Unknown' ? `<div><span style="color:#6ea8ff;">Abuse Email:</span> <span style="color:#ef4444;">${data.abuse_email}</span></div>` : ''}
+            ${data.phone && data.phone !== 'Unknown' ? `<div><span style="color:#6ea8ff;">Phone:</span> <span style="color:#fff;">${data.phone}</span></div>` : ''}
+          </div>
+        </div>
+      `;
+      document.getElementById('whoisContent').innerHTML = content;
+    })
+    .catch(err => {
+      document.getElementById('whoisContent').innerHTML = '<div style="color:#ef4444;">Error performing lookup</div>';
+    });
+}
+
+// Modal control functions
+function closeIpsModal() {
+  document.getElementById('ipsModal').style.display = 'none';
+}
+
+function closeWhoisModal() {
+  document.getElementById('whoisModal').style.display = 'none';
+}
+
+// Make IPS alert box clickable
+document.addEventListener('DOMContentLoaded', function() {
+  const alertBoxes = document.querySelectorAll('.alert-box');
+  if (alertBoxes.length > 0) {
+    const ipsBox = alertBoxes[0];
+    ipsBox.style.cursor = 'pointer';
+    ipsBox.onclick = showIpsDetails;
+  }
+});
+</script>
+
+{% endblock %}
