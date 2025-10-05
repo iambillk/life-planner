@@ -1,13 +1,14 @@
 <!--
 Operations Command Center - Dashboard Template
-Version: 1.2.0
-Last Modified: 2024-01-XX
+Version: 1.3.0
+Last Modified: 2025-01-XX
 Author: Billas
 Description: Main dashboard HTML template for Operations Command Center
 
 File: /templates/ops_center/dashboard.html
 
 CHANGELOG:
+- 1.3.0 (2025-01-XX): Added real DLI PDU controls replacing mock data
 - 1.2.0 (2024-01-XX): Added SFP/QSFP side panel for high-speed ports
 - 1.1.0 (2024-01-XX): Added enhanced switch grid with proper state display and legend
 - 1.0.0 (2024-01-XX): Initial implementation with mock display
@@ -41,10 +42,86 @@ CHANGELOG:
   .alert-box { background: #0a0f1a; padding: 10px; border-radius: 4px; text-align: center; }
   .alert-count { font-size: 24px; font-weight: bold; color: #ef4444; }
   
-  /* PDU outlets display */
-  .outlets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .outlet { background: #0a0f1a; border: 2px solid #1a2332; padding: 8px; text-align: center; border-radius: 4px; }
-  .outlet.on { border-color: #22c55e; color: #22c55e; }
+  /* PDU outlets display - UPDATED FOR DLI */
+   .outlets { 
+     display: grid; 
+     grid-template-columns: repeat(4, 1fr); 
+     gap: 10px; 
+   }
+   
+   .outlet-control {
+     position: relative;
+     /* Add padding top to create hover area above outlet */
+     padding-top: 25px;
+     margin-top: -25px;
+   }
+   
+   /* Keep actions visible when hovering over the control area */
+   .outlet-control:hover .outlet-actions {
+     display: block !important;
+   }
+   
+   .outlet { 
+     background: #0a0f1a; 
+     border: 2px solid #1a2332; 
+     padding: 10px 5px; 
+     text-align: center; 
+     border-radius: 4px;
+     transition: all 0.3s;
+     min-height: 60px;
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+     align-items: center;
+     position: relative;  /* Add this */
+   }
+   
+   .outlet.on { 
+     border-color: #22c55e; 
+     background: rgba(34, 197, 94, 0.1);
+     color: #22c55e; 
+   }
+   
+   .outlet.off {
+     border-color: #7f8c8d;
+     color: #7f8c8d;
+   }
+   
+   .outlet.locked {
+     opacity: 0.6;
+     background-image: repeating-linear-gradient(
+       45deg,
+       transparent,
+       transparent 5px,
+       rgba(255,255,255,0.03) 5px,
+       rgba(255,255,255,0.03) 10px
+     );
+   }
+   
+   .outlet:hover:not(.locked) {
+     transform: scale(1.05);
+     border-color: #6ea8ff !important;
+   }
+   
+   .outlet-actions {
+     display: none;
+     position: absolute;
+     top: 0;  /* Changed from -25px to 0 */
+     right: 0;
+     background: #1a2332;
+     padding: 4px 8px;  /* Increased padding */
+     border-radius: 3px;
+     font-size: 11px;
+     z-index: 100;
+     border: 1px solid #2a3441;  /* Add border for visibility */
+     white-space: nowrap;  /* Prevent wrapping */
+   }
+   
+   /* Make action links easier to click */
+   .outlet-actions a {
+     padding: 2px 5px;  /* Add padding to links */
+     display: inline-block;  /* Make clickable area bigger */
+   }
   
   /* Switch grid styles */
   .switch-grid {
@@ -313,16 +390,78 @@ CHANGELOG:
     </div>
   </div>
 
-  <!-- Power & Control Section -->
+  <!-- Power & Control Section - UPDATED FOR DLI PDU -->
   <div class="section">
     <h3>⚡ Power & Control</h3>
-    <div>{{ pdu.name }} - <span id="pdu-amps">{{ pdu.current_amps }}</span>A / {{ pdu.max_amps }}A</div>
+    
+    <!-- PDU Header with Power Stats -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <div>
+        <strong>{{ pdu.name }}</strong> - 
+        <span id="pdu-amps" style="color: {% if pdu.current_amps > 12 %}#ef4444{% elif pdu.current_amps > 10 %}#f59e0b{% else %}#22c55e{% endif %}">
+          {{ pdu.current_amps|round(1) }}
+        </span>A / {{ pdu.max_amps }}A
+        <span style="color: #7f8c8d; font-size: 12px;">
+          ({{ ((pdu.current_amps / pdu.max_amps * 100)|round(0))|int }}% load)
+        </span>
+      </div>
+      <div style="font-size: 12px; color: #7f8c8d;">
+        {{ pdu.voltage }}V | {{ pdu.watts|round(0)|int }}W
+      </div>
+    </div>
+    
+    <!-- Outlet Grid -->
     <div class="outlets" style="margin-top:10px;">
       {% for outlet in pdu.outlets %}
-      <div class="outlet {{ 'on' if outlet.on else '' }}">{{ outlet.id }}</div>
+      <div class="outlet-control" 
+           data-outlet-id="{{ outlet.id }}"
+           data-locked="{{ outlet.locked|lower }}">
+        
+        <!-- Outlet Box -->
+        <div class="outlet {{ 'on' if outlet.on else 'off' }} {{ 'locked' if outlet.locked else '' }}"
+             onclick="toggleOutlet({{ outlet.id }})"
+             style="cursor: {{ 'not-allowed' if outlet.locked else 'pointer' }};">
+          
+          <!-- Outlet Number -->
+          <div style="font-size: 16px; font-weight: bold;">{{ outlet.id }}</div>
+          
+          <!-- Outlet Name -->
+          <div style="font-size: 10px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ outlet.name|truncate(12, True, '') }}
+          </div>
+          
+          <!-- Lock indicator -->
+          {% if outlet.locked %}
+          <div style="position: absolute; top: 2px; right: 2px; font-size: 10px;">🔒</div>
+          {% endif %}
+        </div>
+        
+        <!-- Quick Actions (shown on hover) -->
+        {% if not outlet.locked %}
+        <div class="outlet-actions">
+          <a href="#" onclick="event.preventDefault(); cycleOutlet({{ outlet.id }})" style="color: #f59e0b; margin: 0 5px;" title="Cycle">⟲</a>
+          <a href="#" onclick="event.preventDefault(); renameOutlet({{ outlet.id }}, '{{ outlet.name }}')" style="color: #6ea8ff;" title="Rename">✏</a>
+        </div>
+        {% endif %}
+      </div>
       {% endfor %}
     </div>
-    <!-- Switch status display -->
+    
+    <!-- Legend and Controls -->
+    <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 10px; border-top: 1px solid #2a3441;">
+      <div style="display: flex; gap: 20px; font-size: 12px; color: #7f8c8d;">
+        <span><span style="color: #22c55e;">●</span> On</span>
+        <span><span style="color: #7f8c8d;">●</span> Off</span>
+        <span>🔒 Locked</span>
+      </div>
+      <div>
+        <button onclick="refreshPDU()" style="background: #1a2332; border: 1px solid #2a3441; color: #6ea8ff; padding: 3px 10px; border-radius: 3px; font-size: 12px; cursor: pointer;">
+          Refresh
+        </button>
+      </div>
+    </div>
+    
+    <!-- Switch status display (keeping legacy display) -->
     <div style="margin-top:20px;">
       {% for switch in switches %}
       <div>{{ switch.name }}: {{ switch.active }}/{{ switch.ports }} ports</div>
@@ -530,6 +669,142 @@ setInterval(function() {
     });
 }, 30000);
 
+// ============== PDU Control Functions ==============
+
+// Toggle outlet on/off
+function toggleOutlet(outletId) {
+  // Get outlet element
+  const outletEl = document.querySelector(`[data-outlet-id="${outletId}"]`);
+  if (outletEl.dataset.locked === 'true') {
+    alert('This outlet is locked and cannot be changed.');
+    return;
+  }
+  
+  if (!confirm(`Toggle outlet ${outletId}?`)) {
+    return;
+  }
+  
+  fetch(`/ops/api/pdu/outlet/${outletId}/toggle`, { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Update UI
+      const outlet = outletEl.querySelector('.outlet');
+      if (data.new_state === 'on') {
+        outlet.classList.remove('off');
+        outlet.classList.add('on');
+      } else {
+        outlet.classList.remove('on');
+        outlet.classList.add('off');
+      }
+      console.log(`Outlet ${outletId} turned ${data.new_state}`);
+    } else {
+      alert(`Failed to toggle outlet: ${data.error || 'Unknown error'}`);
+    }
+  })
+  .catch(err => {
+    alert(`Error: ${err.message}`);
+  });
+}
+
+// Cycle outlet (off, wait, on)
+function cycleOutlet(outletId) {
+  if (!confirm(`Cycle outlet ${outletId}? This will turn it OFF then back ON.`)) {
+    return;
+  }
+  
+  fetch(`/ops/api/pdu/outlet/${outletId}/cycle`, { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      alert(`Outlet ${outletId} is cycling...`);
+      // Refresh after a few seconds
+      setTimeout(refreshPDU, 5000);
+    } else {
+      alert(`Failed to cycle outlet: ${data.error || 'Unknown error'}`);
+    }
+  });
+}
+
+// Rename outlet
+function renameOutlet(outletId, currentName) {
+  const newName = prompt(`Rename outlet ${outletId}:`, currentName);
+  if (!newName || newName === currentName) {
+    return;
+  }
+  
+  fetch(`/ops/api/pdu/outlet/${outletId}/name`, { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Update UI
+      const outletEl = document.querySelector(`[data-outlet-id="${outletId}"] .outlet div:nth-child(2)`);
+      if (outletEl) {
+        outletEl.textContent = newName.substring(0, 12);
+      }
+      console.log(`Outlet ${outletId} renamed to "${newName}"`);
+    } else {
+      alert(`Failed to rename outlet: ${data.error || 'Unknown error'}`);
+    }
+  });
+}
+
+// Refresh PDU status
+function refreshPDU() {
+  fetch('/ops/api/pdu/outlets/all')
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        // Update outlet states
+        data.outlets.forEach(outlet => {
+          const outletEl = document.querySelector(`[data-outlet-id="${outlet.id}"] .outlet`);
+          if (outletEl) {
+            if (outlet.state) {
+              outletEl.classList.remove('off');
+              outletEl.classList.add('on');
+            } else {
+              outletEl.classList.remove('on');
+              outletEl.classList.add('off');
+            }
+          }
+        });
+        
+        // Update power stats
+        if (data.power) {
+          const ampsEl = document.getElementById('pdu-amps');
+          if (ampsEl) {
+            ampsEl.textContent = data.power.current_amps.toFixed(1);
+            // Update color based on load
+            if (data.power.current_amps > 12) {
+              ampsEl.style.color = '#ef4444';
+            } else if (data.power.current_amps > 10) {
+              ampsEl.style.color = '#f59e0b';
+            } else {
+              ampsEl.style.color = '#22c55e';
+            }
+          }
+        }
+        
+        console.log('PDU status refreshed');
+      }
+    })
+    .catch(err => {
+      console.error('Failed to refresh PDU:', err);
+    });
+}
+
+// ============== IPS Alert Functions ==============
+
 // Show IPS details with analytics
 function showIpsDetails() {
   document.getElementById('ipsModal').style.display = 'flex';
@@ -639,15 +914,7 @@ function closeWhoisModal() {
   document.getElementById('whoisModal').style.display = 'none';
 }
 
-// Make IPS alert box clickable
-document.addEventListener('DOMContentLoaded', function() {
-  const alertBoxes = document.querySelectorAll('.alert-box');
-  if (alertBoxes.length > 0) {
-    const ipsBox = alertBoxes[0];
-    ipsBox.style.cursor = 'pointer';
-    ipsBox.onclick = showIpsDetails;
-  }
-});
+// ============== Switch Port Functions ==============
 
 let currentPortId = null;
 
@@ -770,12 +1037,35 @@ function refreshPortDetails() {
   }
 }
 
-// Add click handlers to all ports
+// Add click handlers to all elements on page load
 document.addEventListener('DOMContentLoaded', function() {
+  // IPS alert box clickable
+  const alertBoxes = document.querySelectorAll('.alert-box');
+  if (alertBoxes.length > 0) {
+    const ipsBox = alertBoxes[0];
+    ipsBox.style.cursor = 'pointer';
+    ipsBox.onclick = showIpsDetails;
+  }
+  
+  // Switch port click handlers
   document.querySelectorAll('.switch-port').forEach(port => {
     port.addEventListener('click', function() {
       const portId = parseInt(this.dataset.portId);
       showPortDetails(portId);
+    });
+  });
+  
+  // PDU outlet hover effects
+  document.querySelectorAll('.outlet-control').forEach(el => {
+    el.addEventListener('mouseenter', function() {
+      if (this.dataset.locked !== 'true') {
+        const actions = this.querySelector('.outlet-actions');
+        if (actions) actions.style.display = 'block';
+      }
+    });
+    el.addEventListener('mouseleave', function() {
+      const actions = this.querySelector('.outlet-actions');
+      if (actions) actions.style.display = 'none';
     });
   });
 });

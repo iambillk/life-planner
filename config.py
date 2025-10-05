@@ -46,3 +46,39 @@ class Config:
     MIKROTIK_HOST = "192.168.1.252"   # Replace XX with your switch IP
     MIKROTIK_USER = "tchnoc"          # Your RouterOS username
     MIKROTIK_PASS = "stUP66ey"        # Your RouterOS password
+
+    # DLI Web Power Switch Integration
+    # Version: 1.0.0
+    # Added: 2025-04-10
+    # Description: Configuration for DLI PDU REST API integration
+    # Replaces planned APC unit with more flexible REST-based solution
+    
+    # Primary DLI PDU Configuration
+    DLI_PDU_HOST = "192.168.1.238"          # Replace with your DLI PDU IP
+    DLI_PDU_USER = "admin"                  # DLI admin username
+    DLI_PDU_PASS = "stUP66ey"                   # DLI admin password
+    DLI_PDU_NAME = "DLI-PDU-1"              # Friendly name for dashboard
+    
+    # DLI PDU Settings
+    DLI_PDU_TIMEOUT = 10                    # API timeout in seconds
+    DLI_PDU_CACHE_TTL = 5                   # Cache TTL in seconds (short for real-time)
+    DLI_PDU_MAX_AMPS = 15                   # Maximum amperage for your PDU model
+    DLI_PDU_VERIFY_SSL = False              # Set to True if using HTTPS with valid cert
+    
+    # DLI PDU Features
+    DLI_PDU_ENABLE_AUTOPING = True          # Enable AutoPing monitoring features
+    DLI_PDU_ENABLE_SCRIPTING = True         # Enable Lua scripting features
+    DLI_PDU_ENABLE_SCHEDULING = True        # Enable scheduled operations
+    
+    # Outlet Configuration (customize based on your setup)
+    DLI_PDU_OUTLET_COUNT = 8                # Number of outlets on your PDU
+    DLI_PDU_OUTLET_NAMES = {                # Custom outlet names (optional)
+        0: "OPNsense Firewall",
+        1: "MikroTik Switch",
+        2: "Spectrum Modem",
+        3: "Frontier Router",
+        4: "UniFi AP",
+        5: "NAS Server",
+        6: "Lab Equipment",
+        7: "Spare/Testing"
+    }
