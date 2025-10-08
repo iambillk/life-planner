@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.title }} - Knowledge Base{% endblock %}
+
+{% block header %}{{ item.category.icon if item.category else '📄' }} {{ item.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .item-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .item-header {
+    background: linear-gradient(135deg, rgba(110,168,255,0.15), rgba(110,168,255,0.05));
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  .pin-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  .item-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .item-icon {
+    font-size: 40px;
+  }
+
+  .item-description {
+    color: var(--admin-muted);
+    font-size: 1.05rem;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(110,168,255,0.2);
+  }
+
+  .meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--admin-text);
+  }
+
+  .action-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(110,168,255,0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    background: var(--admin-panel);
+    border-color: var(--admin-primary);
+  }
+
+  .btn-success {
+    background: var(--admin-success);
+    border-color: var(--admin-success);
+    color: white;
+  }
+
+  .btn-success:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+  }
+
+  .btn-warning {
+    background: var(--admin-warning);
+    border-color: var(--admin-warning);
+    color: white;
+  }
+
+  .btn-warning:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+  }
+
+  .btn-danger {
+    background: transparent;
+    border-color: var(--admin-danger);
+    color: var(--admin-danger);
+  }
+
+  .btn-danger:hover {
+    background: var(--admin-danger);
+    color: white;
+  }
+
+  .content-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    box-shadow: var(--admin-shadow);
+    margin-bottom: 20px;
+  }
+
+  .content-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .content-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin: 0;
+  }
+
+  .content-box {
+    background: #000;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #fff;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 600px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  .content-box::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .content-box::-webkit-scrollbar-track {
+    background: var(--admin-panel);
+    border-radius: 4px;
+  }
+
+  .content-box::-webkit-scrollbar-thumb {
+    background: var(--admin-line);
+    border-radius: 4px;
+  }
+
+  .content-box::-webkit-scrollbar-thumb:hover {
+    background: var(--admin-primary);
+  }
+
+  .file-info {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .file-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .file-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .file-info-label {
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .file-info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+  }
+
+  .url-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .url-link:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: var(--admin-primary);
+    transform: translateX(4px);
+  }
+
+  .tags-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag-pill {
+    padding: 8px 16px;
+    background: rgba(110,168,255,0.1);
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: 16px;
+    font-size: 0.9rem;
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .tag-pill:hover {
+    background: rgba(110,168,255,0.2);
+    transform: translateY(-2px);
+  }
+
+  .related-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .related-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--admin-text);
+    transition: all 0.2s;
+  }
+
+  .related-item:hover {
+    background: rgba(110,168,255,0.05);
+    border-color: var(--admin-primary);
+    transform: translateX(4px);
+  }
+
+  .related-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .related-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .related-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .related-meta {
+    font-size: 0.8rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    color: var(--admin-muted);
+  }
+
+  .copy-btn {
+    float: right;
+    padding: 6px 12px;
+    background: var(--admin-primary);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: #5a96e8;
+  }
+
+  @media (max-width: 768px) {
+    .item-title {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .action-bar {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .file-info-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="item-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{{ url_for('admin_tools.knowledge_base') }}">Knowledge Base</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>{{ item.title }}</span>
+  </div>
+
+  <!-- Header -->
+  <div class="item-header">
+    {% if item.is_pinned %}
+    <span class="pin-badge">📌</span>
+    {% endif %}
+
+    <div class="item-title">
+      <span class="item-icon">
+        {% if item.content_type == 'file' %}
+          {{ get_file_icon(item.file_path) if item.file_path else '📄' }}
+        {% elif item.content_type == 'url' %}
+          🔗
+        {% else %}
+          📝
+        {% endif %}
+      </span>
+      <span>{{ item.title }}</span>
+    </div>
+
+    {% if item.description %}
+    <p class="item-description">{{ item.description }}</p>
+    {% endif %}
+
+    <div class="meta-bar">
+      {% if item.category %}
+      <span class="meta-badge">
+        <span>{{ item.category.icon }}</span>
+        <span>{{ item.category.name }}</span>
+      </span>
+      {% endif %}
+
+      <span class="meta-badge">
+        <span>📅</span>
+        <span>Created {{ item.created_at.strftime('%Y-%m-%d') }}</span>
+      </span>
+
+      <span class="meta-badge">
+        <span>🔄</span>
+        <span>Updated {{ item.updated_at.strftime('%Y-%m-%d') }}</span>
+      </span>
+
+      <span class="meta-badge">
+        <span>👁️</span>
+        <span>{{ item.access_count }} views</span>
+      </span>
+
+      {% if item.version > 1 %}
+      <span class="meta-badge">
+        <span>📦</span>
+        <span>Version {{ item.version }}</span>
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-bar">
+    {% if item.content_type == 'file' %}
+    <a href="{{ url_for('admin_tools.download_knowledge_file', item_id=item.id) }}" class="btn btn-success">
+      <span>⬇️</span>
+      <span>Download File</span>
+    </a>
+    {% endif %}
+
+    <a href="{{ url_for('admin_tools.edit_knowledge_item', item_id=item.id) }}" class="btn btn-primary">
+      <span>✏️</span>
+      <span>Edit</span>
+    </a>
+
+    <form method="POST" action="{{ url_for('admin_tools.toggle_pin', item_id=item.id) }}" style="display: inline;">
+      <button type="submit" class="btn btn-warning">
+        <span>{{ '📌' if not item.is_pinned else '📍' }}</span>
+        <span>{{ 'Pin Item' if not item.is_pinned else 'Unpin Item' }}</span>
+      </button>
+    </form>
+
+    <a href="{{ url_for('admin_tools.knowledge_base') }}" class="btn btn-secondary">
+      <span>← Back</span>
+    </a>
+
+    <form method="POST" action="{{ url_for('admin_tools.delete_knowledge_item', item_id=item.id) }}" 
+          style="display: inline; margin-left: auto;"
+          onsubmit="return confirm('Are you sure you want to delete this item? This cannot be undone.')">
+      <button type="submit" class="btn btn-danger">
+        <span>🗑️</span>
+        <span>Delete</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Content -->
+  <div class="content-card">
+    <div class="content-header">
+      <span style="font-size: 24px;">
+        {% if item.content_type == 'file' %}📎
+        {% elif item.content_type == 'url' %}🔗
+        {% else %}📄{% endif %}
+      </span>
+      <h2 class="content-title">Content</h2>
+      {% if item.content_type == 'text' %}
+      <button class="copy-btn" onclick="copyContent()">📋 Copy</button>
+      {% endif %}
+    </div>
+
+    {% if item.content_type == 'text' %}
+      <!-- Text Content -->
+      <div class="content-box" id="content-to-copy">{{ item.content_text }}</div>
+
+    {% elif item.content_type == 'file' %}
+      <!-- File Info -->
+      <div class="file-info">
+        <div class="file-info-grid">
+          <div class="file-info-item">
+            <div class="file-info-label">Filename</div>
+            <div class="file-info-value">{{ item.file_path.split('/')[-1] if item.file_path else 'N/A' }}</div>
+          </div>
+
+          <div class="file-info-item">
+            <div class="file-info-label">File Size</div>
+            <div class="file-info-value">{{ format_file_size(item.file_size) }}</div>
+          </div>
+
+          <div class="file-info-item">
+            <div class="file-info-label">Type</div>
+            <div class="file-info-value">{{ item.mime_type or 'Unknown' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; padding: 40px 20px; color: var(--admin-muted);">
+        <div style="font-size: 64px; margin-bottom: 16px;">{{ get_file_icon(item.file_path) }}</div>
+        <p style="font-size: 1.1rem; margin-bottom: 20px;">File stored successfully</p>
+        <a href="{{ url_for('admin_tools.download_knowledge_file', item_id=item.id) }}" class="btn btn-success">
+          <span>⬇️</span>
+          <span>Download {{ item.file_path.split('/')[-1] if item.file_path else 'File' }}</span>
+        </a>
+      </div>
+
+    {% elif item.content_type == 'url' %}
+      <!-- URL Link -->
+      <div style="text-align: center; padding: 40px 20px;">
+        <div style="font-size: 64px; margin-bottom: 16px;">🔗</div>
+        <p style="color: var(--admin-muted); margin-bottom: 20px;">External resource link:</p>
+        <a href="{{ item.content_text }}" target="_blank" rel="noopener noreferrer" class="url-link">
+          <span>🌐</span>
+          <span>{{ item.content_text }}</span>
+          <span>↗️</span>
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Tags -->
+  {% if item.tags %}
+  <div class="content-card">
+    <div class="content-header">
+      <span style="font-size: 24px;">🏷️</span>
+      <h2 class="content-title">Tags</h2>
+    </div>
+
+    <div class="tags-section">
+      {% for tag in item.tags %}
+      <a href="{{ url_for('admin_tools.knowledge_base', tag=tag.name) }}" class="tag-pill">
+        {{ tag.name }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Related Items -->
+  {% if related %}
+  <div class="content-card">
+    <div class="content-header">
+      <span style="font-size: 24px;">🔗</span>
+      <h2 class="content-title">Related Items</h2>
+    </div>
+
+    <div class="related-grid">
+      {% for rel in related %}
+        {% if rel is mapping and rel.type == 'execution' %}
+          <!-- Tool Execution -->
+          <a href="{{ url_for('admin_tools.view_execution', execution_id=rel.data.id) }}" class="related-item">
+            <span class="related-icon">🔧</span>
+            <div class="related-content">
+              <div class="related-title">{{ rel.data.tool_name }} → {{ rel.data.target }}</div>
+              <div class="related-meta">Tool execution • {{ rel.data.executed_at.strftime('%Y-%m-%d %I:%M %p') }}</div>
+            </div>
+          </a>
+        {% else %}
+          <!-- Knowledge Item -->
+          <a href="{{ url_for('admin_tools.view_knowledge_item', item_id=rel.id) }}" class="related-item">
+            <span class="related-icon">{{ rel.category.icon if rel.category else '📄' }}</span>
+            <div class="related-content">
+              <div class="related-title">{{ rel.title }}</div>
+              <div class="related-meta">{{ rel.category.name if rel.category else 'Uncategorized' }}</div>
+            </div>
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function copyContent() {
+  const content = document.getElementById('content-to-copy').textContent;
+  navigator.clipboard.writeText(content).then(function() {
+    const btn = document.querySelector('.copy-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✅ Copied!';
+    btn.style.background = 'var(--admin-success)';
+    
+    setTimeout(function() {
+      btn.innerHTML = originalText;
+      btn.style.background = 'var(--admin-primary)';
+    }, 2000);
+  }, function(err) {
+    alert('Failed to copy content');
+    console.error('Could not copy text: ', err);
+  });
+}
+</script>
+{% endblock %}

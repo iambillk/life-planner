@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Execution Result - {{ tool_config.name }}{% endblock %}
+
+{% block header %}{{ tool_config.icon }} {{ tool_config.name }} - Result{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .result-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .result-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    box-shadow: var(--admin-shadow);
+    margin-bottom: 20px;
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .result-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-success {
+    background: rgba(34,197,94,0.15);
+    color: var(--admin-success);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  .status-error {
+    background: rgba(239,68,68,0.15);
+    color: var(--admin-danger);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .meta-item {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .meta-label {
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .meta-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+  }
+
+  .command-display {
+    background: #000;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #0f0;
+    overflow-x: auto;
+  }
+
+  .output-section {
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin: 0;
+  }
+
+  .output-box {
+    background: #000;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 500px;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
+
+  .output-box::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .output-box::-webkit-scrollbar-track {
+    background: var(--admin-panel);
+    border-radius: 4px;
+  }
+
+  .output-box::-webkit-scrollbar-thumb {
+    background: var(--admin-line);
+    border-radius: 4px;
+  }
+
+  .output-box::-webkit-scrollbar-thumb:hover {
+    background: var(--admin-primary);
+  }
+
+  .error-output {
+    color: #ff6b6b;
+  }
+
+  .parsed-data {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .parsed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .parsed-item {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .parsed-label {
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+    margin-bottom: 4px;
+  }
+
+  .parsed-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--admin-primary);
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(110,168,255,0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    background: var(--admin-panel);
+    border-color: var(--admin-primary);
+  }
+
+  .btn-success {
+    background: var(--admin-success);
+    border-color: var(--admin-success);
+    color: white;
+  }
+
+  .btn-success:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+  }
+
+  .notes-section {
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-left: 4px solid var(--admin-warning);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+  }
+
+  .notes-title {
+    font-weight: 600;
+    color: var(--admin-warning);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .notes-content {
+    color: var(--admin-text);
+    white-space: pre-wrap;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    color: var(--admin-muted);
+  }
+
+  @media (max-width: 768px) {
+    .meta-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{{ url_for('admin_tools.tools_list') }}">Tools</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name=tool_name) }}">{{ tool_config.name }}</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>Execution #{{ execution.id }}</span>
+  </div>
+
+  <!-- Result Header -->
+  <div class="result-card">
+    <div class="result-header">
+      <h1 class="result-title">
+        <span>{{ tool_config.icon }}</span>
+        <span>Execution Result</span>
+      </h1>
+      
+      <div class="status-badge {{ 'status-success' if result.success else 'status-error' }}">
+        <span>{{ '✓' if result.success else '✗' }}</span>
+        <span>{{ 'Success' if result.success else 'Failed' }}</span>
+      </div>
+    </div>
+
+    <!-- Metadata Grid -->
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">Tool</div>
+        <div class="meta-value">{{ tool_config.name }}</div>
+      </div>
+
+      {% if execution.target %}
+      <div class="meta-item">
+        <div class="meta-label">Target</div>
+        <div class="meta-value">{{ execution.target }}</div>
+      </div>
+      {% endif %}
+
+      <div class="meta-item">
+        <div class="meta-label">Executed At</div>
+        <div class="meta-value">{{ execution.executed_at.strftime('%Y-%m-%d %I:%M:%S %p') }}</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Execution Time</div>
+        <div class="meta-value">{{ execution.execution_time|round(2) }}s</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Exit Code</div>
+        <div class="meta-value">{{ execution.exit_code }}</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Execution ID</div>
+        <div class="meta-value">#{{ execution.id }}</div>
+      </div>
+    </div>
+
+    <!-- Command Executed -->
+    <div class="output-section">
+      <div class="section-header">
+        <h2 class="section-title">💻 Command Executed</h2>
+      </div>
+      <div class="command-display">{{ result.command }}</div>
+    </div>
+
+    <!-- Parsed Data (if available) -->
+    {% if parsed_data %}
+    <div class="output-section">
+      <div class="section-header">
+        <h2 class="section-title">📊 Parsed Results</h2>
+      </div>
+      
+      <div class="parsed-data">
+        {% if tool_name == 'ping' %}
+        <div class="parsed-grid">
+          <div class="parsed-item">
+            <div class="parsed-label">Packets Sent</div>
+            <div class="parsed-value">{{ parsed_data.packets_sent }}</div>
+          </div>
+          <div class="parsed-item">
+            <div class="parsed-label">Packets Received</div>
+            <div class="parsed-value">{{ parsed_data.packets_received }}</div>
+          </div>
+          <div class="parsed-item">
+            <div class="parsed-label">Packets Lost</div>
+            <div class="parsed-value">{{ parsed_data.packets_lost }}</div>
+          </div>
+          <div class="parsed-item">
+            <div class="parsed-label">Loss %</div>
+            <div class="parsed-value">{{ parsed_data.loss_percentage }}%</div>
+          </div>
+          {% if parsed_data.min_time %}
+          <div class="parsed-item">
+            <div class="parsed-label">Min Time</div>
+            <div class="parsed-value">{{ parsed_data.min_time }}ms</div>
+          </div>
+          <div class="parsed-item">
+            <div class="parsed-label">Max Time</div>
+            <div class="parsed-value">{{ parsed_data.max_time }}ms</div>
+          </div>
+          <div class="parsed-item">
+            <div class="parsed-label">Avg Time</div>
+            <div class="parsed-value">{{ parsed_data.avg_time }}ms</div>
+          </div>
+          {% endif %}
+        </div>
+        
+        {% elif tool_name == 'traceroute' %}
+        <div class="parsed-grid">
+          <div class="parsed-item">
+            <div class="parsed-label">Total Hops</div>
+            <div class="parsed-value">{{ parsed_data.hop_count }}</div>
+          </div>
+        </div>
+        
+        {% elif tool_name == 'nslookup' %}
+        <div class="parsed-grid">
+          {% if parsed_data.server %}
+          <div class="parsed-item">
+            <div class="parsed-label">DNS Server</div>
+            <div class="parsed-value">{{ parsed_data.server }}</div>
+          </div>
+          {% endif %}
+          {% for addr in parsed_data.addresses %}
+          <div class="parsed-item">
+            <div class="parsed-label">Address {{ loop.index }}</div>
+            <div class="parsed-value">{{ addr }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Output -->
+    {% if result.output %}
+    <div class="output-section">
+      <div class="section-header">
+        <h2 class="section-title">📄 Output</h2>
+      </div>
+      <div class="output-box">{{ result.output }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Error Output -->
+    {% if result.error %}
+    <div class="output-section">
+      <div class="section-header">
+        <h2 class="section-title">⚠️ Error Output</h2>
+      </div>
+      <div class="output-box error-output">{{ result.error }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Notes -->
+    {% if execution.notes %}
+    <div class="notes-section">
+      <div class="notes-title">
+        <span>📝</span>
+        <span>Notes</span>
+      </div>
+      <div class="notes-content">{{ execution.notes }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--admin-line);">
+      <div class="action-buttons">
+        <a href="{{ url_for('admin_tools.rerun_tool', execution_id=execution.id) }}" class="btn btn-success">
+          <span>🔄</span>
+          <span>Re-run with Same Parameters</span>
+        </a>
+
+        <a href="{{ url_for('admin_tools.execute_tool_route', tool_name=tool_name) }}" class="btn btn-primary">
+          <span>▶️</span>
+          <span>Run {{ tool_config.name }} Again</span>
+        </a>
+
+        <a href="{{ url_for('admin_tools.tool_history') }}" class="btn btn-secondary">
+          <span>📋</span>
+          <span>View History</span>
+        </a>
+
+        <a href="{{ url_for('admin_tools.dashboard') }}" class="btn btn-secondary">
+          <span>🏠</span>
+          <span>Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// Copy command to clipboard
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    alert('Command copied to clipboard!');
+  }, function(err) {
+    console.error('Could not copy text: ', err);
+  });
+}
+
+// Add copy button to command display
+document.addEventListener('DOMContentLoaded', function() {
+  const commandDisplay = document.querySelector('.command-display');
+  if (commandDisplay) {
+    commandDisplay.style.cursor = 'pointer';
+    commandDisplay.title = 'Click to copy';
+    commandDisplay.addEventListener('click', function() {
+      copyToClipboard(this.textContent);
+    });
+  }
+});
+</script>
+{% endblock %}

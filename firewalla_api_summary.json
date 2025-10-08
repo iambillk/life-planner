@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-10-04T21:52:42.023471",
+  "api_domain": "totalchoice.firewalla.net",
+  "working_endpoints": [
+    "/target-lists/TL-8a3af152-551a-4355-b61b-f1e494723b2a",
+    "/boxes",
+    "/devices",
+    "/alarms",
+    "/events",
+    "/flows",
+    "/rules",
+    "/target-lists",
+    "/alarms?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z",
+    "/events?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z",
+    "/flows?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z"
+  ],
+  "endpoint_count": 11,
+  "full_results": {
+    "target_list": "DATA_FOUND",
+    "/boxes": "DATA_FOUND",
+    "/devices": "DATA_FOUND",
+    "/alarms": "DATA_FOUND",
+    "/events": "DATA_FOUND",
+    "/flows": "DATA_FOUND",
+    "/rules": "DATA_FOUND",
+    "/target-lists": "DATA_FOUND",
+    "/alarms?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z": "DATA_FOUND",
+    "/events?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z": "DATA_FOUND",
+    "/flows?start=2025-10-04T01:52:38.517825Z&end=2025-10-05T01:52:38.517825Z": "DATA_FOUND"
+  }
+}

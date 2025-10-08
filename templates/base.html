@@ -192,6 +192,15 @@
                 <a data-key="vault" href="{{ url_for('vault.index') }}" class="nav-item {{ 'active' if active == 'vault' }}">
                     <span class="icon">📁</span><span>Document Vault</span>
                 </a>
+                <a data-key="ops" href="{{ url_for('ops_center.dashboard') }}"
+                   class="nav-item {{ 'active' if active == 'ops' }}">
+                  <span class="icon">🛡️</span><span>Ops Center</span>
+                </a>
+
+                <a data-key="admin" href="{{ url_for('admin_tools.dashboard') }}" class="nav-item {{ 'active' if active == 'admin_tools' }}">
+                    <span class="icon">🔧</span><span>Admin Tools</span>
+                </a>
+
                 <a data-key="home" href="{{ url_for('home.index') }}" class="nav-item {{ 'active' if active == 'home' }}">
                     <span class="icon">🏠</span><span>Home</span>
                 </a>

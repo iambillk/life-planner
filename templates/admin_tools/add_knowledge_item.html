@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+
+{% block title %}Add Knowledge Item - Admin Tools{% endblock %}
+
+{% block header %}➕ Add Knowledge Item{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .form-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .form-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    box-shadow: var(--admin-shadow);
+    margin-bottom: 20px;
+  }
+
+  .form-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .form-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-section {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+  }
+
+  .form-label-required::after {
+    content: " *";
+    color: var(--admin-danger);
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    color: var(--admin-text);
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .form-input:focus,
+  .form-select:focus,
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--admin-primary);
+    background: var(--admin-card);
+    box-shadow: 0 0 0 3px rgba(110,168,255,0.1);
+  }
+
+  .form-input::placeholder,
+  .form-textarea::placeholder {
+    color: var(--admin-muted);
+    opacity: 0.6;
+  }
+
+  .form-select {
+    cursor: pointer;
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+  }
+
+  .form-help {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    margin-top: 6px;
+  }
+
+  .radio-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: var(--admin-panel);
+    border: 2px solid var(--admin-line);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .radio-option:hover {
+    background: rgba(110,168,255,0.05);
+    border-color: var(--admin-primary);
+  }
+
+  .radio-option input[type="radio"] {
+    margin-top: 3px;
+    cursor: pointer;
+  }
+
+  .radio-option input[type="radio"]:checked ~ .radio-content {
+    color: var(--admin-primary);
+  }
+
+  .radio-option:has(input:checked) {
+    border-color: var(--admin-primary);
+    background: rgba(110,168,255,0.1);
+  }
+
+  .radio-content {
+    flex: 1;
+  }
+
+  .radio-label {
+    display: block;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 4px;
+    cursor: pointer;
+  }
+
+  .radio-desc {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+  }
+
+  .file-upload-area {
+    border: 2px dashed var(--admin-line);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    background: var(--admin-panel);
+    transition: all 0.2s;
+  }
+
+  .file-upload-area:hover {
+    border-color: var(--admin-primary);
+    background: rgba(110,168,255,0.05);
+  }
+
+  .file-upload-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .file-upload-text {
+    color: var(--admin-text);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .file-upload-hint {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+  }
+
+  .tag-input-container {
+    position: relative;
+  }
+
+  .suggested-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-line);
+  }
+
+  .suggested-tag {
+    padding: 6px 12px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 16px;
+    font-size: 0.85rem;
+    color: var(--admin-text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .suggested-tag:hover {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .checkbox-group:hover {
+    background: rgba(110,168,255,0.05);
+    border-color: var(--admin-primary);
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .checkbox-label {
+    color: var(--admin-text);
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(110,168,255,0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    background: var(--admin-panel);
+    border-color: var(--admin-primary);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--admin-line);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    color: var(--admin-muted);
+  }
+
+  .content-type-fields {
+    display: none;
+  }
+
+  .content-type-fields.active {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .radio-group {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-group {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{{ url_for('admin_tools.knowledge_base') }}">Knowledge Base</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>Add Item</span>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" enctype="multipart/form-data" class="form-card">
+    
+    <div class="form-header">
+      <h1 class="form-title">
+        <span>➕</span>
+        <span>Add Knowledge Item</span>
+      </h1>
+    </div>
+
+    <!-- Title -->
+    <div class="form-section">
+      <label class="form-label form-label-required" for="title">Title</label>
+      <input 
+        type="text" 
+        id="title" 
+        name="title" 
+        class="form-input"
+        placeholder="Enter a descriptive title..."
+        required
+        autofocus
+      >
+      <div class="form-help">Give this item a clear, searchable name</div>
+    </div>
+
+    <!-- Description -->
+    <div class="form-section">
+      <label class="form-label" for="description">Description</label>
+      <textarea 
+        id="description" 
+        name="description" 
+        class="form-textarea"
+        placeholder="Optional description or notes about this item..."
+        rows="3"
+      ></textarea>
+      <div class="form-help">Add context or summary (optional)</div>
+    </div>
+
+    <!-- Content Type -->
+    <div class="form-section">
+      <label class="form-label form-label-required">Content Type</label>
+      
+      <div class="radio-group">
+        {% for type_key, type_info in content_types.items() %}
+        <label class="radio-option">
+          <input 
+            type="radio" 
+            name="content_type" 
+            value="{{ type_key }}"
+            {% if type_key == 'text' %}checked{% endif %}
+            onchange="showContentFields('{{ type_key }}')"
+          >
+          <div class="radio-content">
+            <span class="radio-label">{{ type_info.icon }} {{ type_info.name }}</span>
+            <span class="radio-desc">{{ type_info.description }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Text Content Field -->
+    <div id="text-fields" class="content-type-fields active">
+      <div class="form-section">
+        <label class="form-label" for="content_text">Content</label>
+        <textarea 
+          id="content_text" 
+          name="content_text" 
+          class="form-textarea"
+          placeholder="Paste your text, code, config, or notes here..."
+          rows="15"
+          style="font-family: 'Courier New', monospace;"
+        ></textarea>
+        <div class="form-help">Supports plain text, code, configs, commands, etc.</div>
+      </div>
+    </div>
+
+    <!-- File Upload Field -->
+    <div id="file-fields" class="content-type-fields">
+      <div class="form-section">
+        <label class="form-label" for="file">Upload File</label>
+        <div class="file-upload-area">
+          <div class="file-upload-icon">📎</div>
+          <div class="file-upload-text">Choose a file to upload</div>
+          <div class="file-upload-hint">Configs, logs, scripts, ISOs, docs, images (max 100MB)</div>
+          <input 
+            type="file" 
+            id="file" 
+            name="file"
+            style="margin-top: 16px;"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- URL Field -->
+    <div id="url-fields" class="content-type-fields">
+      <div class="form-section">
+        <label class="form-label" for="url">URL</label>
+        <input 
+          type="url" 
+          id="url" 
+          name="url" 
+          class="form-input"
+          placeholder="https://example.com/documentation"
+        >
+        <div class="form-help">Link to external documentation or resource</div>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div class="form-section">
+      <label class="form-label" for="category_id">Category</label>
+      <select id="category_id" name="category_id" class="form-select">
+        <option value="">-- None --</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}">{{ category.icon }} {{ category.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-help">Organize into a category</div>
+    </div>
+
+    <!-- Tags -->
+    <div class="form-section">
+      <label class="form-label" for="tags">Tags</label>
+      <div class="tag-input-container">
+        <input 
+          type="text" 
+          id="tags" 
+          name="tags" 
+          class="form-input"
+          placeholder="production, cisco, backup, emergency (comma-separated)"
+        >
+        <div class="form-help">Add tags for easier searching (comma-separated)</div>
+        
+        <div class="suggested-tags">
+          <small style="color: var(--admin-muted); width: 100%; margin-bottom: 4px;">Quick add:</small>
+          {% for tag in suggested_tags %}
+          <span class="suggested-tag" onclick="addTag('{{ tag }}')">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pin Checkbox -->
+    <div class="form-section">
+      <label class="checkbox-group">
+        <input type="checkbox" name="is_pinned" id="is_pinned">
+        <span class="checkbox-label">📌 Pin this item for quick access</span>
+      </label>
+      <div class="form-help" style="margin-left: 30px;">Pinned items appear at the top of your knowledge base</div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+      <button type="submit" class="btn btn-primary">
+        <span>💾</span>
+        <span>Save Item</span>
+      </button>
+      
+      <a href="{{ url_for('admin_tools.knowledge_base') }}" class="btn btn-secondary">
+        <span>← Cancel</span>
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+<script>
+// Show/hide content fields based on selected type
+function showContentFields(type) {
+  document.querySelectorAll('.content-type-fields').forEach(el => {
+    el.classList.remove('active');
+  });
+  
+  document.getElementById(type + '-fields').classList.add('active');
+}
+
+// Add tag to input
+function addTag(tag) {
+  const input = document.getElementById('tags');
+  const currentTags = input.value.trim();
+  
+  // Check if tag already exists
+  const tagsArray = currentTags.split(',').map(t => t.trim().toLowerCase());
+  if (tagsArray.includes(tag.toLowerCase())) {
+    return; // Tag already added
+  }
+  
+  if (currentTags) {
+    input.value = currentTags + ', ' + tag;
+  } else {
+    input.value = tag;
+  }
+  
+  input.focus();
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+  const title = document.getElementById('title').value.trim();
+  if (!title) {
+    e.preventDefault();
+    alert('Please enter a title');
+    document.getElementById('title').focus();
+    return false;
+  }
+  
+  const contentType = document.querySelector('input[name="content_type"]:checked').value;
+  
+  if (contentType === 'file') {
+    const fileInput = document.getElementById('file');
+    if (!fileInput.files.length) {
+      e.preventDefault();
+      alert('Please select a file to upload');
+      return false;
+    }
+  }
+  
+  if (contentType === 'url') {
+    const url = document.getElementById('url').value.trim();
+    if (!url) {
+      e.preventDefault();
+      alert('Please enter a URL');
+      document.getElementById('url').focus();
+      return false;
+    }
+  }
+});
+</script>
+{% endblock %}

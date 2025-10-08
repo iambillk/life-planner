@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}DNS Health Check - {{ execution.target }}{% endblock %}
+
+{% block header %}🏥 DNS Health Check - {{ execution.target }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .dns-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .dns-header {
+    background: linear-gradient(135deg, rgba(110,168,255,0.15), rgba(110,168,255,0.05));
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  .dns-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .domain-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    color: var(--admin-primary);
+  }
+
+  .summary-bar {
+    display: flex;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .summary-passed { border-left: 4px solid var(--admin-success); }
+  .summary-warnings { border-left: 4px solid var(--admin-warning); }
+  .summary-errors { border-left: 4px solid var(--admin-danger); }
+
+  .summary-icon { font-size: 24px; }
+  .summary-count { font-size: 1.5rem; color: var(--admin-primary); }
+  .summary-label { font-size: 0.9rem; color: var(--admin-muted); }
+
+  .category-section {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--admin-shadow);
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .category-icon { font-size: 32px; }
+  .category-title { font-size: 1.3rem; font-weight: 700; color: var(--admin-text); margin: 0; }
+
+  .check-item {
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--admin-panel);
+    border-left: 4px solid;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .check-item:hover { transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  .check-item.check-pass  { border-color: var(--admin-success); background: rgba(34,197,94,0.05); }
+  .check-item.check-warn  { border-color: var(--admin-warning); background: rgba(245,158,11,0.05); }
+  .check-item.check-error { border-color: var(--admin-danger);  background: rgba(239,68,68,0.05); }
+
+  .check-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .check-status-icon { font-size: 24px; flex-shrink: 0; }
+  .check-name { font-size: 1.05rem; font-weight: 700; color: var(--admin-text); }
+
+  .check-message { color: var(--admin-text); margin-bottom: 8px; line-height: 1.6; }
+
+  .check-details {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 6px;
+  }
+  .check-detail-item {
+    padding: 6px 0;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+    font-family: 'Courier New', monospace;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .check-detail-item::before { content: "▸"; color: var(--admin-primary); }
+
+  /* NEW: docs / evidence panel */
+  details.check-docs { margin-top: 10px; }
+  details.check-docs > summary {
+    cursor: pointer; color: var(--admin-primary); font-weight: 600;
+    list-style: none; outline: none;
+  }
+  details.check-docs[open] > summary { color: #9ec2ff; }
+  .doc-block { margin-top: 10px; color: var(--admin-muted); }
+  .doc-block strong { color: var(--admin-text); }
+  .evidence-pre {
+    background: #0b1020; color: #c9d7f2; padding: 10px; border-radius: 8px;
+    overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.88rem;
+    border: 1px solid var(--admin-line);
+  }
+
+  .action-bar {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border: 1px solid var(--admin-line); border-radius: 8px;
+    font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s; font-size: 0.95rem;
+  }
+  .btn-primary { background: var(--admin-primary); border-color: var(--admin-primary); color: white; }
+  .btn-primary:hover { background: #5a96e8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(110,168,255,0.3); }
+  .btn-secondary { background: transparent; border-color: var(--admin-line); color: var(--admin-text); }
+  .btn-secondary:hover { background: var(--admin-panel); border-color: var(--admin-primary); }
+  .btn-success { background: var(--admin-success); border-color: var(--admin-success); color: white; }
+  .btn-success:hover { background: #16a34a; transform: translateY(-2px); }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+    font-size: 0.9rem; color: var(--admin-muted);
+  }
+  .breadcrumb a { color: var(--admin-primary); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .meta-info {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid rgba(110,168,255,0.2);
+  }
+  .meta-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--admin-muted); }
+
+  .progress-bar { width: 100%; height: 8px; background: var(--admin-panel); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--admin-success), var(--admin-primary)); transition: width 0.5s ease; }
+
+  @media (max-width: 768px) {
+    .dns-title { font-size: 1.4rem; flex-direction: column; align-items: flex-start; }
+    .summary-bar { flex-direction: column; }
+    .action-bar { flex-direction: column; }
+    .btn { width: 100%; justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dns-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>›</span>
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='dns_health') }}">DNS Health Check</a>
+    <span>›</span>
+    <span>{{ execution.target }}</span>
+  </div>
+
+  <!-- Header -->
+  <div class="dns-header">
+    <h1 class="dns-title">
+      <span>🏥</span>
+      <span>DNS Health Check Results</span>
+    </h1>
+    
+    <div class="domain-badge">{{ execution.target }}</div>
+
+    {% if parsed_data %}
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      <div class="summary-item summary-passed">
+        <span class="summary-icon">✓</span>
+        <div>
+          <div class="summary-count">{{ parsed_data.summary.passed }}</div>
+          <div class="summary-label">Passed</div>
+        </div>
+      </div>
+
+      <div class="summary-item summary-warnings">
+        <span class="summary-icon">⚠</span>
+        <div>
+          <div class="summary-count">{{ parsed_data.summary.warnings }}</div>
+          <div class="summary-label">Warnings</div>
+        </div>
+      </div>
+
+      <div class="summary-item summary-errors">
+        <span class="summary-icon">✗</span>
+        <div>
+          <div class="summary-count">{{ parsed_data.summary.errors }}</div>
+          <div class="summary-label">Errors</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health Score Progress Bar -->
+    {% set total_checks = parsed_data.summary.passed + parsed_data.summary.warnings + parsed_data.summary.errors %}
+    {% set health_score = (parsed_data.summary.passed / total_checks * 100) if total_checks > 0 else 0 %}
+    <div class="progress-bar" title="Health Score: {{ health_score|round }}%">
+      <div class="progress-fill" style="width: {{ health_score }}%"></div>
+    </div>
+    <div style="text-align: center; margin-top: 8px; color: var(--admin-muted); font-size: 0.9rem;">
+      Health Score: {{ health_score|round }}%
+    </div>
+    {% endif %}
+
+    <!-- Meta Info -->
+    <div class="meta-info">
+      <div class="meta-item">
+        <span>🕐</span>
+        <span>{{ execution.executed_at.strftime('%Y-%m-%d %I:%M:%S %p') }}</span>
+      </div>
+      <div class="meta-item">
+        <span>⏱️</span>
+        <span>{{ execution.execution_time|round(2) }}s</span>
+      </div>
+      <div class="meta-item">
+        <span>🔢</span>
+        <span>Execution #{{ execution.id }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-bar">
+    <a href="{{ url_for('admin_tools.rerun_tool', execution_id=execution.id) }}" class="btn btn-success">
+      <span>🔄</span>
+      <span>Re-run Check</span>
+    </a>
+
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='dns_health') }}" class="btn btn-primary">
+      <span>🏥</span>
+      <span>Check Another Domain</span>
+    </a>
+
+    <a href="{{ url_for('admin_tools.tool_history') }}" class="btn btn-secondary">
+      <span>📋</span>
+      <span>View History</span>
+    </a>
+
+    <a href="{{ url_for('admin_tools.dashboard') }}" class="btn btn-secondary">
+      <span>🏠</span>
+      <span>Dashboard</span>
+    </a>
+  </div>
+
+  {% if parsed_data %}
+  <!-- DNS Check Results by Category -->
+  {% set categories = {} %}
+  {% for check in parsed_data.checks %}
+    {% if check.category not in categories %}
+      {% set _ = categories.update({check.category: []}) %}
+    {% endif %}
+    {% set _ = categories[check.category].append(check) %}
+  {% endfor %}
+
+  {% for category, checks in categories.items() %}
+  <div class="category-section">
+    <div class="category-header">
+      <span class="category-icon">
+        {% if category == 'Nameservers' %}🌐
+        {% elif category == 'SOA' %}📋
+        {% elif category == 'A Records' %}🔗
+        {% elif category == 'Mail' %}✉️
+        {% elif category == 'Web' %}🌍
+        {% else %}📄{% endif %}
+      </span>
+      <h2 class="category-title">{{ category }}</h2>
+    </div>
+
+    {% for check in checks %}
+    <div class="check-item check-{{ check.status }}">
+      <div class="check-header">
+        <span class="check-status-icon">
+          {% if check.status == 'pass' %}✅
+          {% elif check.status == 'warn' %}⚠️
+          {% else %}❌{% endif %}
+        </span>
+        <span class="check-name">{{ check.name }}</span>
+      </div>
+
+      <div class="check-message">{{ check.message }}</div>
+
+      {# NEW: IntoDNS-style docs block #}
+      {% if check.explain or check.why or check.fix or check.refs or check.evidence %}
+      <details class="check-docs">
+        <summary>More details</summary>
+
+        {% if check.explain %}
+          <div class="doc-block"><strong>What we tested:</strong> {{ check.explain }}</div>
+        {% endif %}
+
+        {% if check.why %}
+          <div class="doc-block"><strong>Why it matters:</strong> {{ check.why }}</div>
+        {% endif %}
+
+        {% if check.fix %}
+          <div class="doc-block"><strong>How to fix:</strong> {{ check.fix }}</div>
+        {% endif %}
+
+        {% if check.refs and check.refs|length %}
+          <div class="doc-block">
+            <strong>Refs:</strong>
+            {% for r in check.refs %}
+              <span class="ref">{{ r }}</span>{% if not loop.last %}; {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if check.evidence %}
+          <div class="doc-block">
+            <strong>Evidence:</strong>
+            {% if check.evidence is string %}
+              <pre class="evidence-pre">{{ check.evidence }}</pre>
+            {% else %}
+              <ul class="evidence-list">
+                {% for e in check.evidence %}
+                  <li class="check-detail-item">{{ e }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        {% endif %}
+      </details>
+      {% endif %}
+
+      {% if check.details %}
+      <div class="check-details">
+        {% for detail in check.details %}
+        <div class="check-detail-item">{{ detail }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <!-- Fallback: Show raw output if no parsed data -->
+  <div class="category-section">
+    <div class="category-header">
+      <span class="category-icon">📄</span>
+      <h2 class="category-title">Raw Output</h2>
+    </div>
+    <pre style="background: #000; color: #0f0; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 0.9rem;">{{ result.output if result else execution.output }}</pre>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

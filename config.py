@@ -82,3 +82,32 @@ class Config:
         6: "Lab Equipment",
         7: "Spare/Testing"
     }
+    
+    # Firewalla MSP Integration
+    # Version: 1.0.0
+    # Added: 2025-01-XX
+    # Description: Configuration for Firewalla MSP API v2 integration
+    # Provides security monitoring and threat intelligence for ops dashboard
+    
+    # Primary Firewalla MSP Configuration
+    FIREWALLA_MSP_DOMAIN = "totalchoice.firewalla.net"  # Your MSP subdomain
+    FIREWALLA_API_TOKEN = "fe7f069d59606cd62b0653a8a417303e"  # Your API token
+    
+    # Firewalla Settings
+    FIREWALLA_TIMEOUT = 10                    # API timeout in seconds
+    FIREWALLA_CACHE_TTL = 60                  # Cache TTL in seconds (60 per MVP spec)
+    FIREWALLA_VERIFY_SSL = True               # Set to False if using self-signed cert
+    
+    # Firewalla Feature Flags
+    FIREWALLA_ENABLE_FLOWS = True             # Enable network flow analysis
+    FIREWALLA_ENABLE_RULES = True             # Enable rule management display
+    FIREWALLA_ENABLE_DEVICES = True           # Enable device tracking
+    FIREWALLA_ENABLE_ALARMS = True            # Enable security alarm monitoring
+    
+    # Firewalla Alert Thresholds (for dashboard display)
+    FIREWALLA_ALERT_CRITICAL = 10             # Red alert if more than 10 threats/hour
+    FIREWALLA_ALERT_WARNING = 5               # Yellow alert if more than 5 threats/hour
+    FIREWALLA_ALERT_OK = 2                    # Green if less than 2 threats/hour
+    
+    # Target List Configuration (if using target lists)
+    FIREWALLA_TARGET_LIST_ID = "TL-8a3af152-551a-4355-b61b-f1e494723b2a"  # Example target list ID

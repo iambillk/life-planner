@@ -12,6 +12,12 @@ from .base import db
 from .standalone import StandaloneTask
 from .rolodex import Contact, Company
 
+
+from .admin_tools import (
+    ToolExecution, KnowledgeItem, KnowledgeCategory,
+    KnowledgeTag, KnowledgeRelation, init_admin_tools
+)
+
 from .equipment import (
     Equipment, 
     MaintenanceRecord, 

@@ -1,0 +1,16 @@
+FIREWALLA MSP API DISCOVERY RESULTS
+Generated: 2025-10-04 22:53:01
+API Domain: totalchoice.firewalla.net
+================================================================================
+
+╔══════════════════════════════════════════════════════════╗
+║         FIREWALLA MSP API DISCOVERY TOOL                ║
+║         Testing: totalchoice.firewalla.net              ║
+╚══════════════════════════════════════════════════════════╝
+
+============================================================
+1. TESTING KNOWN WORKING ENDPOINT
+============================================================
+
+Testing: GET /target-lists/TL-8a3af152-551a-4355-b61b-f1e494723b2a
+URL: https://totalchoice.firewalla.net/v2/target-lists/TL-8a3af152-551a-4355-b61b-f1e494723b2a

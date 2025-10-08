@@ -1,41 +1,47 @@
 """
 Operations Command Center - Routes
-Version: 1.3.2
-Last Modified: 2025-10-06
+Version: 1.3.0
+Last Modified: 2025-10-04
 Author: Billas + Marcus
 
 Description:
-- MikroTik + DLI PDU + LibreNMS + Firewalla routes
-- IPS/Firewalla “latest” summaries (last 3 items, timestamped, spaced)
+- Unified routes restoring MikroTik switch integration and DLI PDU controls.
+- Defensive getters so the page still renders even if a backend is missing.
+
+File: /modules/ops_center/routes.py
 """
 
 from __future__ import annotations
 
 from flask import Blueprint, render_template, jsonify, request, current_app
 from datetime import datetime
-import re  # for IPS message cleanup
 
-# ---- Integrations -------------------------------------------------------------
+# ---- Integrations (import paths based on your tree) ---------------------------
+# LibreNMS
 try:
     from modules.ops_center.integrations import OpsLibreNMS
 except Exception:
     OpsLibreNMS = None  # type: ignore
 
+# MikroTik
 try:
     from modules.ops_center.mikrotik import MikroTikAPI
 except Exception:
     MikroTikAPI = None  # type: ignore
 
+# DLI PDU (single-file helper path you showed)
 try:
     from modules.ops_center.dli_pdu import DLIPduAPI
 except Exception:
     DLIPduAPI = None  # type: ignore
 
+# Firewalla
 try:
     from modules.ops_center.firewalla import FirewallaAPI
 except Exception:
     FirewallaAPI = None  # type: ignore
 
+# Create blueprint with url_prefix
 ops_center_bp = Blueprint("ops_center", __name__, url_prefix="/ops")
 
 
@@ -55,8 +61,6 @@ def dashboard():
     alert_summary = {}
     graph_urls = {}
     ips_alerts = {}
-    ips_latest_str = "No Alerts"  # ensure defined even if LibreNMS missing
-
     if OpsLibreNMS:
         try:
             nms = OpsLibreNMS()
@@ -66,21 +70,19 @@ def dashboard():
             graph_urls = _safe(nms, "get_port_graphs", {}) or {}
             ips_alerts = _safe(nms, "get_ips_alerts", {}) or {}
 
-            # Build 3-line timestamped IPS summary (blank line between)
-            def _clean_msg(s: str) -> str:
-                s = re.sub(r"\[[^\]]+\]\s*", "", s or "")  # strip [tags]
-                s = re.sub(r"\s{2,}", " ", s).strip()
-                return s
-
+            # --- Build a 3-line timestamped summary for IPS (like Firewalla) ---
+            ips_latest_str = "No Alerts"
             try:
                 recent = ips_alerts.get("recent_alerts", [])
                 lines, seen = [], set()
+                from datetime import datetime
+
                 for a in recent[:8]:
-                    raw = (a.get("rule") or a.get("message") or a.get("alert") or "").strip()
-                    msg = _clean_msg(raw)
+                    msg = (a.get("rule") or a.get("message") or a.get("alert") or "").strip()
                     if not msg:
                         continue
 
+                    # timestamp may be epoch or string
                     ts = a.get("ts") or a.get("timestamp") or a.get("time")
                     ts_str = ""
                     try:
@@ -95,21 +97,24 @@ def dashboard():
                         ts_str = ""
 
                     line = f"[{ts_str}] {msg}" if ts_str else msg
-                    if len(line) > 80:
-                        line = line[:77] + "..."
+                    line = (line[:80] + "...") if len(line) > 80 else line
+
                     key = f"{ts_str}|{msg}"
                     if key in seen:
                         continue
                     seen.add(key)
                     lines.append(line)
+
                     if len(lines) == 3:
                         break
 
                 if lines:
                     ips_latest_str = "\n\n".join(lines)
+
             except Exception as e:
                 print(f"[IPS] summary build failed: {e}")
                 ips_latest_str = "No Alerts"
+
         except Exception:
             pass
 
@@ -134,17 +139,20 @@ def dashboard():
         "name": current_app.config.get("DLI_PDU_NAME", "DLI-PDU-1"),
         "current_amps": 0.0,
         "max_amps": 15,
-        "voltage": 120.0,
+        "voltage": 120.0,  # change to 208.0 if applicable
         "watts": 0.0,
         "outlets": [],
     }
     if DLIPduAPI:
         try:
             pdu = DLIPduAPI()
+
+            # Power metrics
             power = _first_ok(
                 pdu,
                 [("get_power_status", {}), ("get_metrics", {}), ("status", {}), ("get_status", {})],
-            ) or {}
+            )
+            power = power or {}
             volts = _num(power.get("voltage", power.get("volts", pdu_context["voltage"])))
             amps = _num(power.get("current_amps", power.get("amps", pdu_context["current_amps"])))
             maxa = int(power.get("max_amps", pdu_context["max_amps"]))
@@ -152,6 +160,7 @@ def dashboard():
             if watts is None:
                 watts = volts * amps
 
+            # Outlets
             outlets = _first_ok(
                 pdu,
                 [("get_all_outlets", []), ("list_outlets", []), ("get_outlets", []), ("outlets", [])],
@@ -176,54 +185,81 @@ def dashboard():
                 }
             )
         except Exception:
+            # keep defaults
             pass
 
-    # ---------------- Firewalla (best-effort) ----------------------------------
+    # ---------------- Firewalla (best-effort) -----------------------------------
     fw_alarms = {"count": 0, "latest": "No Alerts"}
     fw_devices = {"total": 0, "online": 0, "offline": 0}
-    fw_summary = {"status": "offline", "boxes_online": "0/0", "flows_blocked": 0, "rules_active": 0}
+    fw_summary = {
+        "status": "offline",
+        "boxes_online": "0/0",
+        "flows_blocked": 0,
+        "rules_active": 0
+    }
     if FirewallaAPI:
         try:
             fw = FirewallaAPI()
             fw_alarms = _safe(fw, "get_alarms", {"count": 0, "latest": "No Alerts"}, 24) or {"count": 0, "latest": "No Alerts"}
             fw_devices = _safe(fw, "get_devices", {"total": 0, "online": 0, "offline": 0}) or {"total": 0, "online": 0, "offline": 0}
-            fw_summary = _safe(
-                fw,
-                "get_dashboard_summary",
-                {"status": "offline", "boxes_online": "0/0", "flows_blocked": 0, "rules_active": 0},
-            ) or {"status": "offline", "boxes_online": "0/0", "flows_blocked": 0, "rules_active": 0}
-
-            # Firewalla: last 3 with timestamps and spacing
+            fw_summary = _safe(fw, "get_dashboard_summary", {
+                "status": "offline",
+                "boxes_online": "0/0", 
+                "flows_blocked": 0,
+                "rules_active": 0
+            }) or {
+                "status": "offline",
+                "boxes_online": "0/0",
+                "flows_blocked": 0,
+                "rules_active": 0
+            }
+            
+            # --- Combine top 3 latest alarms (with timestamps + spacing) for dashboard display ---
             if fw_alarms and isinstance(fw_alarms.get("alarms"), list):
                 alarms_list = fw_alarms.get("alarms", [])
-                msgs, seen = [], set()
-                for a in alarms_list[:8]:
+                msgs = []
+                seen = set()
+
+                for a in alarms_list[:8]:  # scan a few deep in case of dupes
                     msg = a.get("message") or a.get("type") or ""
                     if not msg:
                         continue
+
+                    # --- timestamp formatting (Firewalla 'ts' is UNIX seconds) ---
                     ts = a.get("ts") or a.get("timestamp")
                     try:
+                        from datetime import datetime
                         ts_str = datetime.fromtimestamp(int(ts)).strftime("%H:%M") if ts else ""
                     except Exception:
                         ts_str = ""
+
+                    # --- build formatted line ---
                     line = f"[{ts_str}] {msg.strip()}" if ts_str else msg.strip()
-                    if len(line) > 80:
-                        line = line[:80] + "..."
-                    key = f"{ts_str}|{msg.strip()}"
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    msgs.append(line)
+
+                    # trim overly long lines
+                    line = (line[:80] + "...") if len(line) > 80 else line
+
+                    # create unique key: same message + same timestamp = duplicate
+                    dedupe_key = f"{ts_str}|{msg.strip()}"
+                    if dedupe_key not in seen:
+                        seen.add(dedupe_key)
+                        msgs.append(line)
+
                     if len(msgs) == 3:
                         break
+
+                # join with double newline for spacing between alerts
                 if len(msgs) >= 2:
                     fw_alarms["latest"] = "\n\n".join(msgs)
                 elif len(msgs) == 1:
                     fw_alarms["latest"] = msgs[0]
-        except Exception:
+
+
+  
+        except Exception as e:
             pass
 
-    # ---------------- Context ---------------------------------------------------
+    # ---------------- Context for template -------------------------------------
     context = {
         "page_title": "Operations Command Center",
         "last_refresh": datetime.now().strftime("%H:%M:%S"),
@@ -238,7 +274,7 @@ def dashboard():
             "firewalla_count": fw_alarms.get("count", 0),
             "firewalla_latest": fw_alarms.get("latest", "No Alerts"),
             "syslogs_count": alert_summary.get("warning"),
-            "hostmon_downtime": "4min @3am",
+            "hostmon_downtime": "4min @3am",  # placeholder
         },
         "pdu": pdu_context,
         "firewalla": {
@@ -247,17 +283,22 @@ def dashboard():
             "devices_total": fw_devices.get("total", 0),
             "devices_online": fw_devices.get("online", 0),
             "flows_blocked": fw_summary.get("flows_blocked", 0),
-            "rules_active": fw_summary.get("rules_active", 0),
+            "rules_active": fw_summary.get("rules_active", 0)
         },
         "switches": [
             {"name": "MikroTik", "ports": 24, "active": 18},
             {"name": "Zyxel-1", "ports": 48, "active": 42},
             {"name": "Zyxel-2", "ports": 24, "active": 20},
         ],
-        "mikrotik_switch": {"model": "CRS354-48G-4S+2Q+", "ports": switch_ports, "stats": switch_stats},
+        "mikrotik_switch": {
+            "model": "CRS354-48G-4S+2Q+",
+            "ports": switch_ports,
+            "stats": switch_stats,
+        },
         "device_stats": device_stats,
     }
 
+    # Render; if the template is missing during dev, return JSON so you can inspect
     try:
         return render_template("ops_center/dashboard.html", **context)
     except Exception:
@@ -269,7 +310,10 @@ def dashboard():
 # ==============================================================================
 @ops_center_bp.route("/api/refresh")
 def api_refresh():
-    """Lightweight metrics for periodic refresh (still available if needed)."""
+    """
+    Lightweight metrics for periodic refresh (AJAX).
+    """
+    # LibreNMS
     wan_stats = {}
     ips_alerts = {}
     if OpsLibreNMS:
@@ -277,9 +321,60 @@ def api_refresh():
             nms = OpsLibreNMS()
             wan_stats = _safe(nms, "get_port_bandwidth", {}) or {}
             ips_alerts = _safe(nms, "get_ips_alerts", {}) or {}
+
+            # --- Build a 3-line timestamped summary for IPS (like Firewalla) ---
+            ips_latest_str = ips_alerts.get("latest") or ""
+            try:
+                recent = ips_alerts.get("recent_alerts", [])
+                lines, seen = [], set()
+
+                from datetime import datetime
+
+                for a in recent[:8]:  # look a few deep to skip dupes
+                    # message text (prefer explicit rule/message)
+                    msg = (a.get("rule") or a.get("message") or a.get("alert") or "").strip()
+                    if not msg:
+                        continue
+
+                    # tolerant timestamp parsing
+                    ts = a.get("ts") or a.get("timestamp") or a.get("time")  # may be epoch or string
+                    ts_str = ""
+                    try:
+                        if isinstance(ts, (int, float,)) or (isinstance(ts, str) and ts.isdigit()):
+                            ts_str = datetime.fromtimestamp(int(ts)).strftime("%H:%M")
+                        elif isinstance(ts, str) and len(ts) >= 5:
+                            # try simple slice (HH:MM) as a safe fallback
+                            # or tighten if your format is known
+                            try:
+                                ts_str = datetime.fromisoformat(ts.replace("Z","")).strftime("%H:%M")
+                            except Exception:
+                                ts_str = ts[11:16] if len(ts) >= 16 else ""
+                    except Exception:
+                        ts_str = ""
+
+                    line = f"[{ts_str}] {msg}" if ts_str else msg
+                    line = (line[:80] + "...") if len(line) > 80 else line
+
+                    # dedupe only if both timestamp & message are identical
+                    key = f"{ts_str}|{msg}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+
+                    lines.append(line)
+                    if len(lines) == 3:
+                        break
+
+                if lines:
+                    # double newline = blank line between alerts
+                    ips_latest_str = "\n\n".join(lines)
+            except Exception:
+                pass
+
         except Exception:
             pass
 
+    # MikroTik quick stats
     ports = []
     if MikroTikAPI:
         try:
@@ -287,8 +382,12 @@ def api_refresh():
             ports = _safe(mt, "get_all_ports", []) or []
         except Exception:
             pass
-    switch_stats = {"ports_up": sum(1 for p in ports if p.get("status") == "up"), "total_ports": len(ports)}
+    switch_stats = {
+        "ports_up": sum(1 for p in ports if p.get("status") == "up"),
+        "total_ports": len(ports),
+    }
 
+    # PDU amps
     pdu_amps = 0.0
     if DLIPduAPI:
         try:
@@ -301,6 +400,7 @@ def api_refresh():
         except Exception:
             pass
 
+    # Firewalla
     fw_alarms = {"count": 0, "latest": "No Alerts"}
     if FirewallaAPI:
         try:
@@ -366,7 +466,9 @@ def api_pdu_outlet_toggle(outlet_id: int):
             return jsonify({"success": False, "error": "PDU backend unavailable"}), 501
         pdu = DLIPduAPI()
 
-        api_outlet_id = outlet_id - 1  # convert 1..N to 0-based if needed
+        # Convert human-friendly 1..N to 0-based if needed by your helper
+        api_outlet_id = outlet_id - 1
+
         outlet = _safe(pdu, "get_outlet_status", None, api_outlet_id)
         if not outlet:
             return jsonify({"success": False, "error": "Outlet not found"}), 404
@@ -428,9 +530,11 @@ def api_switch_port_details(port_id: int):
         return jsonify({"error": "MikroTik backend unavailable"}), 501
     try:
         mt = MikroTikAPI()
+        # support either method name
         detail = _safe(mt, "get_port_details", None, port_id) or _safe(mt, "get_port_detail", None, port_id)
         if not detail:
             return jsonify({"error": "Port not found"}), 404
+        # If your helper returns bps, derive mbps
         if "rx_rate_bps" in detail:
             detail["rx_mbps"] = round(detail.get("rx_rate_bps", 0) / 1_000_000, 2)
         if "tx_rate_bps" in detail:
@@ -451,7 +555,7 @@ def api_switch_port_toggle(port_id: int):
             return jsonify({"success": False, "error": "Port not found"}), 404
         new_state = not bool(detail.get("enabled", True))
         ok = _safe(mt, "toggle_port", None, port_id, new_state)
-        if ok is None:
+        if ok is None:  # if your helper uses a different name:
             ok = _safe(mt, "set_port_enabled", False, port_id, new_state)
         return jsonify({"success": bool(ok), "port_id": port_id, "new_state": "enabled" if new_state else "disabled"})
     except Exception as e:
@@ -497,11 +601,20 @@ def api_ips_details():
         return jsonify({"error": str(e)}), 500
 
 
-@ops_center_bp.route("/api/whois/<ip>")
+@ops_center_bp.route('/api/whois/<ip>')
 def api_whois_lookup(ip):
-    """Perform WHOIS lookup on an IP address."""
+    """
+    Perform WHOIS lookup on an IP address.
+    
+    Args:
+        ip: IP address to lookup
+        
+    Returns:
+        JSON response with WHOIS data
+    """
     libre = OpsLibreNMS()
     whois_data = libre.get_ip_whois(ip)
+    
     return jsonify(whois_data)
 
 
@@ -510,6 +623,7 @@ def api_whois_lookup(ip):
 # ==============================================================================
 @ops_center_bp.route("/api/firewalla/details")
 def api_firewalla_details():
+    """Get detailed Firewalla security information."""
     if not FirewallaAPI:
         return jsonify({"success": False, "error": "Firewalla backend unavailable"}), 501
     try:
@@ -519,27 +633,27 @@ def api_firewalla_details():
         flows = _safe(fw, "get_flows", {}, 72) or {}
         rules = _safe(fw, "get_rules", {}) or {}
         boxes = _safe(fw, "get_boxes", []) or []
-        return jsonify(
-            {
-                "success": True,
-                "alarms": {
-                    "count": alarms.get("count", 0),
-                    "latest": alarms.get("latest", "No Alerts"),
-                    "recent": alarms.get("alarms", [])[:100],
-                },
-                "devices": devices,
-                "flows": flows,
-                "rules": rules,
-                "boxes": boxes,
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
-            }
-        )
+        
+        return jsonify({
+            "success": True,
+            "alarms": {
+                "count": alarms.get("count", 0),
+                "latest": alarms.get("latest", "No Alerts"),
+                "recent": alarms.get("alarms", [])[:100]
+            },
+            "devices": devices,
+            "flows": flows,
+            "rules": rules,
+            "boxes": boxes,
+            "timestamp": datetime.now().strftime("%H:%M:%S")
+        })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 
 @ops_center_bp.route("/api/firewalla/alarms/<int:hours>")
 def api_firewalla_alarms(hours: int):
+    """Get Firewalla alarms for specific time period."""
     if not FirewallaAPI:
         return jsonify({"success": False, "error": "Firewalla backend unavailable"}), 501
     if hours < 1 or hours > 168:
@@ -547,11 +661,17 @@ def api_firewalla_alarms(hours: int):
     try:
         fw = FirewallaAPI()
         alarms = _safe(fw, "get_alarms", {}, hours) or {}
-        return jsonify({"success": True, "hours": hours, "alarms": alarms, "timestamp": datetime.now().strftime("%H:%M:%S")})
+        return jsonify({
+            "success": True,
+            "hours": hours,
+            "alarms": alarms,
+            "timestamp": datetime.now().strftime("%H:%M:%S")
+        })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# Target List – list current targets
 @ops_center_bp.route("/api/firewalla/targets", methods=["GET"])
 def api_fw_targets_list():
     if not FirewallaAPI:
@@ -563,7 +683,7 @@ def api_fw_targets_list():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
+# Target List – add target
 @ops_center_bp.route("/api/firewalla/targets", methods=["POST"])
 def api_fw_targets_add():
     if not FirewallaAPI:
@@ -580,7 +700,7 @@ def api_fw_targets_add():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
+# Target List – remove target
 @ops_center_bp.route("/api/firewalla/targets/<path:target>", methods=["DELETE"])
 def api_fw_targets_remove(target: str):
     if not FirewallaAPI:
@@ -595,9 +715,9 @@ def api_fw_targets_remove(target: str):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @ops_center_bp.route("/api/firewalla/abnormal")
 def api_firewalla_abnormal():
+    """Get 'Abnormal Upload' alarms for a recent window."""
     if not FirewallaAPI:
         return jsonify({"success": False, "error": "Firewalla backend unavailable"}), 501
     try:
@@ -610,10 +730,12 @@ def api_firewalla_abnormal():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
 # ==============================================================================
 # Helpers
 # ==============================================================================
 def _safe(obj, method: str, default, *args, **kwargs):
+    """Call obj.method(*args, **kwargs) if it exists; otherwise return default."""
     try:
         fn = getattr(obj, method, None)
         if callable(fn):
@@ -624,6 +746,7 @@ def _safe(obj, method: str, default, *args, **kwargs):
 
 
 def _first_ok(obj, methods):
+    """Given [(name, default)], call the first that works; else return None/defaults."""
     for name, default in methods:
         try:
             fn = getattr(obj, name, None)
@@ -638,6 +761,7 @@ def _first_ok(obj, methods):
 
 
 def _num(x, fallback=0.0):
+    """Safely convert to float."""
     try:
         return float(x)
     except Exception:
@@ -645,6 +769,7 @@ def _num(x, fallback=0.0):
 
 
 def _nested(d, path):
+    """Safely get nested dict values; returns None if missing."""
     cur = d
     for key in path:
         if not isinstance(cur, dict):

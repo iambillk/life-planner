@@ -1,0 +1,576 @@
+{% extends "base.html" %}
+
+{% block title %}Tool History - Admin Tools{% endblock %}
+
+{% block header %}📋 Tool Execution History{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .history-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .history-header {
+    background: linear-gradient(135deg, rgba(110,168,255,0.15), rgba(110,168,255,0.05));
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .history-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .filter-input,
+  .filter-select {
+    padding: 10px 14px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    color: var(--admin-text);
+    font-size: 0.95rem;
+  }
+
+  .filter-input {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .filter-select {
+    min-width: 150px;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 3px rgba(110,168,255,0.1);
+  }
+
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 8px 16px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-text);
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-chip:hover {
+    background: rgba(110,168,255,0.1);
+    border-color: var(--admin-primary);
+  }
+
+  .filter-chip.active {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .stats-bar {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+  }
+
+  .stat-box {
+    text-align: center;
+    padding: 12px;
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--admin-primary);
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .history-table {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    overflow: hidden;
+    box-shadow: var(--admin-shadow);
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: var(--admin-panel);
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--admin-line);
+    transition: all 0.2s;
+  }
+
+  tbody tr:hover {
+    background: rgba(110,168,255,0.05);
+  }
+
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  td {
+    padding: 14px 16px;
+    color: var(--admin-text);
+    font-size: 0.9rem;
+  }
+
+  .tool-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tool-icon {
+    font-size: 20px;
+  }
+
+  .tool-name {
+    font-weight: 600;
+  }
+
+  .target-cell {
+    font-family: 'Courier New', monospace;
+    color: var(--admin-primary);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-success {
+    background: rgba(34,197,94,0.15);
+    color: var(--admin-success);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  .status-error {
+    background: rgba(239,68,68,0.15);
+    color: var(--admin-danger);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  .time-cell {
+    color: var(--admin-muted);
+    font-size: 0.85rem;
+  }
+
+  .duration-cell {
+    font-weight: 600;
+    color: var(--admin-warning);
+  }
+
+  .actions-cell {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-icon {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--admin-line);
+    border-radius: 6px;
+    color: var(--admin-text);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+
+  .btn-icon:hover {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+    transform: translateY(-2px);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--admin-muted);
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    color: var(--admin-muted);
+  }
+
+  @media (max-width: 768px) {
+    .filter-bar {
+      flex-direction: column;
+    }
+
+    .filter-input,
+    .filter-select {
+      width: 100%;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .table-wrapper {
+      overflow-x: scroll;
+    }
+
+    table {
+      min-width: 800px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="history-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>Execution History</span>
+  </div>
+
+  <!-- Header with Filters -->
+  <div class="history-header">
+    <h1 class="history-title">
+      <span>📋</span>
+      <span>Tool Execution History</span>
+    </h1>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="{{ url_for('admin_tools.tool_history') }}" class="filter-bar">
+      <input 
+        type="text" 
+        name="target" 
+        class="filter-input"
+        placeholder="Filter by target (IP, domain, etc.)..."
+        value="{{ request.args.get('target', '') }}"
+      >
+
+      <select name="tool" class="filter-select">
+        <option value="">All Tools</option>
+        {% for tool_key, tool_info in tools.items() %}
+        <option value="{{ tool_key }}" {% if request.args.get('tool') == tool_key %}selected{% endif %}>
+          {{ tool_info.icon }} {{ tool_info.name }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="btn btn-primary">
+        <span>🔍</span>
+        <span>Filter</span>
+      </button>
+    </form>
+
+    <!-- Time Period Chips -->
+    <div class="filter-chips">
+      {% for period_key, period_info in history_filters.items() %}
+      <a href="{{ url_for('admin_tools.tool_history', period=period_key, tool=request.args.get('tool'), target=request.args.get('target')) }}" 
+         class="filter-chip {{ 'active' if current_filter == period_key }}">
+        <span>🕐</span>
+        <span>{{ period_info.label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  {% if stats.total_executions > 0 %}
+  <div class="stats-bar">
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.total_executions }}</div>
+        <div class="stat-label">Total Runs</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.success_count }}</div>
+        <div class="stat-label">Successful</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.failure_count }}</div>
+        <div class="stat-label">Failed</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.success_rate }}%</div>
+        <div class="stat-label">Success Rate</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.avg_execution_time }}s</div>
+        <div class="stat-label">Avg Time</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- History Table -->
+  {% if executions %}
+  <div class="history-table">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Executed</th>
+            <th>Duration</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for execution in executions %}
+          <tr>
+            <!-- Tool -->
+            <td>
+              <div class="tool-cell">
+                <span class="tool-icon">
+                  {{ tools[execution.tool_name].icon if execution.tool_name in tools else '🔧' }}
+                </span>
+                <span class="tool-name">
+                  {{ tools[execution.tool_name].name if execution.tool_name in tools else execution.tool_name }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Target -->
+            <td>
+              <span class="target-cell">
+                {{ execution.target if execution.target else '—' }}
+              </span>
+            </td>
+
+            <!-- Status -->
+            <td>
+              <span class="status-badge {{ 'status-success' if execution.success else 'status-error' }}">
+                <span>{{ '✓' if execution.success else '✗' }}</span>
+                <span>{{ 'OK' if execution.success else 'Error' }}</span>
+              </span>
+            </td>
+
+            <!-- Time -->
+            <td>
+              <div class="time-cell">
+                <div>{{ execution.executed_at.strftime('%Y-%m-%d') }}</div>
+                <div>{{ execution.executed_at.strftime('%I:%M:%S %p') }}</div>
+              </div>
+            </td>
+
+            <!-- Duration -->
+            <td>
+              <span class="duration-cell">
+                {{ execution.execution_time|round(2) }}s
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              <div class="actions-cell">
+                <a href="{{ url_for('admin_tools.view_execution', execution_id=execution.id) }}" 
+                   class="btn-icon" 
+                   title="View Details">
+                  👁️
+                </a>
+
+                <a href="{{ url_for('admin_tools.rerun_tool', execution_id=execution.id) }}" 
+                   class="btn-icon" 
+                   title="Re-run">
+                  🔄
+                </a>
+
+                <form method="POST" 
+                      action="{{ url_for('admin_tools.delete_execution', execution_id=execution.id) }}" 
+                      style="display: inline;"
+                      onsubmit="return confirm('Delete this execution?')">
+                  <button type="submit" class="btn-icon" title="Delete">
+                    🗑️
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if executions|length == 100 %}
+  <div style="text-align: center; margin-top: 20px; color: var(--admin-muted); font-size: 0.9rem;">
+    <p>Showing first 100 results. Use filters to narrow down your search.</p>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="history-table">
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">
+        {% if request.args.get('target') or request.args.get('tool') %}
+          No matching executions found
+        {% else %}
+          No tool executions yet
+        {% endif %}
+      </div>
+      <p style="margin-bottom: 20px;">
+        {% if request.args.get('target') or request.args.get('tool') %}
+          Try adjusting your filters
+        {% else %}
+          Run your first diagnostic tool to see history here
+        {% endif %}
+      </p>
+      <a href="{{ url_for('admin_tools.dashboard') }}" class="btn btn-primary">
+        <span>🔧</span>
+        <span>Go to Tools</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
