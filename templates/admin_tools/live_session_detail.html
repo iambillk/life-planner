@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Session #{{ session.id }} - Live Monitoring{% endblock %}
+{% block header %}📋 Session Details{% endblock %}
+
+{% block extra_css %}
+<style>
+  .detail-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .detail-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .detail-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0 0 8px 0;
+  }
+
+  .detail-subtitle {
+    color: var(--admin-muted);
+    font-size: 0.95rem;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .status-badge.running {
+    background: rgba(239,68,68,0.2);
+    color: #ef4444;
+  }
+
+  .status-badge.stopped {
+    background: rgba(34,197,94,0.2);
+    color: #22c55e;
+  }
+
+  .status-badge.timeout {
+    background: rgba(245,158,11,0.2);
+    color: #f59e0b;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-label {
+    font-size: 0.8rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .meta-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    background: var(--admin-panel);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+  }
+
+  .stat-box {
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--admin-primary);
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--admin-primary);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>›</span>
+    <a href="{{ url_for('admin_tools.live_dashboard') }}">Live Monitoring</a>
+    <span>›</span>
+    <span>Session #{{ session.id }}</span>
+  </div>
+
+  <!-- Session Details -->
+  <div class="detail-card">
+    <div class="detail-header">
+      <div>
+        <h1 class="detail-title">📡 {{ session.target }}</h1>
+        <div class="detail-subtitle">Continuous Ping Session #{{ session.id }}</div>
+      </div>
+      <div class="status-badge {{ session.status }}">
+        <span>●</span>
+        <span>{{ session.status.upper() }}</span>
+      </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">Tool</div>
+        <div class="meta-value">{{ session.tool_name.replace('_', ' ').title() }}</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Started At</div>
+        <div class="meta-value">{{ session.started_at.strftime('%Y-%m-%d %I:%M %p') }}</div>
+      </div>
+
+      {% if session.stopped_at %}
+      <div class="meta-item">
+        <div class="meta-label">Stopped At</div>
+        <div class="meta-value">{{ session.stopped_at.strftime('%Y-%m-%d %I:%M %p') }}</div>
+      </div>
+      {% endif %}
+
+      <div class="meta-item">
+        <div class="meta-label">Duration</div>
+        <div class="meta-value">{{ session.formatted_duration }}</div>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    {% if session.packets_sent %}
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-number">{{ session.packets_sent }}</div>
+        <div class="stat-label">Packets Sent</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-number" style="color: #22c55e;">{{ session.packets_received }}</div>
+        <div class="stat-label">Packets Received</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-number" style="color: {{ '#ef4444' if session.packet_loss_pct > 10 else '#22c55e' }};">
+          {{ "%.1f"|format(session.packet_loss_pct) }}%
+        </div>
+        <div class="stat-label">Packet Loss</div>
+      </div>
+
+      {% if session.packets_sent > 0 %}
+      <div class="stat-box">
+        <div class="stat-number">
+          {{ "%.1f"|format((session.packets_received / session.packets_sent) * 100) }}%
+        </div>
+        <div class="stat-label">Success Rate</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Notes -->
+    {% if session.notes %}
+    <div style="margin-bottom: 24px;">
+      <div class="meta-label" style="margin-bottom: 8px;">Session Notes</div>
+      <div style="background: var(--admin-panel); padding: 12px; border-radius: 8px; color: var(--admin-text);">
+        {{ session.notes }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 12px;">
+      {% if session.status == 'running' %}
+      <a href="{{ url_for('admin_tools.live_terminal', session_id=session.id) }}" class="btn btn-primary">
+        View Live Terminal
+      </a>
+      {% endif %}
+      
+      <a href="{{ url_for('admin_tools.live_sessions_history') }}" class="btn btn-secondary">
+        View All Sessions
+      </a>
+      
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="btn btn-secondary">
+        ← Back to Live Monitoring
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -7,7 +7,7 @@ Created: 2025-01-08
 """
 
 from models.base import db
-from datetime import datetime
+from datetime import datetime, timedelta  
 from sqlalchemy import Index
 
 
@@ -92,6 +92,106 @@ class KnowledgeCategory(db.Model):
     
     def __repr__(self):
         return f'<KnowledgeCategory {self.name}>'
+
+# ADD THIS CLASS TO models/admin_tools.py
+# Place it after the ToolExecution class, before KnowledgeItem
+
+class LiveToolSession(db.Model):
+    """Live monitoring tool sessions (continuous ping, etc.)"""
+    __tablename__ = 'live_tool_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tool_name = db.Column(db.String(50), nullable=False)  # continuous_ping, etc.
+    target = db.Column(db.String(255), nullable=False)  # IP or hostname
+    
+    # Session tracking
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    stopped_at = db.Column(db.DateTime)
+    duration_seconds = db.Column(db.Integer)
+    
+    # Process management
+    process_pid = db.Column(db.Integer)  # OS process ID
+    status = db.Column(db.String(20), default='running')  # running, stopped, failed, timeout
+    
+    # Statistics
+    packets_sent = db.Column(db.Integer, default=0)
+    packets_received = db.Column(db.Integer, default=0)
+    packet_loss_pct = db.Column(db.Float, default=0.0)
+    
+    # Summary data (last 100 lines of output)
+    summary_output = db.Column(db.Text)
+    
+    # Optional metadata
+    notes = db.Column(db.Text)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_live_status', 'status'),
+        Index('idx_live_started', 'started_at'),
+    )
+    
+    def __repr__(self):
+        return f'<LiveToolSession {self.tool_name} → {self.target} ({self.status})>'
+    
+    @property
+    def is_active(self):
+        """Check if session is currently running"""
+        return self.status == 'running'
+    
+    @property
+    def formatted_duration(self):
+        """Get human-readable duration"""
+        if not self.duration_seconds:
+            if self.started_at:
+                # Calculate live duration
+                delta = datetime.utcnow() - self.started_at
+                seconds = int(delta.total_seconds())
+            else:
+                return "0s"
+        else:
+            seconds = self.duration_seconds
+        
+        if seconds < 60:
+            return f"{seconds}s"
+        elif seconds < 3600:
+            minutes = seconds // 60
+            secs = seconds % 60
+            return f"{minutes}m {secs}s"
+        else:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            return f"{hours}h {minutes}m"
+    
+    @classmethod
+    def get_active_sessions(cls):
+        """Get all currently running sessions"""
+        return cls.query.filter_by(status='running').order_by(cls.started_at.desc()).all()
+    
+    @classmethod
+    def get_recent_sessions(cls, limit=50):
+        """Get recent sessions (all statuses)"""
+        return cls.query.order_by(cls.started_at.desc()).limit(limit).all()
+    
+    @classmethod
+    def cleanup_orphaned_sessions(cls, timeout_minutes=60):
+        """Mark sessions as timeout if they've been running too long"""
+        cutoff = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+        
+        orphaned = cls.query.filter(
+            cls.status == 'running',
+            cls.started_at < cutoff
+        ).all()
+        
+        for session in orphaned:
+            session.status = 'timeout'
+            if not session.stopped_at:
+                session.stopped_at = datetime.utcnow()
+            if not session.duration_seconds:
+                delta = session.stopped_at - session.started_at
+                session.duration_seconds = int(delta.total_seconds())
+        
+        db.session.commit()
+        return len(orphaned)
 
 
 class KnowledgeItem(db.Model):

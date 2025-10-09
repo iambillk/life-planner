@@ -377,6 +377,10 @@
     </div>
     
     <div class="quick-actions">
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="quick-action-btn">
+        <span class="quick-action-icon">🔴</span>
+        <span class="quick-action-label">Live Monitor</span>
+      </a>
       <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='ping') }}" class="quick-action-btn">
         <span class="quick-action-icon">📶</span>
         <span class="quick-action-label">Ping</span>

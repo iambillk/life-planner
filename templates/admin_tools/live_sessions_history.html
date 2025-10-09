@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Live Monitoring History - Admin Tools{% endblock %}
+{% block header %}📋 Live Monitoring History{% endblock %}
+
+{% block extra_css %}
+<style>
+  .history-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--admin-primary);
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+  }
+
+  .sessions-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+
+  .sessions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .sessions-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+
+  .session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .session-item {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 10px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    transition: all 0.2s;
+  }
+
+  .session-item:hover {
+    border-color: var(--admin-primary);
+    transform: translateX(4px);
+  }
+
+  .session-icon {
+    font-size: 2rem;
+  }
+
+  .session-info {
+    flex: 1;
+  }
+
+  .session-target {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 4px;
+  }
+
+  .session-meta {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .session-stats {
+    display: flex;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .session-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .session-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+
+  .session-stat-label {
+    font-size: 0.7rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+  }
+
+  .session-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .session-status.running {
+    background: rgba(239,68,68,0.2);
+    color: #ef4444;
+  }
+
+  .session-status.stopped {
+    background: rgba(34,197,94,0.2);
+    color: #22c55e;
+  }
+
+  .session-status.timeout {
+    background: rgba(245,158,11,0.2);
+    color: #f59e0b;
+  }
+
+  .session-status.failed {
+    background: rgba(156,163,175,0.2);
+    color: var(--admin-muted);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--admin-primary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--admin-muted);
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="history-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>›</span>
+    <a href="{{ url_for('admin_tools.live_dashboard') }}">Live Monitoring</a>
+    <span>›</span>
+    <span>History</span>
+  </div>
+
+  <!-- Statistics Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-number">{{ stats.total }}</div>
+      <div class="stat-label">Total Sessions</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-number" style="color: #ef4444;">{{ stats.active }}</div>
+      <div class="stat-label">Currently Active</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-number" style="color: #22c55e;">{{ stats.completed }}</div>
+      <div class="stat-label">Completed</div>
+    </div>
+  </div>
+
+  <!-- Sessions List -->
+  <div class="sessions-card">
+    <div class="sessions-header">
+      <div class="sessions-title">All Monitoring Sessions</div>
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="btn btn-secondary">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    {% if sessions %}
+    <div class="session-list">
+      {% for session in sessions %}
+      <div class="session-item">
+        <div class="session-icon">
+          {% if session.status == 'running' %}⚡{% else %}📡{% endif %}
+        </div>
+
+        <div class="session-info">
+          <div class="session-target">{{ session.target }}</div>
+          <div class="session-meta">
+            <span>{{ session.started_at.strftime('%Y-%m-%d %I:%M %p') }}</span>
+            <span>Duration: {{ session.formatted_duration }}</span>
+            {% if session.notes %}
+            <span>📝 {{ session.notes[:50] }}{% if session.notes|length > 50 %}...{% endif %}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if session.packets_sent %}
+        <div class="session-stats">
+          <div class="session-stat">
+            <div class="session-stat-value">{{ session.packets_sent }}</div>
+            <div class="session-stat-label">Sent</div>
+          </div>
+          <div class="session-stat">
+            <div class="session-stat-value" style="color: #22c55e;">{{ session.packets_received }}</div>
+            <div class="session-stat-label">Received</div>
+          </div>
+          <div class="session-stat">
+            <div class="session-stat-value" style="color: {{ '#ef4444' if session.packet_loss_pct > 10 else '#22c55e' }};">
+              {{ "%.1f"|format(session.packet_loss_pct) }}%
+            </div>
+            <div class="session-stat-label">Loss</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="session-status {{ session.status }}">
+          <span>●</span>
+          <span>{{ session.status.upper() }}</span>
+        </div>
+
+        <a href="{{ url_for('admin_tools.view_live_session', session_id=session.id) }}" class="btn btn-secondary">
+          View Details
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <h3 style="color: var(--admin-text); margin-bottom: 8px;">No sessions yet</h3>
+      <p>Start a monitoring session to see history here</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

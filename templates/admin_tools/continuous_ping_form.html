@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Continuous Ping - Admin Tools{% endblock %}
+{% block header %}📡 Continuous Ping Monitor{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --live-primary: #ef4444;
+  }
+
+  .ping-container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .ping-header {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+    border: 2px solid rgba(239,68,68,0.3);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .ping-icon {
+    font-size: 64px;
+  }
+
+  .ping-header-content h1 {
+    font-size: 1.8rem;
+    margin: 0 0 8px 0;
+    color: var(--admin-text);
+  }
+
+  .ping-header-content p {
+    color: var(--admin-muted);
+    margin: 0;
+  }
+
+  .form-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 32px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+
+  .form-section {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+  }
+
+  .form-label-required::after {
+    content: " *";
+    color: var(--live-primary);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--admin-panel);
+    border: 2px solid var(--admin-line);
+    border-radius: 10px;
+    color: var(--admin-text);
+    font-size: 1.1rem;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--live-primary);
+    background: var(--admin-card);
+    box-shadow: 0 0 0 4px rgba(239,68,68,0.1);
+  }
+
+  .form-input::placeholder {
+    color: var(--admin-muted);
+    opacity: 0.6;
+  }
+
+  .form-help {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    margin-top: 6px;
+  }
+
+  .info-box {
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .info-box-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #3b82f6;
+    margin-bottom: 8px;
+  }
+
+  .info-box-content {
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .info-box-content ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+  }
+
+  .info-box-content li {
+    margin-bottom: 4px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .btn {
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--live-primary);
+    border-color: var(--live-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(239,68,68,0.4);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--admin-primary);
+    background: var(--admin-panel);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ping-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>›</span>
+    <a href="{{ url_for('admin_tools.live_dashboard') }}">Live Monitoring</a>
+    <span>›</span>
+    <span>Continuous Ping</span>
+  </div>
+
+  <!-- Header -->
+  <div class="ping-header">
+    <div class="ping-icon">📡</div>
+    <div class="ping-header-content">
+      <h1>Continuous Ping Monitor</h1>
+      <p>Monitor network connectivity in real-time</p>
+    </div>
+  </div>
+
+  <!-- Info Box -->
+  <div class="info-box">
+    <div class="info-box-title">
+      <span>ℹ️</span>
+      <span>How It Works</span>
+    </div>
+    <div class="info-box-content">
+      This tool will continuously ping the target until you manually stop it:
+      <ul>
+        <li>Real-time output streaming to your browser</li>
+        <li>Live statistics (packets sent/received, loss %)</li>
+        <li>You control when to stop monitoring</li>
+        <li>Full session history saved for audit trail</li>
+      </ul>
+      <strong>Perfect for:</strong> Monitoring server reboots, testing connectivity, troubleshooting intermittent issues
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" class="form-card">
+    
+    <!-- Target -->
+    <div class="form-section">
+      <label class="form-label form-label-required" for="target">
+        Target (IP Address or Hostname)
+      </label>
+      <input 
+        type="text" 
+        id="target" 
+        name="target" 
+        class="form-input"
+        placeholder="e.g., 192.168.1.1 or server.company.com"
+        required
+        autofocus
+      >
+      <div class="form-help">
+        Enter the IP address or hostname you want to continuously monitor
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-section">
+      <label class="form-label" for="notes">
+        Notes (Optional)
+      </label>
+      <textarea 
+        id="notes" 
+        name="notes" 
+        class="form-input"
+        rows="3"
+        placeholder="Why are you monitoring this target? (e.g., 'Waiting for web server reboot')"
+      ></textarea>
+      <div class="form-help">
+        Add context about why you're running this monitoring session
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+      <button type="submit" class="btn btn-primary">
+        <span>▶️</span>
+        <span>Start Monitoring</span>
+      </button>
+      
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="btn btn-secondary">
+        <span>← Cancel</span>
+      </a>
+    </div>
+  </form>
+
+</div>
+
+<script>
+// Auto-focus target input
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('target').focus();
+});
+</script>
+{% endblock %}

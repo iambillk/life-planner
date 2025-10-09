@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Live Monitoring - Admin Tools{% endblock %}
+{% block header %}🔴 Live Monitoring Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --live-primary: #ef4444;
+    --live-success: #22c55e;
+    --live-warning: #f59e0b;
+  }
+
+  .live-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .live-header {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+    border: 2px solid rgba(239,68,68,0.3);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .live-header h1 {
+    font-size: 2rem;
+    margin: 0 0 12px 0;
+    color: var(--admin-text);
+  }
+
+  .live-header p {
+    color: var(--admin-muted);
+    margin: 0;
+  }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .tool-card {
+    background: var(--admin-card);
+    border: 2px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .tool-card:hover {
+    border-color: var(--live-primary);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(239,68,68,0.3);
+  }
+
+  .tool-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  .tool-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin-bottom: 8px;
+  }
+
+  .tool-desc {
+    color: var(--admin-muted);
+    font-size: 0.95rem;
+  }
+
+  .section-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .session-item {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .session-item.active {
+    border-color: var(--live-primary);
+    background: rgba(239,68,68,0.05);
+  }
+
+  .session-info {
+    flex: 1;
+  }
+
+  .session-target {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 4px;
+  }
+
+  .session-meta {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+  }
+
+  .session-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .session-status.running {
+    background: rgba(239,68,68,0.2);
+    color: var(--live-primary);
+  }
+
+  .session-status.stopped {
+    background: rgba(156,163,175,0.2);
+    color: var(--admin-muted);
+  }
+
+  .session-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    background: var(--live-primary);
+    border-color: var(--live-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--admin-primary);
+    background: var(--admin-panel);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--admin-muted);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="live-container">
+
+  <!-- Header -->
+  <div class="live-header">
+    <h1>🔴 Live Monitoring Tools</h1>
+    <p>Real-time streaming tools for continuous network monitoring</p>
+  </div>
+
+  <!-- Available Tools -->
+  <div class="tools-grid">
+    <a href="{{ url_for('admin_tools.continuous_ping') }}" class="tool-card">
+      <div class="tool-icon">📡</div>
+      <div class="tool-name">Continuous Ping</div>
+      <div class="tool-desc">Monitor network connectivity in real-time with continuous ping</div>
+    </a>
+
+    <div class="tool-card" style="opacity: 0.5; cursor: not-allowed;">
+      <div class="tool-icon">🔍</div>
+      <div class="tool-name">Live Port Scanner</div>
+      <div class="tool-desc">Coming soon - Stream port scan results in real-time</div>
+    </div>
+
+    <div class="tool-card" style="opacity: 0.5; cursor: not-allowed;">
+      <div class="tool-icon">📊</div>
+      <div class="tool-name">Packet Capture</div>
+      <div class="tool-desc">Coming soon - Monitor network traffic live</div>
+    </div>
+  </div>
+
+  <!-- Active Sessions -->
+  {% if active_sessions %}
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <span class="pulse">⚡</span>
+        <span>Active Sessions ({{ active_sessions|length }})</span>
+      </div>
+      <a href="{{ url_for('admin_tools.live_sessions_history') }}" class="btn btn-secondary">
+        View All History →
+      </a>
+    </div>
+
+    <div class="session-list">
+      {% for session in active_sessions %}
+      <div class="session-item active">
+        <div class="session-info">
+          <div class="session-target">{{ session.target }}</div>
+          <div class="session-meta">
+            Started {{ session.started_at.strftime('%I:%M %p') }} • 
+            Running for {{ session.formatted_duration }}
+          </div>
+        </div>
+        <div class="session-status running">
+          <span class="pulse">●</span>
+          <span>RUNNING</span>
+        </div>
+        <div class="session-actions">
+          <a href="{{ url_for('admin_tools.live_terminal', session_id=session.id) }}" class="btn btn-primary">
+            View Terminal
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent Completed Sessions -->
+  {% if recent_sessions %}
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📋</span>
+        <span>Recent Completed Sessions</span>
+      </div>
+    </div>
+
+    <div class="session-list">
+      {% for session in recent_sessions %}
+      <div class="session-item">
+        <div class="session-info">
+          <div class="session-target">{{ session.target }}</div>
+          <div class="session-meta">
+            {{ session.started_at.strftime('%Y-%m-%d %I:%M %p') }} • 
+            Duration: {{ session.formatted_duration }} • 
+            {% if session.packets_sent %}
+              {{ session.packets_received }}/{{ session.packets_sent }} packets ({{ "%.1f"|format(session.packet_loss_pct) }}% loss)
+            {% endif %}
+          </div>
+        </div>
+        <div class="session-status stopped">
+          <span>●</span>
+          <span>{{ session.status.upper() }}</span>
+        </div>
+        <div class="session-actions">
+          <a href="{{ url_for('admin_tools.view_live_session', session_id=session.id) }}" class="btn btn-secondary">
+            View Details
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Empty State -->
+  {% if not active_sessions and not recent_sessions %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📡</div>
+    <h3 style="color: var(--admin-text); margin-bottom: 8px;">No monitoring sessions yet</h3>
+    <p>Start a continuous ping session to monitor network connectivity</p>
+    <a href="{{ url_for('admin_tools.continuous_ping') }}" class="btn btn-primary" style="margin-top: 16px;">
+      Start Continuous Ping
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

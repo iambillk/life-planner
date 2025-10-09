@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Live Terminal - {{ session.target }} - Admin Tools{% endblock %}
+{% block header %}📡 Monitoring {{ session.target }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  body {
+    overflow: hidden;
+  }
+
+  .terminal-container {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background: #0a0e14;
+  }
+
+  .terminal-header {
+    background: linear-gradient(135deg, #1a1f2e, #0f1419);
+    border-bottom: 2px solid #ef4444;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .terminal-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .terminal-target {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #e6eaf2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .status-indicator.stopped {
+    background: #6b7280;
+    animation: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 10px #ef4444; }
+    50% { opacity: 0.6; box-shadow: 0 0 20px #ef4444; }
+  }
+
+  .terminal-stats {
+    display: flex;
+    gap: 24px;
+    font-size: 0.9rem;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    color: #9fb0c8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-value {
+    color: #e6eaf2;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .stat-value.success { color: #22c55e; }
+  .stat-value.danger { color: #ef4444; }
+
+  .terminal-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-stop {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+  }
+
+  .btn-stop:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+  }
+
+  .btn-stop:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: #374151;
+    color: #9fb0c8;
+  }
+
+  .btn-secondary:hover {
+    border-color: #6ea8ff;
+    color: #e6eaf2;
+  }
+
+  .terminal-output-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: #0a0e14;
+  }
+
+  .terminal-output {
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e6eaf2;
+  }
+
+  .terminal-output::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .terminal-output::-webkit-scrollbar-track {
+    background: #0a0e14;
+  }
+
+  .terminal-output::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 6px;
+  }
+
+  .terminal-output::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+  }
+
+  .terminal-line {
+    margin-bottom: 2px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .terminal-line.success {
+    color: #22c55e;
+  }
+
+  .terminal-line.error {
+    color: #ef4444;
+  }
+
+  .terminal-line.info {
+    color: #3b82f6;
+  }
+
+  .terminal-line.system {
+    color: #f59e0b;
+    font-weight: 600;
+  }
+
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #9fb0c8;
+    gap: 12px;
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #374151;
+    border-top-color: #6ea8ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .completion-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15, 20, 25, 0.95);
+    border: 2px solid #22c55e;
+    border-radius: 14px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: none;
+  }
+
+  .completion-banner.visible {
+    display: block;
+  }
+
+  .completion-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  .completion-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e6eaf2;
+    margin-bottom: 8px;
+  }
+
+  .completion-message {
+    color: #9fb0c8;
+    margin-bottom: 24px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="terminal-container">
+
+  <!-- Terminal Header -->
+  <div class="terminal-header">
+    <div class="terminal-info">
+      <div class="terminal-target">
+        <div class="status-indicator" id="statusIndicator"></div>
+        <span id="targetDisplay">{{ session.target }}</span>
+      </div>
+
+      <div class="terminal-stats">
+        <div class="stat-item">
+          <div class="stat-label">Duration</div>
+          <div class="stat-value" id="durationDisplay">00:00:00</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Sent</div>
+          <div class="stat-value" id="sentDisplay">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Received</div>
+          <div class="stat-value success" id="receivedDisplay">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Loss</div>
+          <div class="stat-value" id="lossDisplay">0.0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="terminal-actions">
+      <button class="btn btn-stop" id="stopButton" onclick="stopSession()">
+        <span>⏹️</span>
+        <span>Stop Monitoring</span>
+      </button>
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="btn btn-secondary">
+        <span>← Back</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Terminal Output -->
+  <div class="terminal-output-container">
+    <div class="terminal-output" id="terminalOutput">
+      <div class="loading-indicator">
+        <div class="spinner"></div>
+        <span>Initializing monitoring session...</span>
+      </div>
+    </div>
+
+    <!-- Completion Banner -->
+    <div class="completion-banner" id="completionBanner">
+      <div class="completion-icon">✅</div>
+      <div class="completion-title">Session Complete</div>
+      <div class="completion-message" id="completionMessage">
+        Monitoring stopped successfully
+      </div>
+      <a href="{{ url_for('admin_tools.live_dashboard') }}" class="btn btn-stop">
+        Return to Dashboard
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SESSION_ID = {{ session.id }};
+let eventSource = null;
+let startTime = new Date('{{ session.started_at }}');
+let durationInterval = null;
+let packetsSent = 0;
+let packetsReceived = 0;
+
+// Update duration counter
+function updateDuration() {
+  const now = new Date();
+  const diff = Math.floor((now - startTime) / 1000);
+  
+  const hours = Math.floor(diff / 3600);
+  const minutes = Math.floor((diff % 3600) / 60);
+  const seconds = diff % 60;
+  
+  const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  document.getElementById('durationDisplay').textContent = formatted;
+}
+
+// Update statistics display
+function updateStats(sent, received) {
+  packetsSent = sent;
+  packetsReceived = received;
+  
+  document.getElementById('sentDisplay').textContent = sent;
+  document.getElementById('receivedDisplay').textContent = received;
+  
+  const lossDisplay = document.getElementById('lossDisplay');
+  if (sent > 0) {
+    const loss = ((sent - received) / sent) * 100;
+    lossDisplay.textContent = loss.toFixed(1) + '%';
+    
+    // Color code based on loss
+    lossDisplay.className = 'stat-value';
+    if (loss > 10) {
+      lossDisplay.classList.add('danger');
+    } else if (loss > 0) {
+      // No class = normal color
+    } else {
+      lossDisplay.classList.add('success');
+    }
+  }
+}
+
+// Add line to terminal
+function addLine(text, className = '') {
+  const output = document.getElementById('terminalOutput');
+  const line = document.createElement('div');
+  line.className = 'terminal-line ' + className;
+  line.textContent = text;
+  output.appendChild(line);
+  
+  // Auto-scroll to bottom
+  output.scrollTop = output.scrollHeight;
+}
+
+// Start the monitoring session
+function startMonitoring() {
+  // Clear loading indicator
+  document.getElementById('terminalOutput').innerHTML = '';
+  
+  // Add initial message
+  addLine('═'.repeat(80), 'info');
+  addLine(`Starting continuous ping to ${document.getElementById('targetDisplay').textContent}`, 'system');
+  addLine('Press "Stop Monitoring" button when finished', 'system');
+  addLine('═'.repeat(80), 'info');
+  addLine('');
+  
+  // Start subprocess
+  fetch(`/admin/live/start/${SESSION_ID}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        addLine(`[Process started with PID ${data.pid}]`, 'info');
+        addLine('');
+        
+        // Connect to SSE stream
+        connectEventSource();
+        
+        // Start duration counter
+        durationInterval = setInterval(updateDuration, 1000);
+        updateDuration();
+      } else {
+        addLine(`[ERROR] Failed to start: ${data.error}`, 'error');
+        document.getElementById('stopButton').disabled = true;
+      }
+    })
+    .catch(error => {
+      addLine(`[ERROR] ${error.message}`, 'error');
+      document.getElementById('stopButton').disabled = true;
+    });
+}
+
+// Connect to Server-Sent Events stream
+function connectEventSource() {
+  eventSource = new EventSource(`/admin/live/stream/${SESSION_ID}`);
+  
+  eventSource.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    
+    if (data.type === 'started') {
+      addLine(`[Connected to ${data.target}]`, 'info');
+      addLine('');
+    }
+    else if (data.type === 'output') {
+      // Determine line type
+      let lineClass = '';
+      if (data.line.includes('Reply from') || data.line.includes('bytes=')) {
+        lineClass = 'success';
+      } else if (data.line.includes('timed out') || data.line.includes('unreachable')) {
+        lineClass = 'error';
+      }
+      
+      addLine(data.line, lineClass);
+      
+      // Update stats
+      updateStats(data.sent, data.received);
+    }
+    else if (data.type === 'finished' || data.type === 'stopped') {
+      handleSessionEnd('Session ended');
+    }
+    else if (data.type === 'error') {
+      addLine(`[ERROR] ${data.message}`, 'error');
+      handleSessionEnd('Session failed');
+    }
+  };
+  
+  eventSource.onerror = function(error) {
+    console.error('EventSource error:', error);
+    eventSource.close();
+  };
+}
+
+// Stop the monitoring session
+function stopSession() {
+  const button = document.getElementById('stopButton');
+  button.disabled = true;
+  button.innerHTML = '<span>⏹️</span><span>Stopping...</span>';
+  
+  fetch(`/admin/live/stop/${SESSION_ID}`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      handleSessionEnd('Session stopped by user', data);
+    }
+  })
+  .catch(error => {
+    console.error('Stop error:', error);
+    handleSessionEnd('Session ended');
+  });
+}
+
+// Handle session completion
+function handleSessionEnd(message, stats = null) {
+  // Close event source
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  
+  // Stop duration counter
+  if (durationInterval) {
+    clearInterval(durationInterval);
+  }
+  
+  // Update UI
+  document.getElementById('statusIndicator').classList.add('stopped');
+  document.getElementById('stopButton').disabled = true;
+  
+  // Add completion message to terminal
+  addLine('');
+  addLine('═'.repeat(80), 'info');
+  addLine(message, 'system');
+  
+  if (stats) {
+    addLine('');
+    addLine('Final Statistics:', 'info');
+    addLine(`  Packets Sent: ${stats.packets_sent}`, 'info');
+    addLine(`  Packets Received: ${stats.packets_received}`, 'info');
+    addLine(`  Packet Loss: ${stats.packet_loss_pct}%`, 'info');
+    addLine(`  Duration: ${stats.duration}`, 'info');
+  }
+  
+  addLine('═'.repeat(80), 'info');
+  
+  // Show completion banner after a moment
+  setTimeout(() => {
+    const banner = document.getElementById('completionBanner');
+    const completionMsg = document.getElementById('completionMessage');
+    
+    if (stats) {
+      completionMsg.innerHTML = `
+        Monitored ${document.getElementById('targetDisplay').textContent} for ${stats.duration}<br>
+        Sent ${stats.packets_sent} packets, received ${stats.packets_received} (${stats.packet_loss_pct}% loss)
+      `;
+    } else {
+      completionMsg.textContent = message;
+    }
+    
+    banner.classList.add('visible');
+  }, 1000);
+}
+
+// Start monitoring when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  startMonitoring();
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+  if (eventSource) {
+    eventSource.close();
+  }
+  if (durationInterval) {
+    clearInterval(durationInterval);
+  }
+});
+</script>
+{% endblock %}

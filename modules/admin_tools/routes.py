@@ -12,6 +12,8 @@ from sqlalchemy import func, desc
 import json
 import os
 
+from . import live_routes  
+
 from models.base import db
 from models.admin_tools import (
     ToolExecution, KnowledgeItem, KnowledgeCategory, 

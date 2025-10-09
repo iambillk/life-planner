@@ -14,9 +14,16 @@ from .rolodex import Contact, Company
 
 
 from .admin_tools import (
-    ToolExecution, KnowledgeItem, KnowledgeCategory,
-    KnowledgeTag, KnowledgeRelation, init_admin_tools
+    ToolExecution, 
+    LiveToolSession,  # <-- ADD THIS LINE
+    KnowledgeItem, 
+    KnowledgeCategory,
+    KnowledgeTag, 
+    KnowledgeRelation, 
+    init_admin_tools
 )
+
+# Also add 'LiveToolSession' to the __all__ list at the bottom of the file
 
 from .ssh_logs import (
     SSHSession,
