@@ -2,8 +2,9 @@
 """
 Admin Tools Constants
 Tool configurations, categories, and default settings
-Version: 1.0.0
+Version: 1.1.0 (Added Port Scanner)
 Created: 2025-01-08
+Updated: 2025-10-09
 """
 
 # Tool Categories for organization
@@ -32,6 +33,11 @@ TOOL_CATEGORIES = {
         'name': 'System Info',
         'icon': '💻',
         'tools': ['netstat', 'arp', 'route']
+    },
+    'security': {
+        'name': 'Security Tools',
+        'icon': '🔒',
+        'tools': ['port_scan']
     }
 }
 
@@ -181,6 +187,76 @@ TOOLS = {
         ],
         'output_parser': None
     },
+    
+    'port_scan': {
+        'name': 'Port Scanner',
+        'description': 'Scan ports using Nmap to discover open services',
+        'category': 'security',
+        'icon': '🔍',
+        'command': None,  # Handled specially
+        'is_windows_builtin': False,
+        'accepts_target': True,
+        'target_label': 'IP Address or Hostname',
+        'parameters': [
+            {
+                'name': 'scan_type',
+                'label': 'Scan Type',
+                'type': 'select',
+                'options': [
+                    {'value': 'quick', 'label': 'Quick Scan (Top 100 ports, ~10-20s)'},
+                    {'value': 'standard', 'label': 'Standard Scan (Top 1000 ports + versions, ~1-2min)'},
+                    {'value': 'thorough', 'label': 'Thorough Scan (Top 1000 + OS detection, ~2-5min)'},
+                    {'value': 'custom', 'label': 'Custom Ports (specify below)'}
+                ],
+                'default': 'quick'
+            },
+            {
+                'name': 'custom_ports',
+                'label': 'Custom Ports (comma-separated)',
+                'type': 'text',
+                'placeholder': 'e.g., 22,80,443,3389',
+                'default': '',
+                'depends_on': {'scan_type': 'custom'}
+            }
+        ],
+        'output_parser': 'parse_nmap',
+        'warning': '⚠️ Only scan systems you are authorized to test. Unauthorized scanning may be illegal.',
+        'requires_admin': False,
+        'admin_note': 'OS detection requires administrator/root privileges'
+    }
+}
+
+# Nmap Scan Preset Configurations
+NMAP_SCAN_PRESETS = {
+    'quick': {
+        'name': 'Quick Scan',
+        'description': 'Top 100 most common ports',
+        'flags': ['-Pn', '--top-ports', '100', '-T4'],
+        'estimated_time': '10-20 seconds',
+        'requires_admin': False
+    },
+    'standard': {
+        'name': 'Standard Scan',
+        'description': 'Top 1000 ports with service version detection',
+        'flags': ['-Pn', '-sV', '--top-ports', '1000', '-T4'],
+        'estimated_time': '1-2 minutes',
+        'requires_admin': False
+    },
+    'thorough': {
+        'name': 'Thorough Scan',
+        'description': 'Top 1000 ports with service versions and OS detection',
+        'flags': ['-Pn', '-sV', '-O', '--top-ports', '1000', '-T4'],
+        'estimated_time': '2-5 minutes',
+        'requires_admin': True,
+        'admin_warning': 'OS detection works best with administrator/root privileges'
+    },
+    'custom': {
+        'name': 'Custom Ports',
+        'description': 'User-specified port list',
+        'flags': ['-Pn', '-sV', '-T4'],  # -p flag added dynamically
+        'estimated_time': 'Variable',
+        'requires_admin': False
+    }
 }
 
 # Knowledge Base Item Types
@@ -233,6 +309,7 @@ DEFAULT_TOOL_PATHS = {
     'custom_tools_dir': 'C:\\Tools',  # Where user's .exe files live
     'whois_domain': 'C:\\Tools\\whois_domain.exe',
     'whois_ip': 'C:\\Tools\\whois_ip.exe',
+    'nmap': 'nmap',  # Assumes nmap is in PATH, or specify full path
 }
 
 # Predefined tags for quick tagging

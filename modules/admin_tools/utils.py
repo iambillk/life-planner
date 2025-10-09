@@ -33,7 +33,8 @@ import socket
 import ipaddress
 import ssl
 from datetime import datetime
-
+import xml.etree.ElementTree as ET
+import tempfile
 import dns.resolver
 import dns.query
 import dns.zone
@@ -43,7 +44,7 @@ from dns.exception import DNSException
 from werkzeug.utils import secure_filename
 from flask import current_app
 
-from .constants import TOOLS, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, DEFAULT_TOOL_PATHS
+from .constants import TOOLS, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, DEFAULT_TOOL_PATHS, NMAP_SCAN_PRESETS
 
 
 # ==================== FILE HANDLING ====================
@@ -521,6 +522,265 @@ _DOC_RULES = [
     {"category": "Parent Zone", "prefix": "Parent NS Records", "doc": "Parent Zone::Parent NS Records"},
     {"category": "Parent Zone", "prefix": "Parent/Child Match","doc": "Parent Zone::Parent/Child Match"},
 ]
+
+# ==================== NMAP EXECUTION ====================
+def execute_nmap_scan(target, scan_type='quick', custom_ports=None, timeout=300):
+    """
+    Execute nmap scan and return results
+    
+    Args:
+        target: IP or hostname to scan
+        scan_type: 'quick', 'standard', 'thorough', or 'custom'
+        custom_ports: Comma-separated port list (for custom scans)
+        timeout: Max seconds to wait for scan
+        
+    Returns:
+        dict with: success, output, parsed_data, execution_time, command
+    """
+    start_time = time.time()
+    
+    # Get nmap path
+    nmap_path = DEFAULT_TOOL_PATHS.get('nmap', 'nmap')
+    
+    # Get scan preset
+    preset = NMAP_SCAN_PRESETS.get(scan_type, NMAP_SCAN_PRESETS['quick'])
+    
+    # Build command
+    cmd = [nmap_path] + preset['flags']
+    
+    # Handle custom ports
+    if scan_type == 'custom' and custom_ports:
+        cmd.extend(['-p', custom_ports])
+    
+    # Add target
+    cmd.append(target)
+    
+    # Create temp file for XML output
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as tmp:
+        xml_file = tmp.name
+    
+    # Add XML output flag
+    cmd.extend(['-oX', xml_file])
+    
+    command_string = ' '.join(cmd)
+    
+    try:
+        # Execute nmap
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        
+        execution_time = time.time() - start_time
+        
+        # Read XML file
+        try:
+            with open(xml_file, 'r') as f:
+                xml_content = f.read()
+        except Exception as e:
+            xml_content = f"Error reading XML: {str(e)}"
+        
+        # Parse XML results
+        parsed_data = parse_nmap_xml(xml_file, target, scan_type)
+        
+        # Clean up temp file
+        try:
+            os.unlink(xml_file)
+        except:
+            pass
+        
+        return {
+            'success': result.returncode == 0,
+            'exit_code': result.returncode,
+            'output': result.stdout + result.stderr,
+            'xml_output': xml_content,
+            'parsed_data': parsed_data,
+            'execution_time': execution_time,
+            'command': command_string
+        }
+        
+    except subprocess.TimeoutExpired:
+        try:
+            os.unlink(xml_file)
+        except:
+            pass
+        return {
+            'success': False,
+            'exit_code': -1,
+            'output': f'Scan timed out after {timeout} seconds',
+            'error': 'Timeout',
+            'execution_time': time.time() - start_time,
+            'command': command_string,
+            'parsed_data': None
+        }
+    except FileNotFoundError:
+        return {
+            'success': False,
+            'exit_code': -1,
+            'output': f'Nmap not found. Please install nmap or update path in constants.py',
+            'error': 'Nmap not found',
+            'execution_time': time.time() - start_time,
+            'command': command_string,
+            'parsed_data': None
+        }
+    except Exception as e:
+        try:
+            os.unlink(xml_file)
+        except:
+            pass
+        return {
+            'success': False,
+            'exit_code': -1,
+            'output': f'Error executing nmap: {str(e)}',
+            'error': str(e),
+            'execution_time': time.time() - start_time,
+            'command': command_string,
+            'parsed_data': None
+        }
+
+
+def parse_nmap_xml(xml_file, target, scan_type):
+    """
+    Parse nmap XML output into structured data
+    
+    Args:
+        xml_file: Path to nmap XML output file
+        target: Original target
+        scan_type: Type of scan performed
+        
+    Returns:
+        dict with parsed port scan results
+    """
+    try:
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        
+        # Get host info
+        host = root.find('.//host')
+        if not host:
+            return {
+                'error': 'No host found in scan results',
+                'target': target,
+                'host_up': False,
+                'open_ports': [],
+                'closed_ports': [],
+                'filtered_ports': []
+            }
+        
+        # Check if host is up
+        status = host.find('status')
+        host_up = status.get('state') == 'up' if status is not None else False
+        
+        # Get hostname
+        hostnames = host.find('hostnames')
+        hostname = None
+        if hostnames is not None:
+            hostname_elem = hostnames.find('hostname')
+            if hostname_elem is not None:
+                hostname = hostname_elem.get('name')
+        
+        # Get IP address
+        address = host.find('address')
+        target_ip = address.get('addr') if address is not None else target
+        
+        # Parse ports
+        open_ports = []
+        closed_ports = []
+        filtered_ports = []
+        
+        ports = host.find('ports')
+        if ports is not None:
+            for port in ports.findall('port'):
+                port_id = port.get('portid')
+                protocol = port.get('protocol', 'tcp')
+                
+                state = port.find('state')
+                port_state = state.get('state') if state is not None else 'unknown'
+                
+                service = port.find('service')
+                service_name = service.get('name', 'unknown') if service is not None else 'unknown'
+                service_product = service.get('product', '') if service is not None else ''
+                service_version = service.get('version', '') if service is not None else ''
+                
+                port_info = {
+                    'port': port_id,
+                    'protocol': protocol,
+                    'state': port_state,
+                    'service': service_name,
+                    'product': service_product,
+                    'version': service_version,
+                    'service_detail': f"{service_product} {service_version}".strip() if service_product else service_name
+                }
+                
+                if port_state == 'open':
+                    open_ports.append(port_info)
+                elif port_state == 'closed':
+                    closed_ports.append(port_info)
+                elif port_state == 'filtered':
+                    filtered_ports.append(port_info)
+        
+        # Get OS detection
+        os_matches = []
+        os_elem = host.find('os')
+        if os_elem is not None:
+            for osmatch in os_elem.findall('osmatch'):
+                os_matches.append({
+                    'name': osmatch.get('name'),
+                    'accuracy': osmatch.get('accuracy')
+                })
+        
+        # Get scan statistics
+        runstats = root.find('runstats')
+        finished = runstats.find('finished') if runstats is not None else None
+        scan_time = finished.get('elapsed') if finished is not None else '0'
+        
+        # Get scan info
+        scaninfo = root.find('scaninfo')
+        num_services = scaninfo.get('numservices', '0') if scaninfo is not None else '0'
+        
+        # Create summary
+        summary = f"Scanned {num_services} ports in {scan_time} seconds. "
+        summary += f"Found {len(open_ports)} open, {len(closed_ports)} closed, {len(filtered_ports)} filtered."
+        
+        return {
+            'target': target_ip,
+            'hostname': hostname,
+            'host_up': host_up,
+            'scan_type': scan_type,
+            'ports_scanned': int(num_services),
+            'open_ports': open_ports,
+            'closed_ports': closed_ports,
+            'filtered_ports': filtered_ports,
+            'os_matches': os_matches,
+            'scan_time': scan_time,
+            'summary': summary,
+            'total_ports': {
+                'open': len(open_ports),
+                'closed': len(closed_ports),
+                'filtered': len(filtered_ports)
+            }
+        }
+        
+    except Exception as e:
+        return {
+            'error': f'Failed to parse nmap XML: {str(e)}',
+            'target': target,
+            'host_up': False,
+            'open_ports': [],
+            'closed_ports': [],
+            'filtered_ports': [],
+            'total_ports': {'open': 0, 'closed': 0, 'filtered': 0}
+        }
+
+
+def parse_nmap(output):
+    """
+    Wrapper for parse_tool_output compatibility
+    """
+    # The actual parsing is done in execute_nmap_scan
+    return None
 
 def _doc_for(category, name):
     """
@@ -1489,6 +1749,22 @@ def execute_tool(tool_name, target=None, parameters=None, timeout=None):
                     'command': f'DNS Health Check: {target}'
                 }
 
+        if tool_name == 'port_scan':
+            scan_type = parameters.get('scan_type', 'quick')
+            custom_ports = parameters.get('custom_ports', '')
+            
+            # Set timeout based on scan type
+            if scan_type == 'quick':
+                timeout = 120  # 2 minutes
+            elif scan_type == 'standard':
+                timeout = 300  # 5 minutes
+            elif scan_type == 'thorough':
+                timeout = 600  # 10 minutes
+            else:
+                timeout = 300  # Default 5 minutes
+            
+            return execute_nmap_scan(target, scan_type, custom_ports, timeout)
+
         # Build and execute command for other tools
         cmd, command_string = build_tool_command(tool_name, target, parameters)
         result = subprocess.run(
@@ -1616,12 +1892,15 @@ def parse_tool_output(tool_name, output):
     parsers = {
         'parse_ping': parse_ping,
         'parse_traceroute': parse_traceroute,
-        'parse_nslookup': parse_nslookup
+        'parse_nslookup': parse_nslookup,
+        'parse_nmap': parse_nmap
     }
     parser_func = parsers.get(parser_name)
     if parser_func:
         return parser_func(output)
     return None
+
+
 
 
 # ==================== STATISTICS ====================

@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% block title %}Port Scan Results - {{ parsed_data.target }} - Admin Tools{% endblock %}
+{% block header %}🔍 Port Scan Results{% endblock %}
+
+{% block extra_css %}
+<style>
+  .scan-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .scan-header {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.05));
+    border: 2px solid rgba(99,102,241,0.3);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .scan-target {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin-bottom: 8px;
+  }
+
+  .scan-subtitle {
+    color: var(--admin-muted);
+    font-size: 1.1rem;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .status-success {
+    background: rgba(34,197,94,0.2);
+    color: #22c55e;
+  }
+
+  .status-warning {
+    background: rgba(245,158,11,0.2);
+    color: #f59e0b;
+  }
+
+  .status-error {
+    background: rgba(239,68,68,0.2);
+    color: #ef4444;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .stat-number.success { color: #22c55e; }
+  .stat-number.warning { color: #f59e0b; }
+  .stat-number.danger { color: #ef4444; }
+  .stat-number.primary { color: #6366f1; }
+
+  .stat-label {
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+  }
+
+  .ports-section {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ports-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ports-table thead {
+    background: var(--admin-panel);
+  }
+
+  .ports-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--admin-text);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ports-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+
+  .ports-table tbody tr {
+    transition: all 0.2s;
+  }
+
+  .ports-table tbody tr:hover {
+    background: rgba(99,102,241,0.05);
+  }
+
+  .port-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+
+  .service-name {
+    color: var(--admin-primary);
+    font-weight: 600;
+  }
+
+  .service-details {
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  .port-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .port-status.open {
+    background: rgba(34,197,94,0.2);
+    color: #22c55e;
+  }
+
+  .port-status.filtered {
+    background: rgba(245,158,11,0.2);
+    color: #f59e0b;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--admin-muted);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .collapsible-section {
+    margin-top: 16px;
+  }
+
+  .collapse-toggle {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    color: var(--admin-text);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .collapse-toggle:hover {
+    background: rgba(99,102,241,0.1);
+    border-color: var(--admin-primary);
+  }
+
+  .collapse-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .collapse-content.open {
+    max-height: 2000px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--admin-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a5fc7;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--admin-primary);
+  }
+
+  .raw-output {
+    background: #0a0e14;
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    color: #e6eaf2;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scan-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>›</span>
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='port_scan') }}">Port Scanner</a>
+    <span>›</span>
+    <span>Results #{{ execution.id }}</span>
+  </div>
+
+  <!-- Scan Header -->
+  <div class="scan-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <div class="scan-target">
+          🔍 {{ parsed_data.target }}
+          {% if parsed_data.hostname %}
+            <span style="font-size: 1rem; color: var(--admin-muted); font-weight: normal;">({{ parsed_data.hostname }})</span>
+          {% endif %}
+        </div>
+        <div class="scan-subtitle">
+          Scanned {{ execution.executed_at.strftime('%Y-%m-%d %I:%M %p') }} • 
+          Duration: {{ execution.execution_time|round(2) }}s
+        </div>
+      </div>
+      <div class="status-badge status-{{ 'success' if result.success else 'error' }}">
+        <span>{{ '✓' if result.success else '✗' }}</span>
+        <span>{{ 'Scan Complete' if result.success else 'Scan Failed' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-number primary">{{ parsed_data.ports_scanned }}</div>
+      <div class="stat-label">Ports Scanned</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-number success">{{ parsed_data.total_ports.open }}</div>
+      <div class="stat-label">Open Ports</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-number warning">{{ parsed_data.total_ports.filtered }}</div>
+      <div class="stat-label">Filtered Ports</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-number">{{ parsed_data.total_ports.closed }}</div>
+      <div class="stat-label">Closed Ports</div>
+    </div>
+  </div>
+
+  <!-- Open Ports Section -->
+  {% if parsed_data.open_ports %}
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>✅</span>
+        <span>Open Ports ({{ parsed_data.open_ports|length }})</span>
+      </div>
+    </div>
+
+    <table class="ports-table">
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Service</th>
+          <th>Product / Version</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for port in parsed_data.open_ports %}
+        <tr>
+          <td>
+            <div class="port-number">{{ port.port }}/{{ port.protocol }}</div>
+          </td>
+          <td>
+            <div class="service-name">{{ port.service|upper if port.service else 'Unknown' }}</div>
+          </td>
+          <td>
+            {% if port.product %}
+            <div style="color: var(--admin-text); font-weight: 500;">{{ port.product }}</div>
+            {% endif %}
+            {% if port.version %}
+            <div class="service-details">Version: {{ port.version }}</div>
+            {% endif %}
+            {% if port.extra %}
+            <div class="service-details">{{ port.extra }}</div>
+            {% endif %}
+            {% if not port.product and not port.version %}
+            <span style="color: var(--admin-muted);">No version info</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="port-status open">
+              <span>●</span>
+              <span>OPEN</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>✅</span>
+        <span>Open Ports</span>
+      </div>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">🔒</div>
+      <h3 style="color: var(--admin-text); margin-bottom: 8px;">No Open Ports Found</h3>
+      <p>All scanned ports are either closed or filtered</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filtered Ports -->
+  {% if parsed_data.filtered_ports %}
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>⚠️</span>
+        <span>Filtered Ports ({{ parsed_data.filtered_ports|length }})</span>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapse-toggle" onclick="toggleSection('filtered')">
+        <span>Show Details</span>
+        <span id="filtered-icon">▼</span>
+      </button>
+      <div class="collapse-content" id="filtered-content">
+        <table class="ports-table" style="margin-top: 12px;">
+          <thead>
+            <tr>
+              <th>Port</th>
+              <th>Service</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for port in parsed_data.filtered_ports %}
+            <tr>
+              <td><div class="port-number">{{ port.port }}/{{ port.protocol }}</div></td>
+              <td><div class="service-name">{{ port.service|upper if port.service else 'Unknown' }}</div></td>
+              <td><div class="port-status filtered"><span>●</span><span>FILTERED</span></div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Closed Ports Summary -->
+  {% if parsed_data.total_ports.closed > 0 %}
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>🔒</span>
+        <span>Closed Ports ({{ parsed_data.total_ports.closed }})</span>
+      </div>
+    </div>
+    <p style="color: var(--admin-muted); margin: 0;">
+      {{ parsed_data.total_ports.closed }} ports were found in a closed state. 
+      These ports are not accessible and are likely not running any services.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- OS Detection -->
+  {% if parsed_data.os_matches %}
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>💻</span>
+        <span>Operating System Detection</span>
+      </div>
+    </div>
+
+    {% for os in parsed_data.os_matches %}
+    <div style="padding: 12px; background: var(--admin-panel); border-radius: 8px; margin-bottom: 8px;">
+      <div style="font-weight: 600; color: var(--admin-text); margin-bottom: 4px;">
+        {{ os.name }}
+      </div>
+      <div style="color: var(--admin-muted); font-size: 0.9rem;">
+        Confidence: {{ os.accuracy }}%
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Raw Output -->
+  <div class="ports-section">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📄</span>
+        <span>Raw Nmap Output</span>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapse-toggle" onclick="toggleSection('raw')">
+        <span>Show Output</span>
+        <span id="raw-icon">▼</span>
+      </button>
+      <div class="collapse-content" id="raw-content">
+        <div class="raw-output" style="margin-top: 12px;">{{ result.output }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div style="display: flex; gap: 12px; margin-top: 24px;">
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='port_scan') }}" class="btn btn-primary">
+      <span>🔍</span>
+      <span>New Scan</span>
+    </a>
+    <a href="{{ url_for('admin_tools.tool_history', tool='port_scan') }}" class="btn btn-secondary">
+      <span>📋</span>
+      <span>Scan History</span>
+    </a>
+    <a href="{{ url_for('admin_tools.dashboard') }}" class="btn btn-secondary">
+      <span>← Back to Dashboard</span>
+    </a>
+  </div>
+
+</div>
+
+<script>
+function toggleSection(sectionId) {
+  const content = document.getElementById(sectionId + '-content');
+  const icon = document.getElementById(sectionId + '-icon');
+  
+  if (content.classList.contains('open')) {
+    content.classList.remove('open');
+    icon.textContent = '▼';
+  } else {
+    content.classList.add('open');
+    icon.textContent = '▲';
+  }
+}
+</script>
+{% endblock %}
