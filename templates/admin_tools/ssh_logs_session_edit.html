@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Edit Session · SSH Logs{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ssh-muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    color: var(--ssh-primary);
+    text-decoration: none;
+  }
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 24px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 30px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ssh-text);
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    color: var(--ssh-text);
+    font-size: 14px;
+    resize: vertical;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--ssh-primary);
+  }
+
+  .form-help {
+    font-size: 13px;
+    color: var(--ssh-muted);
+    margin-top: 6px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+  }
+
+  .checkbox-group input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .checkbox-group label {
+    color: var(--ssh-text);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: var(--ssh-panel);
+    color: var(--ssh-text);
+    border: 1px solid var(--ssh-line);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 30px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}">SSH Logs</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=session.id) }}">{{ session.friendly_name or session.hostname }}</a>
+    <span>/</span>
+    <span>Edit</span>
+  </div>
+
+  <!-- Page Title -->
+  <h1 class="page-title">
+    <span>✏️</span>
+    Edit Session Metadata
+  </h1>
+
+  <!-- Form -->
+  <div class="ssh-card">
+    <form method="post" action="{{ url_for('admin_tools.ssh_logs_session_edit', session_id=session.id) }}">
+      
+      <!-- Notes -->
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" 
+                  class="form-input" 
+                  rows="6"
+                  placeholder="Add notes about this session...">{{ session.notes or '' }}</textarea>
+        <div class="form-help">
+          Document what you did in this session, issues encountered, solutions found, etc.
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="form-group">
+        <label class="form-label">Tags</label>
+        <input type="text" 
+               name="tags" 
+               class="form-input"
+               value="{{ session.tags or '' }}"
+               placeholder="troubleshooting, maintenance, deployment">
+        <div class="form-help">
+          Comma-separated tags for categorization (e.g., troubleshooting, maintenance, deployment)
+        </div>
+      </div>
+
+      <!-- Flagged -->
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" 
+                 id="is_flagged" 
+                 name="is_flagged"
+                 {% if session.is_flagged %}checked{% endif %}>
+          <label for="is_flagged">
+            🚩 Flag this session as important
+          </label>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <span>💾</span>
+          <span>Save Changes</span>
+        </button>
+        <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=session.id) }}" class="btn btn-secondary">
+          <span>✕</span>
+          <span>Cancel</span>
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

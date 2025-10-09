@@ -28,6 +28,9 @@ from .constants import (
     DOC_TEMPLATES, HISTORY_FILTERS
 )
 
+from models.ssh_logs import SSHSession, SSHCommand, SSHScanLog
+from .ssh_scanner import scan_ssh_logs, get_scan_history, parse_single_log
+
 
 # ==================== MAIN DASHBOARD ====================
 
@@ -574,4 +577,420 @@ def api_quick_execute():
         'output': result['output'],
         'execution_id': execution.id,
         'execution_time': result['execution_time']
+    })
+
+# ==================== SSH SESSION LOGS ====================
+
+@admin_tools_bp.route('/ssh-logs')
+def ssh_logs_dashboard():
+    """SSH logs main dashboard"""
+    
+    # Get statistics
+    stats = SSHSession.get_stats(days=30)
+    
+    # Get recent sessions
+    recent_sessions = SSHSession.get_recent(limit=20)
+    
+    # Get unique hosts for filter
+    unique_hosts = SSHSession.get_unique_hosts()
+    
+    # Get last scan info
+    last_scan = SSHScanLog.get_last_scan()
+    
+    # Get top commands
+    top_commands = SSHCommand.get_top_commands(limit=10)
+    
+    return render_template('admin_tools/ssh_logs_dashboard.html',
+                         stats=stats,
+                         recent_sessions=recent_sessions,
+                         unique_hosts=unique_hosts,
+                         last_scan=last_scan,
+                         top_commands=top_commands,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/sessions')
+def ssh_logs_sessions():
+    """Browse all SSH sessions with filtering"""
+    
+    # Filters
+    host_filter = request.args.get('host')
+    user_filter = request.args.get('user')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    search_query = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Build query
+    query = SSHSession.query
+    
+    if host_filter:
+        query = query.filter_by(hostname=host_filter)
+    
+    if user_filter:
+        query = query.filter_by(username=user_filter)
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(SSHSession.session_start >= date_from_obj)
+        except:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            query = query.filter(SSHSession.session_start <= date_to_obj)
+        except:
+            pass
+    
+    if search_query:
+        sessions = SSHSession.search(search_query)
+        # Manual pagination for search results
+        total = len(sessions)
+        start = (page - 1) * per_page
+        end = start + per_page
+        sessions = sessions[start:end]
+        has_next = end < total
+        has_prev = page > 1
+    else:
+        # Use SQLAlchemy pagination
+        query = query.order_by(SSHSession.session_start.desc())
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+        sessions = paginated.items
+        has_next = paginated.has_next
+        has_prev = paginated.has_prev
+        total = paginated.total
+    
+    # Get filter options
+    unique_hosts = SSHSession.get_unique_hosts()
+    unique_users = db.session.query(SSHSession.username).distinct().filter(SSHSession.username.isnot(None)).all()
+    unique_users = [u[0] for u in unique_users]
+    
+    return render_template('admin_tools/ssh_logs_sessions.html',
+                         sessions=sessions,
+                         unique_hosts=unique_hosts,
+                         unique_users=unique_users,
+                         host_filter=host_filter,
+                         user_filter=user_filter,
+                         date_from=date_from,
+                         date_to=date_to,
+                         search_query=search_query,
+                         page=page,
+                         has_next=has_next,
+                         has_prev=has_prev,
+                         total=total,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/session/<int:session_id>')
+def ssh_logs_session_detail(session_id):
+    """View detailed information about a specific SSH session"""
+    
+    session = SSHSession.query.get_or_404(session_id)
+    
+    # Get all commands for this session
+    commands = SSHCommand.query.filter_by(session_id=session_id)\
+                               .order_by(SSHCommand.sequence_number)\
+                               .all()
+    
+    # Get related sessions (same host, around same time)
+    related_sessions = SSHSession.query.filter(
+        SSHSession.hostname == session.hostname,
+        SSHSession.id != session.id
+    ).order_by(SSHSession.session_start.desc()).limit(5).all()
+    
+    # Read full log file if it exists
+    log_content = None
+    if session.file_path and os.path.exists(session.file_path):
+        try:
+            with open(session.file_path, 'r', encoding='utf-8', errors='replace') as f:
+                log_content = f.read()
+        except Exception as e:
+            log_content = f"Error reading log file: {e}"
+    
+    return render_template('admin_tools/ssh_logs_session_detail.html',
+                         session=session,
+                         commands=commands,
+                         related_sessions=related_sessions,
+                         log_content=log_content,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/session/<int:session_id>/edit', methods=['GET', 'POST'])
+def ssh_logs_session_edit(session_id):
+    """Edit session metadata (notes, tags, flagged status)"""
+    
+    session = SSHSession.query.get_or_404(session_id)
+    
+    if request.method == 'POST':
+        session.notes = request.form.get('notes', '').strip()
+        session.tags = request.form.get('tags', '').strip()
+        session.is_flagged = 'is_flagged' in request.form
+        
+        db.session.commit()
+        flash('Session updated', 'success')
+        return redirect(url_for('admin_tools.ssh_logs_session_detail', session_id=session_id))
+    
+    return render_template('admin_tools/ssh_logs_session_edit.html',
+                         session=session,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/session/<int:session_id>/delete', methods=['POST'])
+def ssh_logs_session_delete(session_id):
+    """Delete a session from database (does not delete log file)"""
+    
+    session = SSHSession.query.get_or_404(session_id)
+    
+    # Confirmation check
+    if request.form.get('confirm') != 'yes':
+        flash('Deletion cancelled - confirmation required', 'warning')
+        return redirect(url_for('admin_tools.ssh_logs_session_detail', session_id=session_id))
+    
+    db.session.delete(session)
+    db.session.commit()
+    
+    flash('Session deleted from database', 'success')
+    return redirect(url_for('admin_tools.ssh_logs_sessions'))
+
+
+@admin_tools_bp.route('/ssh-logs/scan', methods=['GET', 'POST'])
+def ssh_logs_scan():
+    """Scan NAS directory for new SSH logs"""
+    
+    if request.method == 'POST':
+        # Get scan path from form or use default from config
+        scan_path = request.form.get('scan_path') or current_app.config.get('SSH_LOG_PATH')
+        
+        if not scan_path:
+            flash('No scan path configured. Please set SSH_LOG_PATH in config.py', 'danger')
+            return redirect(url_for('admin_tools.ssh_logs_scan'))
+        
+        try:
+            # Run the scan
+            stats = scan_ssh_logs(scan_path)
+            
+            flash(f'Scan completed! Found {stats["files_found"]} files. '
+                  f'New: {stats["files_new"]}, Updated: {stats["files_updated"]}, '
+                  f'Skipped: {stats["files_skipped"]}, Errors: {stats["files_error"]}', 
+                  'success')
+            
+            return redirect(url_for('admin_tools.ssh_logs_dashboard'))
+            
+        except Exception as e:
+            flash(f'Scan error: {str(e)}', 'danger')
+            return redirect(url_for('admin_tools.ssh_logs_scan'))
+    
+    # GET - show scan form
+    scan_history = get_scan_history(limit=10)
+    default_path = current_app.config.get('SSH_LOG_PATH', '')
+    
+    return render_template('admin_tools/ssh_logs_scan.html',
+                         scan_history=scan_history,
+                         default_path=default_path,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/analytics')
+def ssh_logs_analytics():
+    """SSH logs analytics and insights"""
+    
+    # Get stats for different time periods
+    stats_7d = SSHSession.get_stats(days=7)
+    stats_30d = SSHSession.get_stats(days=30)
+    stats_all = SSHSession.get_stats(days=None)  # All time
+    
+    # Get top commands
+    top_commands = SSHCommand.get_top_commands(limit=20, days=30)
+    
+    # Get session frequency by day of week
+    from sqlalchemy import func, extract
+    sessions_by_dow = db.session.query(
+        extract('dow', SSHSession.session_start).label('dow'),
+        func.count(SSHSession.id).label('count')
+    ).group_by('dow').order_by('dow').all()
+    
+    # Convert dow numbers to day names
+    day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    dow_data = {day_names[int(dow)]: count for dow, count in sessions_by_dow}
+    
+    # Get sessions by hour of day
+    sessions_by_hour = db.session.query(
+        extract('hour', SSHSession.session_start).label('hour'),
+        func.count(SSHSession.id).label('count')
+    ).group_by('hour').order_by('hour').all()
+    
+    hour_data = {int(hour): count for hour, count in sessions_by_hour}
+    
+    # Get host activity breakdown
+    host_activity = db.session.query(
+        SSHSession.hostname,
+        SSHSession.friendly_name,
+        func.count(SSHSession.id).label('session_count'),
+        func.sum(SSHSession.duration_seconds).label('total_duration'),
+        func.avg(SSHSession.duration_seconds).label('avg_duration')
+    ).filter(SSHSession.hostname.isnot(None))\
+     .group_by(SSHSession.hostname, SSHSession.friendly_name)\
+     .order_by(func.count(SSHSession.id).desc())\
+     .limit(10)\
+     .all()
+    
+    # Get command type distribution
+    command_type_dist = db.session.query(
+        SSHCommand.command_type,
+        func.count(SSHCommand.id).label('count')
+    ).group_by(SSHCommand.command_type)\
+     .order_by(func.count(SSHCommand.id).desc())\
+     .all()
+    
+    return render_template('admin_tools/ssh_logs_analytics.html',
+                         stats_7d=stats_7d,
+                         stats_30d=stats_30d,
+                         stats_all=stats_all,
+                         top_commands=top_commands,
+                         dow_data=dow_data,
+                         hour_data=hour_data,
+                         host_activity=host_activity,
+                         command_type_dist=command_type_dist,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/host/<hostname>')
+def ssh_logs_host_profile(hostname):
+    """View all sessions and stats for a specific host"""
+    
+    # Get all sessions for this host
+    sessions = SSHSession.get_by_host(hostname)
+    
+    if not sessions:
+        flash(f'No sessions found for host: {hostname}', 'warning')
+        return redirect(url_for('admin_tools.ssh_logs_dashboard'))
+    
+    # Calculate host-specific stats
+    total_sessions = len(sessions)
+    total_duration = sum(s.duration_seconds or 0 for s in sessions)
+    avg_duration = total_duration / total_sessions if total_sessions > 0 else 0
+    
+    # Get most common commands on this host
+    host_commands = db.session.query(
+        SSHCommand.command_text,
+        func.count(SSHCommand.id).label('count')
+    ).join(SSHSession)\
+     .filter(SSHSession.hostname == hostname)\
+     .group_by(SSHCommand.command_text)\
+     .order_by(func.count(SSHCommand.id).desc())\
+     .limit(10)\
+     .all()
+    
+    # Get most active user on this host
+    user_activity = db.session.query(
+        SSHSession.username,
+        func.count(SSHSession.id).label('count')
+    ).filter(SSHSession.hostname == hostname)\
+     .filter(SSHSession.username.isnot(None))\
+     .group_by(SSHSession.username)\
+     .order_by(func.count(SSHSession.id).desc())\
+     .all()
+    
+    friendly_name = sessions[0].friendly_name if sessions else hostname
+    
+    return render_template('admin_tools/ssh_logs_host_profile.html',
+                         hostname=hostname,
+                         friendly_name=friendly_name,
+                         sessions=sessions,
+                         total_sessions=total_sessions,
+                         total_duration=total_duration,
+                         avg_duration=avg_duration,
+                         host_commands=host_commands,
+                         user_activity=user_activity,
+                         active='admin_tools')
+
+
+@admin_tools_bp.route('/ssh-logs/search-commands')
+def ssh_logs_search_commands():
+    """Search across all commands"""
+    
+    search_query = request.args.get('q', '').strip()
+    command_type_filter = request.args.get('type')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    if not search_query and not command_type_filter:
+        return render_template('admin_tools/ssh_logs_search_commands.html',
+                             commands=[],
+                             search_query='',
+                             command_type_filter=None,
+                             active='admin_tools')
+    
+    # Build query
+    query = SSHCommand.query.join(SSHSession)
+    
+    if search_query:
+        search_term = f'%{search_query}%'
+        query = query.filter(SSHCommand.command_text.ilike(search_term))
+    
+    if command_type_filter:
+        query = query.filter(SSHCommand.command_type == command_type_filter)
+    
+    # Paginate
+    query = query.order_by(SSHCommand.timestamp.desc())
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Get available command types for filter
+    command_types = db.session.query(SSHCommand.command_type)\
+                              .distinct()\
+                              .filter(SSHCommand.command_type.isnot(None))\
+                              .all()
+    command_types = [ct[0] for ct in command_types]
+    
+    return render_template('admin_tools/ssh_logs_search_commands.html',
+                         commands=paginated.items,
+                         search_query=search_query,
+                         command_type_filter=command_type_filter,
+                         command_types=command_types,
+                         page=page,
+                         has_next=paginated.has_next,
+                         has_prev=paginated.has_prev,
+                         total=paginated.total,
+                         active='admin_tools')
+
+
+# ==================== API ENDPOINTS FOR SSH LOGS ====================
+
+@admin_tools_bp.route('/api/ssh-logs/quick-stats')
+def api_ssh_logs_quick_stats():
+    """Quick stats API for dashboard widgets"""
+    
+    stats = SSHSession.get_stats(days=7)
+    
+    return jsonify({
+        'success': True,
+        'stats': stats
+    })
+
+
+@admin_tools_bp.route('/api/ssh-logs/recent-sessions')
+def api_ssh_logs_recent_sessions():
+    """Get recent sessions as JSON"""
+    
+    limit = request.args.get('limit', 10, type=int)
+    sessions = SSHSession.get_recent(limit=limit)
+    
+    sessions_data = []
+    for s in sessions:
+        sessions_data.append({
+            'id': s.id,
+            'hostname': s.hostname,
+            'friendly_name': s.friendly_name,
+            'username': s.username,
+            'session_start': s.session_start.isoformat() if s.session_start else None,
+            'duration': s.duration_formatted,
+            'command_count': s.command_count
+        })
+    
+    return jsonify({
+        'success': True,
+        'sessions': sessions_data
     })

@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+{% block title %}Analytics · SSH Logs · Admin Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-success: #22c55e;
+    --ssh-warning: #f59e0b;
+    --ssh-danger: #ef4444;
+    --ssh-bg: #0b0f1a;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ssh-muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    color: var(--ssh-primary);
+    text-decoration: none;
+  }
+
+  .page-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .page-subtitle {
+    font-size: 16px;
+    color: var(--ssh-muted);
+    margin-bottom: 30px;
+  }
+
+  /* Stats Cards */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 24px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ssh-muted);
+    font-weight: 600;
+  }
+
+  .stat-period {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: rgba(110, 168, 255, 0.15);
+    border-radius: 8px;
+    color: var(--ssh-primary);
+  }
+
+  .stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--ssh-primary);
+    margin: 8px 0;
+  }
+
+  .stat-detail {
+    font-size: 13px;
+    color: var(--ssh-muted);
+  }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 24px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Bar Charts */
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .bar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bar-label {
+    min-width: 100px;
+    font-size: 13px;
+    color: var(--ssh-text);
+    font-weight: 600;
+  }
+
+  .bar-container {
+    flex: 1;
+    height: 28px;
+    background: var(--ssh-panel);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ssh-primary), #5a96e8);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .bar-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0a0f1a;
+  }
+
+  /* Tables */
+  .analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .analytics-table th {
+    text-align: left;
+    padding: 12px;
+    background: var(--ssh-panel);
+    border-bottom: 2px solid var(--ssh-line);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ssh-muted);
+    font-weight: 600;
+  }
+
+  .analytics-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--ssh-line);
+    font-size: 14px;
+  }
+
+  .analytics-table tr:hover {
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .host-link {
+    color: var(--ssh-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .host-link:hover {
+    color: var(--ssh-text);
+  }
+
+  /* Command List */
+  .command-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .command-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+
+  .command-rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .command-text {
+    flex: 1;
+    color: var(--ssh-text);
+  }
+
+  .command-count {
+    background: rgba(110, 168, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: var(--ssh-primary);
+  }
+
+  /* Type Distribution */
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .type-item {
+    text-align: center;
+    padding: 16px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+  }
+
+  .type-count {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ssh-primary);
+    margin: 8px 0;
+  }
+
+  .type-label {
+    font-size: 12px;
+    color: var(--ssh-muted);
+    text-transform: capitalize;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}">SSH Logs</a>
+    <span>/</span>
+    <span>Analytics</span>
+  </div>
+
+  <!-- Page Header -->
+  <h1 class="page-title">
+    <span>📈</span>
+    SSH Session Analytics
+  </h1>
+  <p class="page-subtitle">Insights and trends from your SSH activity</p>
+
+  <!-- Time Period Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Sessions</span>
+        <span class="stat-period">7 Days</span>
+      </div>
+      <div class="stat-value">{{ stats_7d.recent_sessions or 0 }}</div>
+      <div class="stat-detail">{{ stats_7d.total_commands or 0 }} commands executed</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Sessions</span>
+        <span class="stat-period">30 Days</span>
+      </div>
+      <div class="stat-value">{{ stats_30d.recent_sessions or 0 }}</div>
+      <div class="stat-detail">{{ stats_30d.total_commands or 0 }} commands executed</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">All Time</span>
+        <span class="stat-period">Total</span>
+      </div>
+      <div class="stat-value">{{ stats_all.total_sessions or 0 }}</div>
+      <div class="stat-detail">{{ stats_all.unique_hosts or 0 }} unique hosts</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Avg Duration</span>
+        <span class="stat-period">30 Days</span>
+      </div>
+      <div class="stat-value">
+        {% if stats_30d.avg_duration %}
+          {{ (stats_30d.avg_duration / 60)|round(1) }}m
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-detail">Average session length</div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-grid">
+
+    <!-- Sessions by Day of Week -->
+    <div class="ssh-card">
+      <h2 class="card-title">
+        <span>📅</span>
+        Sessions by Day of Week
+      </h2>
+      <div class="bar-chart">
+        {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        {% set count = dow_data.get(day, 0) %}
+        {% set max_count = dow_data.values()|max if dow_data else 1 %}
+        {% set percentage = (count / max_count * 100) if max_count > 0 else 0 %}
+        <div class="bar-item">
+          <div class="bar-label">{{ day[:3] }}</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: {{ percentage }}%;">
+              <span class="bar-value">{{ count }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sessions by Hour -->
+    <div class="ssh-card">
+      <h2 class="card-title">
+        <span>🕐</span>
+        Sessions by Hour of Day
+      </h2>
+      <div class="bar-chart">
+        {% set max_hour = hour_data.values()|max if hour_data else 1 %}
+        {% for hour in range(24) %}
+        {% set count = hour_data.get(hour, 0) %}
+        {% set percentage = (count / max_hour * 100) if max_hour > 0 else 0 %}
+        <div class="bar-item">
+          <div class="bar-label">{{ '%02d'|format(hour) }}:00</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: {{ percentage }}%;">
+              {% if count > 0 %}
+              <span class="bar-value">{{ count }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Command Type Distribution -->
+  <div class="ssh-card" style="margin-bottom: 24px;">
+    <h2 class="card-title">
+      <span>⚙️</span>
+      Command Types Distribution
+    </h2>
+    <div class="type-grid">
+      {% for cmd_type, count in command_type_dist %}
+      <div class="type-item">
+        <div class="type-count">{{ count }}</div>
+        <div class="type-label">{{ cmd_type|replace('_', ' ') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Top Commands -->
+  <div class="ssh-card" style="margin-bottom: 24px;">
+    <h2 class="card-title">
+      <span>⌨️</span>
+      Top 20 Commands (Last 30 Days)
+    </h2>
+    {% if top_commands %}
+    <ul class="command-list">
+      {% for cmd, count in top_commands %}
+      <li class="command-list-item">
+        <span class="command-rank">{{ loop.index }}</span>
+        <code class="command-text">{{ cmd }}</code>
+        <span class="command-count">{{ count }}×</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color: var(--ssh-muted); text-align: center; padding: 40px;">No commands logged yet</p>
+    {% endif %}
+  </div>
+
+  <!-- Host Activity Breakdown -->
+  <div class="ssh-card full-width">
+    <h2 class="card-title">
+      <span>🖥️</span>
+      Most Active Hosts
+    </h2>
+    {% if host_activity %}
+    <table class="analytics-table">
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th>Friendly Name</th>
+          <th>Sessions</th>
+          <th>Total Duration</th>
+          <th>Avg Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hostname, friendly_name, session_count, total_dur, avg_dur in host_activity %}
+        <tr>
+          <td>
+            <a href="{{ url_for('admin_tools.ssh_logs_host_profile', hostname=hostname) }}" class="host-link">
+              {{ hostname }}
+            </a>
+          </td>
+          <td>{{ friendly_name or '-' }}</td>
+          <td><strong style="color: var(--ssh-primary);">{{ session_count }}</strong></td>
+          <td>
+            {% if total_dur %}
+              {{ (total_dur / 3600)|round(1) }}h
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if avg_dur %}
+              {{ (avg_dur / 60)|round(1) }}m
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--ssh-muted); text-align: center; padding: 40px;">No host activity data available</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

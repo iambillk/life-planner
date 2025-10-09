@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Search Commands · SSH Logs{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .search-form {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .search-input-group {
+    display: flex;
+    gap: 12px;
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    color: var(--ssh-text);
+    font-size: 15px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--ssh-primary);
+  }
+
+  .btn-primary {
+    padding: 14px 28px;
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .command-result {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .command-text {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--ssh-text);
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+
+  .command-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--ssh-muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+  <h1 style="color: var(--ssh-text); margin-bottom: 20px;">🔍 Search Commands</h1>
+
+  <div class="search-form">
+    <form method="get">
+      <div class="search-input-group">
+        <input type="text" name="q" class="search-input" placeholder="Search commands..." value="{{ search_query }}" autofocus>
+        <button type="submit" class="btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
+
+  {% if commands %}
+    {% for cmd in commands %}
+    <div class="command-result">
+      <div class="command-text">{{ cmd.command_text }}</div>
+      <div class="command-meta">
+        <span>{{ cmd.session.friendly_name or cmd.session.hostname }}</span>
+        <span>{{ cmd.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+        <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=cmd.session_id) }}" style="color: var(--ssh-primary);">View Session →</a>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

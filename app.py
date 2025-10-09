@@ -355,6 +355,10 @@ def create_app():
     # --- DB tables ---
     with app.app_context():
         db.create_all()
+        
+        # Initialize SSH Logs module
+        from models.ssh_logs import init_ssh_logs
+        init_ssh_logs()
 
     return app
 

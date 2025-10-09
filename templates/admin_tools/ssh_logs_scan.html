@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Scan for Logs · SSH Logs · Admin Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-success: #22c55e;
+    --ssh-warning: #f59e0b;
+    --ssh-danger: #ef4444;
+    --ssh-bg: #0b0f1a;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ssh-muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    color: var(--ssh-primary);
+    text-decoration: none;
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .page-subtitle {
+    font-size: 16px;
+    color: var(--ssh-muted);
+  }
+
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 30px;
+    box-shadow: var(--ssh-shadow);
+    margin-bottom: 24px;
+  }
+
+  .card-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ssh-text);
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    color: var(--ssh-text);
+    font-size: 15px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--ssh-primary);
+  }
+
+  .form-help {
+    font-size: 13px;
+    color: var(--ssh-muted);
+    margin-top: 6px;
+  }
+
+  .info-box {
+    background: rgba(110, 168, 255, 0.1);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    border-left: 4px solid var(--ssh-primary);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .info-box-title {
+    font-weight: 700;
+    color: var(--ssh-primary);
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .info-box-content {
+    color: var(--ssh-text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .warning-box {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-left: 4px solid var(--ssh-warning);
+  }
+
+  .warning-box .info-box-title {
+    color: var(--ssh-warning);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(110, 168, 255, 0.4);
+  }
+
+  .btn-secondary {
+    background: var(--ssh-panel);
+    color: var(--ssh-text);
+    border: 1px solid var(--ssh-line);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .btn-block {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Scan History */
+  .scan-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .scan-history-item:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .scan-main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .scan-date {
+    font-weight: 600;
+    color: var(--ssh-text);
+  }
+
+  .scan-stats {
+    font-size: 13px;
+    color: var(--ssh-muted);
+  }
+
+  .scan-status {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .status-completed {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--ssh-success);
+  }
+
+  .status-error {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--ssh-danger);
+  }
+
+  .status-running {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--ssh-warning);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ssh-muted);
+  }
+
+  .empty-state .icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}">SSH Logs</a>
+    <span>/</span>
+    <span>Scan for Logs</span>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <span>🔄</span>
+      Scan for SSH Logs
+    </h1>
+    <p class="page-subtitle">Import MobaXterm session logs from your NAS directory</p>
+  </div>
+
+  <!-- Info Box -->
+  <div class="info-box">
+    <div class="info-box-title">
+      <span>💡</span>
+      How It Works
+    </div>
+    <div class="info-box-content">
+      The scanner will walk through your NAS directory and import all <code>.log</code> files. 
+      It automatically extracts session metadata, commands, and timing information. 
+      Files that have already been imported will be skipped unless they've been modified.
+    </div>
+  </div>
+
+  <!-- Scan Form -->
+  <div class="ssh-card">
+    <h2 class="card-title">
+      <span>📁</span>
+      Configure Scan
+    </h2>
+
+    <form method="post" action="{{ url_for('admin_tools.ssh_logs_scan') }}">
+      
+      <div class="form-group">
+        <label class="form-label">NAS Directory Path</label>
+        <input type="text" 
+               name="scan_path" 
+               class="form-input" 
+               value="{{ default_path }}"
+               placeholder="\\192.168.1.196\wtr_shared_folder\Data\SSH log files"
+               required>
+        <div class="form-help">
+          Enter the full path to your SSH log directory on the NAS. 
+          Use UNC path format on Windows (e.g., \\server\share\folder)
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <div class="info-box-title">
+          <span>⚠️</span>
+          Before You Scan
+        </div>
+        <div class="info-box-content">
+          <ul style="margin: 0; padding-left: 20px;">
+            <li>Ensure the NAS path is accessible from this server</li>
+            <li>Large directories may take several minutes to scan</li>
+            <li>The scanner will NOT delete or modify any log files</li>
+            <li>Duplicate sessions will be automatically skipped</li>
+          </ul>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        <span>🚀</span>
+        <span>Start Scanning</span>
+      </button>
+
+    </form>
+  </div>
+
+  <!-- Scan History -->
+  <div class="ssh-card">
+    <h2 class="card-title">
+      <span>📊</span>
+      Recent Scans
+    </h2>
+
+    {% if scan_history %}
+    <div>
+      {% for scan in scan_history %}
+      <div class="scan-history-item">
+        <div class="scan-main">
+          <div class="scan-date">{{ scan.scan_started.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+          <div class="scan-stats">
+            {% if scan.status == 'completed' %}
+              Found {{ scan.files_found }} files · 
+              {{ scan.files_new }} new · 
+              {{ scan.files_updated }} updated · 
+              {{ scan.files_skipped }} skipped
+              {% if scan.files_error > 0 %} · {{ scan.files_error }} errors{% endif %}
+              {% if scan.duration_seconds %}
+               · {{ scan.duration_seconds|round(1) }}s
+              {% endif %}
+            {% elif scan.status == 'error' %}
+              Error: {{ scan.error_message }}
+            {% else %}
+              Scanning...
+            {% endif %}
+          </div>
+        </div>
+        <span class="scan-status status-{{ scan.status }}">{{ scan.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🔄</div>
+      <p>No scans have been run yet</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Quick Actions -->
+  <div style="display: flex; gap: 12px;">
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}" class="btn btn-secondary">
+      <span>←</span>
+      <span>Back to Dashboard</span>
+    </a>
+    <a href="{{ url_for('admin_tools.ssh_logs_sessions') }}" class="btn btn-secondary">
+      <span>📋</span>
+      <span>View Sessions</span>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

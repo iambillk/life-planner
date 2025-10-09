@@ -503,35 +503,64 @@
   </div>
 
   <!-- Available Tools by Category -->
-  <div class="admin-card">
-    <div class="admin-card-header">
-      <span class="admin-card-icon">🧰</span>
-      <h2 class="admin-card-title">Available Tools</h2>
-    </div>
-    
-    {% for category_key, category in tool_categories.items() %}
-    <div class="tool-category">
-      <div class="category-header">
-        <span class="category-icon">{{ category.icon }}</span>
-        <h3 class="category-title">{{ category.name }}</h3>
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <span class="admin-card-icon">🧰</span>
+        <h2 class="admin-card-title">Available Tools</h2>
       </div>
       
-      <div class="tool-grid">
-        {% for tool_name in category.tools %}
-          {% if tool_name in tools %}
-          <a href="{{ url_for('admin_tools.execute_tool_route', tool_name=tool_name) }}" class="tool-card">
-            <span class="tool-icon">{{ tools[tool_name].icon }}</span>
-            <div class="tool-info">
-              <div class="tool-name">{{ tools[tool_name].name }}</div>
-              <div class="tool-desc">{{ tools[tool_name].description }}</div>
-            </div>
+      {% for category_key, category in tool_categories.items() %}
+      <div class="tool-category">
+        <div class="category-header">
+          <span class="category-icon">{{ category.icon }}</span>
+          <h3 class="category-title">{{ category.name }}</h3>
+        </div>
+        
+        <div class="tool-grid">
+          {% for tool_name in category.tools %}
+            {% if tool_name in tools %}
+            <a href="{{ url_for('admin_tools.execute_tool_route', tool_name=tool_name) }}" class="tool-card">
+              <span class="tool-icon">{{ tools[tool_name].icon }}</span>
+              <div class="tool-info">
+                <div class="tool-name">{{ tools[tool_name].name }}</div>
+                <div class="tool-desc">{{ tools[tool_name].description }}</div>
+              </div>
+            </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- SSH Session Logs Section -->
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <span class="admin-card-icon">🖥️</span>
+        <h2 class="admin-card-title">SSH Session Logs</h2>
+        <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}" class="admin-card-action">View All →</a>
+      </div>
+      
+      <div style="padding: 20px; text-align: center;">
+        <p style="color: var(--admin-muted); margin-bottom: 16px;">
+          Browse and analyze your SSH session history from MobaXterm logs
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}" class="quick-action-btn">
+            📊 Dashboard
           </a>
-          {% endif %}
-        {% endfor %}
+          <a href="{{ url_for('admin_tools.ssh_logs_sessions') }}" class="quick-action-btn">
+            📋 Browse Sessions
+          </a>
+          <a href="{{ url_for('admin_tools.ssh_logs_scan') }}" class="quick-action-btn">
+            🔄 Scan for Logs
+          </a>
+          <a href="{{ url_for('admin_tools.ssh_logs_analytics') }}" class="quick-action-btn">
+            📈 Analytics
+          </a>
+        </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
 
   <!-- Knowledge Base Categories -->
   {% if category_stats %}

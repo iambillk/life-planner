@@ -596,4 +596,18 @@
   {% endif %}
 
 </div>
+<script>
+// Make entire card clickable
+document.querySelectorAll('.kb-item-card').forEach(card => {
+  card.addEventListener('click', function(e) {
+    // Don't trigger if clicking on a tag link
+    if (e.target.classList.contains('tag-pill')) return;
+    
+    const link = this.querySelector('.kb-item-title');
+    if (link) {
+      window.location.href = link.href;
+    }
+  });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% block title %}SSH Session Logs · Admin Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* SSH Logs Styling */
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-success: #22c55e;
+    --ssh-warning: #f59e0b;
+    --ssh-danger: #ef4444;
+    --ssh-bg: #0b0f1a;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .ssh-header {
+    margin-bottom: 24px;
+  }
+
+  .ssh-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ssh-subtitle {
+    color: var(--ssh-muted);
+    font-size: 14px;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 20px;
+    box-shadow: var(--ssh-shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--ssh-primary);
+  }
+
+  .stat-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--ssh-primary);
+    margin: 8px 0;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--ssh-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-detail {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ssh-muted);
+  }
+
+  /* Action Buttons */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    color: var(--ssh-text);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .action-btn:hover {
+    background: var(--ssh-primary);
+    border-color: var(--ssh-primary);
+    color: #0a0f1a;
+    transform: translateY(-2px);
+  }
+
+  .action-btn .icon {
+    font-size: 20px;
+  }
+
+  /* Recent Sessions */
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 20px;
+    box-shadow: var(--ssh-shadow);
+    margin-bottom: 20px;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ssh-line);
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-action {
+    font-size: 14px;
+    color: var(--ssh-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .card-action:hover {
+    color: var(--ssh-text);
+  }
+
+  /* Session Table */
+  .session-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .session-table th {
+    text-align: left;
+    padding: 12px;
+    background: var(--ssh-panel);
+    border-bottom: 2px solid var(--ssh-line);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ssh-muted);
+    font-weight: 600;
+  }
+
+  .session-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--ssh-line);
+    font-size: 14px;
+  }
+
+  .session-table tr {
+    transition: background 0.2s ease;
+  }
+
+  .session-table tr:hover {
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .session-link {
+    color: var(--ssh-primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+
+  .session-link:hover {
+    color: var(--ssh-text);
+  }
+
+  .session-host {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .session-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(110, 168, 255, 0.15);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ssh-primary);
+  }
+
+  .command-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .command-item {
+    padding: 10px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .command-count {
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .scan-info {
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .scan-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .scan-info-label {
+    color: var(--ssh-muted);
+    font-size: 13px;
+  }
+
+  .scan-info-value {
+    color: var(--ssh-text);
+    font-weight: 600;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--ssh-primary);
+    border: none;
+    border-radius: 8px;
+    color: #0a0f1a;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ssh-muted);
+  }
+
+  .empty-state .icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state h3 {
+    font-size: 20px;
+    margin: 0 0 8px 0;
+    color: var(--ssh-text);
+  }
+
+  .empty-state p {
+    margin: 0 0 20px 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+  
+  <!-- Header -->
+  <div class="ssh-header">
+    <h1 class="ssh-title">
+      <span>🖥️</span>
+      SSH Session Logs
+    </h1>
+    <p class="ssh-subtitle">Track and analyze your SSH sessions from MobaXterm logs</p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-icon">📊</span>
+      <div class="stat-value">{{ stats.total_sessions|default(0) }}</div>
+      <div class="stat-label">Total Sessions</div>
+      <div class="stat-detail">{{ stats.recent_sessions|default(0) }} in last 30 days</div>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-icon">🖥️</span>
+      <div class="stat-value">{{ stats.unique_hosts|default(0) }}</div>
+      <div class="stat-label">Unique Hosts</div>
+      {% if stats.most_accessed_host %}
+      <div class="stat-detail">
+        Most accessed: {{ stats.most_accessed_host.friendly_name or stats.most_accessed_host.hostname }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-icon">⌨️</span>
+      <div class="stat-value">{{ stats.total_commands|default(0) }}</div>
+      <div class="stat-label">Commands Logged</div>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-icon">⏱️</span>
+      <div class="stat-value">
+        {% if stats.avg_duration %}
+          {{ (stats.avg_duration / 60)|round(1) }}m
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-label">Avg Session Duration</div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-grid">
+    <a href="{{ url_for('admin_tools.ssh_logs_sessions') }}" class="action-btn">
+      <span class="icon">📋</span>
+      <span>Browse All Sessions</span>
+    </a>
+    <a href="{{ url_for('admin_tools.ssh_logs_analytics') }}" class="action-btn">
+      <span class="icon">📈</span>
+      <span>View Analytics</span>
+    </a>
+    <a href="{{ url_for('admin_tools.ssh_logs_scan') }}" class="action-btn">
+      <span class="icon">🔄</span>
+      <span>Scan for New Logs</span>
+    </a>
+    <a href="{{ url_for('admin_tools.ssh_logs_search_commands') }}" class="action-btn">
+      <span class="icon">🔍</span>
+      <span>Search Commands</span>
+    </a>
+  </div>
+
+  <!-- Last Scan Info -->
+  {% if last_scan %}
+  <div class="scan-info">
+    <div class="scan-info-row">
+      <span class="scan-info-label">Last Scan:</span>
+      <span class="scan-info-value">{{ last_scan.scan_started.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+    </div>
+    <div class="scan-info-row">
+      <span class="scan-info-label">Status:</span>
+      <span class="scan-info-value" style="color: {% if last_scan.status == 'completed' %}var(--ssh-success){% else %}var(--ssh-warning){% endif %}">
+        {{ last_scan.status|upper }}
+      </span>
+    </div>
+    <div class="scan-info-row">
+      <span class="scan-info-label">Files Found:</span>
+      <span class="scan-info-value">
+        {{ last_scan.files_new }} new, {{ last_scan.files_updated }} updated, {{ last_scan.files_skipped }} skipped
+      </span>
+    </div>
+  </div>
+  {% else %}
+  <div class="scan-info">
+    <div style="text-align: center; color: var(--ssh-muted);">
+      <p>No scans have been run yet.</p>
+      <a href="{{ url_for('admin_tools.ssh_logs_scan') }}" class="btn-primary">
+        <span>🔄</span>
+        <span>Run First Scan</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent Sessions -->
+  <div class="ssh-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span>📋</span>
+        Recent Sessions
+      </h2>
+      <a href="{{ url_for('admin_tools.ssh_logs_sessions') }}" class="card-action">View All →</a>
+    </div>
+
+    {% if recent_sessions %}
+    <table class="session-table">
+      <thead>
+        <tr>
+          <th>Host / Server</th>
+          <th>User</th>
+          <th>Session Start</th>
+          <th>Duration</th>
+          <th>Commands</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for session in recent_sessions %}
+        <tr>
+          <td>
+            <div class="session-host">
+              <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=session.id) }}" class="session-link">
+                {{ session.friendly_name or session.hostname }}
+              </a>
+              {% if session.hostname and session.friendly_name %}
+              <span style="color: var(--ssh-muted); font-size: 12px;">({{ session.hostname }})</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="session-badge">
+              <span>👤</span>
+              <span>{{ session.username or 'unknown' }}</span>
+            </span>
+          </td>
+          <td>{{ session.session_start.strftime('%Y-%m-%d %H:%M:%S') if session.session_start else '-' }}</td>
+          <td>{{ session.duration_formatted }}</td>
+          <td>
+            <span style="font-weight: 600; color: var(--ssh-primary);">{{ session.command_count }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🖥️</div>
+      <h3>No Sessions Yet</h3>
+      <p>Scan your NAS directory to import SSH session logs</p>
+      <a href="{{ url_for('admin_tools.ssh_logs_scan') }}" class="btn-primary">
+        <span>🔄</span>
+        <span>Start Scanning</span>
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Top Commands -->
+  {% if top_commands %}
+  <div class="ssh-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span>⌨️</span>
+        Top Commands (Last 30 Days)
+      </h2>
+      <a href="{{ url_for('admin_tools.ssh_logs_search_commands') }}" class="card-action">Search All →</a>
+    </div>
+
+    <ul class="command-list">
+      {% for cmd, count in top_commands %}
+      <li class="command-item">
+        <span class="command-count">{{ count }}</span>
+        <code>{{ cmd }}</code>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Unique Hosts Quick Links -->
+  {% if unique_hosts %}
+  <div class="ssh-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span>🖥️</span>
+        Your Hosts ({{ unique_hosts|length }})
+      </h2>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      {% for hostname, friendly_name in unique_hosts %}
+      <a href="{{ url_for('admin_tools.ssh_logs_host_profile', hostname=hostname) }}" 
+         class="session-badge" 
+         style="text-decoration: none; padding: 8px 14px;">
+        <span>🖥️</span>
+        <span>{{ friendly_name or hostname }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+{% block title %}{{ session.friendly_name or session.hostname }} · Session Details · SSH Logs{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-success: #22c55e;
+    --ssh-warning: #f59e0b;
+    --ssh-danger: #ef4444;
+    --ssh-bg: #0b0f1a;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ssh-muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    color: var(--ssh-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--ssh-text);
+  }
+
+  /* Session Header */
+  .session-header-card {
+    background: linear-gradient(135deg, var(--ssh-card) 0%, var(--ssh-panel) 100%);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 30px;
+    margin-bottom: 24px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .session-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .session-title-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .session-icon-large {
+    font-size: 48px;
+  }
+
+  .session-title-main {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    color: var(--ssh-text);
+  }
+
+  .session-subtitle {
+    font-size: 16px;
+    color: var(--ssh-muted);
+  }
+
+  .session-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: var(--ssh-success);
+  }
+
+  .badge-warning {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: var(--ssh-warning);
+  }
+
+  .badge-primary {
+    background: rgba(110, 168, 255, 0.15);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    color: var(--ssh-primary);
+  }
+
+  /* Session Stats Grid */
+  .session-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    font-size: 28px;
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ssh-muted);
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ssh-text);
+  }
+
+  /* Action Buttons */
+  .action-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: var(--ssh-panel);
+    color: var(--ssh-text);
+    border: 1px solid var(--ssh-line);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--ssh-danger);
+  }
+
+  .btn-danger:hover {
+    background: var(--ssh-danger);
+    color: white;
+  }
+
+  /* Layout Grid */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 1200px) {
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Cards */
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 20px;
+    box-shadow: var(--ssh-shadow);
+    margin-bottom: 20px;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ssh-line);
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  /* Commands List */
+  .commands-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .command-item {
+    padding: 14px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+  }
+
+  .command-item:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .command-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .command-sequence {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .command-timestamp {
+    font-size: 12px;
+    color: var(--ssh-muted);
+  }
+
+  .command-text {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--ssh-text);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+
+  .command-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(110, 168, 255, 0.15);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ssh-primary);
+  }
+
+  .command-output {
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-left: 3px solid var(--ssh-primary);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--ssh-muted);
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  .copy-btn {
+    padding: 4px 10px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 6px;
+    color: var(--ssh-text);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .copy-btn:hover {
+    background: var(--ssh-primary);
+    border-color: var(--ssh-primary);
+    color: #0a0f1a;
+  }
+
+  /* Log Viewer */
+  .log-viewer {
+    background: #000;
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #00ff00;
+    max-height: 600px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+
+  .log-viewer::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .log-viewer::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .log-viewer::-webkit-scrollbar-thumb {
+    background: var(--ssh-primary);
+    border-radius: 5px;
+  }
+
+  /* Sidebar Cards */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--ssh-line);
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-size: 13px;
+    color: var(--ssh-muted);
+  }
+
+  .info-value {
+    font-size: 13px;
+    color: var(--ssh-text);
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .related-session {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: var(--ssh-text);
+    transition: all 0.2s ease;
+  }
+
+  .related-session:hover {
+    border-color: var(--ssh-primary);
+    transform: translateX(4px);
+  }
+
+  .related-session-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .related-session-time {
+    font-size: 11px;
+    color: var(--ssh-muted);
+  }
+
+  .related-session-commands {
+    font-size: 12px;
+    color: var(--ssh-primary);
+    font-weight: 600;
+  }
+
+  .toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 6px;
+    color: var(--ssh-text);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .toggle-btn:hover {
+    border-color: var(--ssh-primary);
+  }
+
+  .collapsed {
+    display: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}">SSH Logs</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_sessions') }}">Sessions</a>
+    <span>/</span>
+    <span>{{ session.friendly_name or session.hostname }}</span>
+  </div>
+
+  <!-- Session Header Card -->
+  <div class="session-header-card">
+    <div class="session-header-top">
+      <div class="session-title-group">
+        <span class="session-icon-large">🖥️</span>
+        <div>
+          <h1 class="session-title-main">{{ session.friendly_name or session.hostname }}</h1>
+          <div class="session-subtitle">
+            {{ session.username }}@{{ session.hostname }}
+            {% if session.ip_address %} ({{ session.ip_address }}) {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="session-badges">
+        {% if session.exit_clean %}
+        <span class="badge badge-success">
+          <span>✓</span>
+          <span>Clean Exit</span>
+        </span>
+        {% else %}
+        <span class="badge badge-warning">
+          <span>⚠</span>
+          <span>Disconnected</span>
+        </span>
+        {% endif %}
+
+        {% if session.is_flagged %}
+        <span class="badge badge-warning">
+          <span>🚩</span>
+          <span>Flagged</span>
+        </span>
+        {% endif %}
+
+        <span class="badge badge-primary">
+          <span>🔒</span>
+          <span>{{ session.authentication_method or 'SSH' }}</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Session Stats -->
+    <div class="session-stats-grid">
+      <div class="stat-item">
+        <span class="stat-icon">📅</span>
+        <div class="stat-content">
+          <span class="stat-label">Session Start</span>
+          <span class="stat-value">{{ session.session_start.strftime('%Y-%m-%d %H:%M:%S') if session.session_start else '-' }}</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-icon">⏱️</span>
+        <div class="stat-content">
+          <span class="stat-label">Duration</span>
+          <span class="stat-value">{{ session.duration_formatted }}</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-icon">⌨️</span>
+        <div class="stat-content">
+          <span class="stat-label">Commands</span>
+          <span class="stat-value">{{ session.command_count }}</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-icon">📄</span>
+        <div class="stat-content">
+          <span class="stat-label">Log Lines</span>
+          <span class="stat-value">{{ session.line_count or 0 }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <a href="{{ url_for('admin_tools.ssh_logs_session_edit', session_id=session.id) }}" class="btn btn-secondary">
+      <span>✏️</span>
+      <span>Edit Notes/Tags</span>
+    </a>
+    <a href="{{ url_for('admin_tools.ssh_logs_host_profile', hostname=session.hostname) }}" class="btn btn-secondary">
+      <span>🖥️</span>
+      <span>Host Profile</span>
+    </a>
+    <button onclick="window.print()" class="btn btn-secondary">
+      <span>🖨️</span>
+      <span>Print</span>
+    </button>
+    <button onclick="if(confirm('Delete this session from database? (Log file will not be deleted)')) document.getElementById('delete-form').submit();" class="btn btn-danger">
+      <span>🗑️</span>
+      <span>Delete</span>
+    </button>
+  </div>
+
+  <!-- Hidden Delete Form -->
+  <form id="delete-form" method="post" action="{{ url_for('admin_tools.ssh_logs_session_delete', session_id=session.id) }}" style="display: none;">
+    <input type="hidden" name="confirm" value="yes">
+  </form>
+
+  <!-- Main Content Grid -->
+  <div class="detail-grid">
+
+    <!-- Left Column - Commands & Log -->
+    <div>
+
+      <!-- Commands List -->
+      {% if commands %}
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>⌨️</span>
+            Commands Executed ({{ commands|length }})
+          </h2>
+        </div>
+
+        <ul class="commands-list">
+          {% for cmd in commands %}
+          <li class="command-item" id="cmd-{{ cmd.id }}">
+            <div class="command-header">
+              <span class="command-sequence">{{ cmd.sequence_number }}</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="command-timestamp">{{ cmd.timestamp.strftime('%H:%M:%S') }}</span>
+                <span class="command-type-badge">{{ cmd.command_type or 'custom' }}</span>
+                <button class="copy-btn" onclick="copyCommand('{{ cmd.command_text|replace("'", "\\'") }}')">
+                  📋 Copy
+                </button>
+              </div>
+            </div>
+
+            <div class="command-text">{{ cmd.command_text }}</div>
+
+            {% if cmd.output_preview %}
+            <button class="toggle-btn" onclick="toggleOutput({{ cmd.id }})">
+              <span id="toggle-icon-{{ cmd.id }}">▶</span>
+              <span>Show Output</span>
+            </button>
+            <div id="output-{{ cmd.id }}" class="command-output collapsed">{{ cmd.output_preview }}</div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- Full Log Viewer -->
+      {% if log_content %}
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>📄</span>
+            Full Session Log
+          </h2>
+          <button class="copy-btn" onclick="copyLog()">
+            📋 Copy All
+          </button>
+        </div>
+
+        <div class="log-viewer" id="log-content">{{ log_content }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right Column - Metadata & Related -->
+    <div>
+
+      <!-- Session Details -->
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>ℹ️</span>
+            Session Details
+          </h2>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Protocol</span>
+          <span class="info-value">{{ session.protocol or 'ssh' }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Username</span>
+          <span class="info-value">{{ session.username or 'unknown' }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Hostname</span>
+          <span class="info-value">{{ session.hostname }}</span>
+        </div>
+
+        {% if session.ip_address %}
+        <div class="info-row">
+          <span class="info-label">IP Address</span>
+          <span class="info-value">{{ session.ip_address }}</span>
+        </div>
+        {% endif %}
+
+        {% if session.authentication_method %}
+        <div class="info-row">
+          <span class="info-label">Authentication</span>
+          <span class="info-value">{{ session.authentication_method }}</span>
+        </div>
+        {% endif %}
+
+        {% if session.mobaterm_version %}
+        <div class="info-row">
+          <span class="info-label">MobaXterm</span>
+          <span class="info-value">{{ session.mobaterm_version }}</span>
+        </div>
+        {% endif %}
+
+        {% if session.last_login_info %}
+        <div class="info-row">
+          <span class="info-label">Last Login</span>
+          <span class="info-value" style="font-size: 11px;">{{ session.last_login_info }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- File Info -->
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>📁</span>
+            File Info
+          </h2>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Filename</span>
+          <span class="info-value" style="font-size: 11px;">{{ session.filename }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">File Size</span>
+          <span class="info-value">{{ (session.file_size / 1024)|round(1) }} KB</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Modified</span>
+          <span class="info-value">{{ session.file_modified.strftime('%Y-%m-%d %H:%M') if session.file_modified else '-' }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Imported</span>
+          <span class="info-value">{{ session.imported_at.strftime('%Y-%m-%d %H:%M') if session.imported_at else '-' }}</span>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      {% if session.notes %}
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>📝</span>
+            Notes
+          </h2>
+        </div>
+        <div style="white-space: pre-wrap; color: var(--ssh-text); line-height: 1.6;">{{ session.notes }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Tags -->
+      {% if session.tags %}
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>🏷️</span>
+            Tags
+          </h2>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          {% for tag in session.tags.split(',') %}
+          <span class="badge badge-primary">{{ tag.strip() }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Related Sessions -->
+      {% if related_sessions %}
+      <div class="ssh-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>🔗</span>
+            Related Sessions
+          </h2>
+        </div>
+
+        {% for rel in related_sessions %}
+        <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=rel.id) }}" class="related-session">
+          <div class="related-session-main">
+            <div style="font-weight: 600;">{{ rel.session_start.strftime('%Y-%m-%d %H:%M:%S') if rel.session_start else '-' }}</div>
+            <div class="related-session-time">{{ rel.duration_formatted }}</div>
+          </div>
+          <div class="related-session-commands">{{ rel.command_count }} cmds →</div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function copyCommand(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Command copied to clipboard!');
+  });
+}
+
+function copyLog() {
+  const logContent = document.getElementById('log-content').innerText;
+  navigator.clipboard.writeText(logContent).then(() => {
+    alert('Log copied to clipboard!');
+  });
+}
+
+function toggleOutput(cmdId) {
+  const output = document.getElementById('output-' + cmdId);
+  const icon = document.getElementById('toggle-icon-' + cmdId);
+  
+  if (output.classList.contains('collapsed')) {
+    output.classList.remove('collapsed');
+    icon.textContent = '▼';
+  } else {
+    output.classList.add('collapsed');
+    icon.textContent = '▶';
+  }
+}
+</script>
+{% endblock %}

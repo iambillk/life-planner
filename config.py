@@ -111,3 +111,9 @@ class Config:
     
     # Target List Configuration (if using target lists)
     FIREWALLA_TARGET_LIST_ID = "TL-8a3af152-551a-4355-b61b-f1e494723b2a"  # Example target list ID
+
+    
+    # SSH Log Scanner Configuration
+    SSH_LOG_PATH = os.environ.get('SSH_LOG_PATH', r'\\192.168.1.196\wtr_shared_folder\Data\SSH log files')
+    SSH_LOG_AUTO_SCAN = os.environ.get('SSH_LOG_AUTO_SCAN', 'False').lower() == 'true'
+    SSH_LOG_SCAN_INTERVAL = int(os.environ.get('SSH_LOG_SCAN_INTERVAL', 3600))  # seconds

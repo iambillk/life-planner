@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block title %}{{ friendly_name or hostname }} · Host Profile · SSH Logs{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ssh-primary: #6ea8ff;
+    --ssh-success: #22c55e;
+    --ssh-warning: #f59e0b;
+    --ssh-bg: #0b0f1a;
+    --ssh-card: #0f1625;
+    --ssh-panel: #121a2a;
+    --ssh-line: #1f2a3d;
+    --ssh-text: #e6eaf2;
+    --ssh-muted: #9fb0c8;
+    --ssh-radius: 12px;
+    --ssh-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .ssh-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ssh-muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    color: var(--ssh-primary);
+    text-decoration: none;
+  }
+
+  /* Host Header */
+  .host-header {
+    background: linear-gradient(135deg, var(--ssh-card) 0%, var(--ssh-panel) 100%);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 30px;
+    margin-bottom: 24px;
+    box-shadow: var(--ssh-shadow);
+  }
+
+  .host-title-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .host-icon {
+    font-size: 48px;
+  }
+
+  .host-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: var(--ssh-text);
+  }
+
+  .host-subtitle {
+    font-size: 16px;
+    color: var(--ssh-muted);
+  }
+
+  /* Stats Grid */
+  .host-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    font-size: 28px;
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ssh-muted);
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ssh-text);
+  }
+
+  /* Cards */
+  .ssh-card {
+    background: var(--ssh-card);
+    border: 1px solid var(--ssh-line);
+    border-radius: var(--ssh-radius);
+    padding: 24px;
+    box-shadow: var(--ssh-shadow);
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    color: var(--ssh-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Session List */
+  .session-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: var(--ssh-text);
+  }
+
+  .session-item:hover {
+    border-color: var(--ssh-primary);
+    transform: translateX(4px);
+  }
+
+  .session-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .session-date {
+    font-weight: 600;
+    color: var(--ssh-text);
+  }
+
+  .session-meta {
+    font-size: 13px;
+    color: var(--ssh-muted);
+  }
+
+  .session-arrow {
+    color: var(--ssh-primary);
+    font-size: 20px;
+  }
+
+  /* Command List */
+  .command-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .command-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+
+  .command-rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .command-text {
+    flex: 1;
+    color: var(--ssh-text);
+  }
+
+  .command-count {
+    background: rgba(110, 168, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: var(--ssh-primary);
+  }
+
+  /* User Activity */
+  .user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--ssh-panel);
+    border: 1px solid var(--ssh-line);
+    border-radius: 8px;
+  }
+
+  .user-name {
+    font-weight: 600;
+    color: var(--ssh-text);
+  }
+
+  .user-count {
+    background: var(--ssh-primary);
+    color: #0a0f1a;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssh-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_tools.dashboard') }}">Admin Tools</a>
+    <span>/</span>
+    <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}">SSH Logs</a>
+    <span>/</span>
+    <span>{{ friendly_name or hostname }}</span>
+  </div>
+
+  <!-- Host Header -->
+  <div class="host-header">
+    <div class="host-title-group">
+      <span class="host-icon">🖥️</span>
+      <div>
+        <h1 class="host-title">{{ friendly_name or hostname }}</h1>
+        <div class="host-subtitle">{{ hostname }}</div>
+      </div>
+    </div>
+
+    <div class="host-stats-grid">
+      <div class="stat-item">
+        <span class="stat-icon">📊</span>
+        <div class="stat-content">
+          <span class="stat-label">Total Sessions</span>
+          <span class="stat-value">{{ total_sessions }}</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-icon">⏱️</span>
+        <div class="stat-content">
+          <span class="stat-label">Total Duration</span>
+          <span class="stat-value">{{ (total_duration / 3600)|round(1) }}h</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-icon">📈</span>
+        <div class="stat-content">
+          <span class="stat-label">Avg Duration</span>
+          <span class="stat-value">{{ (avg_duration / 60)|round(1) }}m</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Grid -->
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+
+    <!-- Left Column -->
+    <div>
+
+      <!-- Recent Sessions -->
+      <div class="ssh-card">
+        <div class="card-title">
+          <span>📋</span>
+          All Sessions on This Host
+        </div>
+
+        {% if sessions %}
+        <ul class="session-list">
+          {% for session in sessions %}
+          <a href="{{ url_for('admin_tools.ssh_logs_session_detail', session_id=session.id) }}" class="session-item">
+            <div class="session-main">
+              <div class="session-date">{{ session.session_start.strftime('%Y-%m-%d %H:%M:%S') if session.session_start else '-' }}</div>
+              <div class="session-meta">
+                {{ session.username }} · {{ session.duration_formatted }} · {{ session.command_count }} commands
+              </div>
+            </div>
+            <span class="session-arrow">→</span>
+          </a>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color: var(--ssh-muted); text-align: center; padding: 40px;">No sessions found</p>
+        {% endif %}
+      </div>
+
+      <!-- Top Commands -->
+      {% if host_commands %}
+      <div class="ssh-card">
+        <div class="card-title">
+          <span>⌨️</span>
+          Most Used Commands on This Host
+        </div>
+
+        <ul class="command-list">
+          {% for cmd, count in host_commands %}
+          <li class="command-item">
+            <span class="command-rank">{{ loop.index }}</span>
+            <code class="command-text">{{ cmd }}</code>
+            <span class="command-count">{{ count }}×</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right Column -->
+    <div>
+
+      <!-- User Activity -->
+      {% if user_activity %}
+      <div class="ssh-card">
+        <div class="card-title">
+          <span>👥</span>
+          User Activity
+        </div>
+
+        <div class="user-list">
+          {% for username, count in user_activity %}
+          <div class="user-item">
+            <span class="user-name">{{ username }}</span>
+            <span class="user-count">{{ count }} sessions</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Quick Actions -->
+      <div class="ssh-card">
+        <div class="card-title">
+          <span>⚡</span>
+          Quick Actions
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <a href="{{ url_for('admin_tools.ssh_logs_sessions', host=hostname) }}" 
+             style="padding: 12px; background: var(--ssh-panel); border: 1px solid var(--ssh-line); border-radius: 8px; text-decoration: none; color: var(--ssh-text); display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;"
+             onmouseover="this.style.borderColor='var(--ssh-primary)'"
+             onmouseout="this.style.borderColor='var(--ssh-line)'">
+            <span>🔍</span>
+            <span>Filter All Sessions</span>
+          </a>
+
+          <a href="{{ url_for('admin_tools.ssh_logs_search_commands', q=hostname) }}" 
+             style="padding: 12px; background: var(--ssh-panel); border: 1px solid var(--ssh-line); border-radius: 8px; text-decoration: none; color: var(--ssh-text); display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;"
+             onmouseover="this.style.borderColor='var(--ssh-primary)'"
+             onmouseout="this.style.borderColor='var(--ssh-line)'">
+            <span>⌨️</span>
+            <span>Search Commands</span>
+          </a>
+
+          <a href="{{ url_for('admin_tools.ssh_logs_dashboard') }}" 
+             style="padding: 12px; background: var(--ssh-panel); border: 1px solid var(--ssh-line); border-radius: 8px; text-decoration: none; color: var(--ssh-text); display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;"
+             onmouseover="this.style.borderColor='var(--ssh-primary)'"
+             onmouseout="this.style.borderColor='var(--ssh-line)'">
+            <span>←</span>
+            <span>Back to Dashboard</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

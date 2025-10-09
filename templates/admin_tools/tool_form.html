@@ -152,18 +152,24 @@
     gap: 16px;
   }
 
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    border: 1px solid var(--admin-line);
     border-radius: 8px;
     font-weight: 600;
-    text-decoration: none;
+    font-size: 1rem;
+    border: 2px solid;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 1rem;
+    text-decoration: none;
   }
 
   .btn-primary {
@@ -172,10 +178,15 @@
     color: white;
   }
 
-  .btn-primary:hover {
+  .btn-primary:hover:not(:disabled) {
     background: #5a96e8;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(110,168,255,0.3);
+    box-shadow: 0 4px 12px rgba(110,168,255,0.4);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .btn-secondary {
@@ -189,35 +200,58 @@
     border-color: var(--admin-primary);
   }
 
-  .btn-group {
-    display: flex;
-    gap: 12px;
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid var(--admin-line);
-  }
-
   .info-box {
-    background: rgba(110,168,255,0.05);
-    border: 1px solid rgba(110,168,255,0.2);
-    border-left: 4px solid var(--admin-primary);
-    border-radius: 8px;
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: var(--admin-radius);
     padding: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .info-box-title {
-    font-weight: 600;
-    color: var(--admin-primary);
-    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-bottom: 8px;
   }
 
   .info-box-content {
     color: var(--admin-muted);
     font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .info-box-content code {
+    background: rgba(0,0,0,0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--admin-primary);
+  }
+
+  .recent-executions {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 20px;
+    box-shadow: var(--admin-shadow);
+  }
+
+  .recent-executions-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .breadcrumb {
@@ -242,6 +276,88 @@
     color: var(--admin-muted);
   }
 
+  /* ==================== LOADING OVERLAY STYLES ==================== */
+  
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(11, 15, 26, 0.95);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(8px);
+  }
+
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .loading-content {
+    text-align: center;
+    max-width: 500px;
+    padding: 40px;
+    background: var(--admin-card);
+    border: 2px solid var(--admin-primary);
+    border-radius: var(--admin-radius);
+    box-shadow: 0 8px 32px rgba(110,168,255,0.3);
+  }
+
+  .loading-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .loading-spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    border: 4px solid var(--admin-line);
+    border-top: 4px solid var(--admin-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin-bottom: 12px;
+  }
+
+  .loading-message {
+    font-size: 1.1rem;
+    color: var(--admin-muted);
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .loading-submessage {
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+    opacity: 0.7;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { 
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+  }
+
   @media (max-width: 768px) {
     .tool-header {
       flex-direction: column;
@@ -259,6 +375,11 @@
     .btn {
       width: 100%;
       justify-content: center;
+    }
+
+    .loading-content {
+      margin: 20px;
+      padding: 30px 20px;
     }
   }
 </style>
@@ -302,7 +423,7 @@
   {% endif %}
 
   <!-- Execution Form -->
-  <form method="POST" class="tool-card">
+  <form method="POST" class="tool-card" id="toolExecutionForm">
     
     <!-- Target Input (if tool accepts target) -->
     {% if tool_config.accepts_target %}
@@ -393,7 +514,7 @@
 
     <!-- Action Buttons -->
     <div class="btn-group">
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" id="executeButton">
         <span>▶️</span>
         <span>Execute Tool</span>
       </button>
@@ -402,35 +523,33 @@
         <span>← Cancel</span>
       </a>
     </div>
-
   </form>
 
-  <!-- Recent Executions of This Tool -->
-<div class="tool-card">
-  <h2 style="margin-bottom: 16px; font-size: 1.1rem; color: var(--admin-text);">
-    🕐 Recent {{ tool_config.name }} Executions
-  </h2>
-  
-  {% if recent_executions and recent_executions|length > 0 %}
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+  <!-- Recent Executions -->
+  {% if recent_executions %}
+  <div class="recent-executions">
+    <div class="recent-executions-title">
+      <span>🕐</span>
+      <span>Recent Executions</span>
+    </div>
+    
+    <div class="recent-list">
       {% for execution in recent_executions %}
-        <div style="padding: 12px; background: var(--admin-panel); border-left: 3px solid {{ 'var(--admin-success)' if execution.success else 'var(--admin-danger)' }}; border-radius: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div>
-              <span style="font-weight: 600; color: var(--admin-text);">
-                {% if execution.target %}
-                  {{ execution.target }}
-                {% else %}
-                  {{ tool_config.name }}
-                {% endif %}
-              </span>
-              <span style="margin-left: 8px; font-size: 0.85rem; color: var(--admin-muted);">
+        <div style="padding: 12px; background: var(--admin-panel); border-radius: 8px; border: 1px solid var(--admin-line);">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: var(--admin-text); margin-bottom: 4px;">
+                {% if execution.target %}{{ execution.target }}{% else %}No target{% endif %}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--admin-muted);">
                 {{ execution.executed_at.strftime('%Y-%m-%d %I:%M %p') }}
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">
+                {{ '✓' if execution.success else '✗' }}
               </span>
             </div>
-            <span style="padding: 4px 8px; background: {{ 'rgba(34,197,94,0.2)' if execution.success else 'rgba(239,68,68,0.2)' }}; color: {{ 'var(--admin-success)' if execution.success else 'var(--admin-danger)' }}; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
-              {{ '✓ Success' if execution.success else '✗ Failed' }}
-            </span>
           </div>
           <div style="font-size: 0.85rem; color: var(--admin-muted);">
             Execution time: {{ execution.execution_time|round(2) }}s
@@ -443,6 +562,7 @@
         </div>
       {% endfor %}
     </div>
+  </div>
   {% else %}
     <div style="text-align: center; padding: 20px; color: var(--admin-muted);">
       <p>No recent executions of this tool</p>
@@ -457,9 +577,89 @@
   </div>
 </div>
 
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-content">
+    <div class="loading-icon">{{ tool_config.icon }}</div>
+    <div class="loading-spinner"></div>
+    <div class="loading-title">Executing {{ tool_config.name }}</div>
+    <div class="loading-message" id="loadingMessage">Please wait...</div>
+    <div class="loading-submessage" id="loadingSubmessage">This may take up to 60 seconds</div>
+  </div>
 </div>
 
 <script>
+// Tool-specific execution time estimates and messages
+const toolConfig = {
+  'ping': {
+    estimatedTime: '5-10 seconds',
+    message: 'Sending ping packets to target...'
+  },
+  'traceroute': {
+    estimatedTime: '30-60 seconds',
+    message: 'Tracing route to destination...'
+  },
+  'pathping': {
+    estimatedTime: '60+ seconds',
+    message: 'Running comprehensive network analysis...'
+  },
+  'nslookup': {
+    estimatedTime: '2-5 seconds',
+    message: 'Querying DNS servers...'
+  },
+  'whois_domain': {
+    estimatedTime: '5-10 seconds',
+    message: 'Retrieving domain registration information...'
+  },
+  'whois_ip': {
+    estimatedTime: '5-10 seconds',
+    message: 'Retrieving IP address ownership information...'
+  },
+  'dns_health': {
+    estimatedTime: '30-60 seconds',
+    message: 'Running comprehensive DNS health checks...'
+  },
+  'ipconfig': {
+    estimatedTime: '1-2 seconds',
+    message: 'Gathering network configuration...'
+  },
+  'netstat': {
+    estimatedTime: '2-5 seconds',
+    message: 'Collecting network statistics...'
+  },
+  'arp': {
+    estimatedTime: '1-2 seconds',
+    message: 'Reading ARP cache...'
+  },
+  'telnet': {
+    estimatedTime: '5-10 seconds',
+    message: 'Testing port connectivity...'
+  },
+  'ssh_test': {
+    estimatedTime: '5-10 seconds',
+    message: 'Testing SSH connectivity...'
+  },
+  'http_test': {
+    estimatedTime: '5-10 seconds',
+    message: 'Testing HTTP/HTTPS connectivity...'
+  },
+  'dig': {
+    estimatedTime: '2-5 seconds',
+    message: 'Performing DNS query...'
+  },
+  'route': {
+    estimatedTime: '1-2 seconds',
+    message: 'Reading routing table...'
+  }
+};
+
+// Get the current tool name from the template
+const currentTool = '{{ tool_name }}';
+const toolInfo = toolConfig[currentTool] || {
+  estimatedTime: '10-30 seconds',
+  message: 'Executing tool...'
+};
+
 // Auto-focus first input
 document.addEventListener('DOMContentLoaded', function() {
   const firstInput = document.querySelector('input[type="text"], input[type="number"]');
@@ -468,14 +668,46 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Form validation
-document.querySelector('form').addEventListener('submit', function(e) {
+// Form submission handler
+document.getElementById('toolExecutionForm').addEventListener('submit', function(e) {
+  // Validate target if required
   const targetInput = document.getElementById('target');
   if (targetInput && !targetInput.value.trim()) {
     e.preventDefault();
     alert('Please enter a target');
     targetInput.focus();
     return false;
+  }
+
+  // Show loading overlay
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingMessage = document.getElementById('loadingMessage');
+  const loadingSubmessage = document.getElementById('loadingSubmessage');
+  const executeButton = document.getElementById('executeButton');
+  
+  // Update messages with tool-specific info
+  loadingMessage.textContent = toolInfo.message;
+  loadingSubmessage.textContent = `This may take ${toolInfo.estimatedTime}`;
+  
+  // Disable submit button
+  executeButton.disabled = true;
+  
+  // Show overlay
+  overlay.classList.add('active');
+  
+  // Let the form submit normally
+  return true;
+});
+
+// Handle browser back button - re-enable form if user comes back
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    // Page was loaded from cache (back button)
+    const overlay = document.getElementById('loadingOverlay');
+    const executeButton = document.getElementById('executeButton');
+    
+    overlay.classList.remove('active');
+    executeButton.disabled = false;
   }
 });
 </script>

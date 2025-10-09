@@ -18,6 +18,13 @@ from .admin_tools import (
     KnowledgeTag, KnowledgeRelation, init_admin_tools
 )
 
+from .ssh_logs import (
+    SSHSession,
+    SSHCommand,
+    SSHScanLog,
+    init_ssh_logs
+)
+
 from .equipment import (
     Equipment, 
     MaintenanceRecord, 
@@ -144,7 +151,12 @@ __all__ = [
     'SpendingCategory',
     'Transaction', 
     'MerchantAlias',
-     # Rolodex
+    # SSH Logs
+    'SSHSession',
+    'SSHCommand', 
+    'SSHScanLog',
+    'init_ssh_logs',
+    # Rolodex
     'Contact',
     'Company'
 ]
