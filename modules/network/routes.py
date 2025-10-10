@@ -79,7 +79,6 @@ def devices_list():
 def _devices_alias():
     return devices_list()
 
-# ---------- new ----------
 @network_bp.route("/devices/new", methods=["GET", "POST"])
 def device_new():
     if request.method == "POST":
@@ -92,7 +91,7 @@ def device_new():
             serial=_norm(request.form.get("serial")),
             os_name=_norm(request.form.get("os_name")),
             os_version=_norm(request.form.get("os_version")),
-            location=_norm(request.form.get("location")),  # Option B: string field
+            location=_norm(request.form.get("location")),
             mgmt_ip=_norm(request.form.get("mgmt_ip")),
             mgmt_url=_norm(request.form.get("mgmt_url")),
             credential_ref=_norm(request.form.get("credential_ref")),
@@ -104,6 +103,12 @@ def device_new():
             notes=_norm(request.form.get("notes")),
         )
 
+        # Process LibreNMS device ID and Unraid host
+        l_id = _norm(request.form.get("librenms_device_id"))
+        d.librenms_device_id = int(l_id) if l_id else None
+        d.unraid_host = _norm(request.form.get("unraid_host"))
+
+        # Process LibreNMS widgets checkbox
         widgets = request.form.getlist("widgets")
         d.librenms_widgets = ",".join(widgets) if widgets else None
 

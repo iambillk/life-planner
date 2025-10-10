@@ -550,16 +550,17 @@
         <select name="role">
           {% for r in role_choices %}
             <option value="{{ r }}" {% if device and device.role == r %}selected{% endif %}>
-              {% if r == 'router' %}🌐
-              {% elif r == 'switch' %}🔀
-              {% elif r == 'firewall' %}🛡️
-              {% elif r == 'server' %}🖥️
-              {% elif r == 'storage' %}💾
-              {% elif r == 'access_point' %}📡
-              {% elif r == 'printer' %}🖨️
-              {% elif r == 'camera' %}📹
+              {% if r == 'Router' %}🌐
+              {% elif r == 'Switch' %}🖧
+              {% elif r == 'Firewall' %}🛡️
+              {% elif r == 'Server' %}🖥️
+              {% elif r == 'Storage' %}💾
+              {% elif r == 'Access_point' %}📡
+              {% elif r == 'Printer' %}🖨️
+              {% elif r == 'Camera' %}📹
               {% elif r == 'iot' %}📱
-              {% elif r == 'workstation' %}💻
+              {% elif r == 'Workstation' %}💻
+              {% elif r == 'IPS' %}🧱
               {% else %}📟
               {% endif %}
               {{ r|replace('_',' ')|title }}

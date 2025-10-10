@@ -41,7 +41,7 @@ PERSONAL_PROJECT_CATEGORIES = [
 # =============================================================================
 
 PERSONAL_TASK_CATEGORIES = [
-    'Home Maintenance TEST',
+    'Home Maintenance',
     'DIY Project',
     'Shopping',
     'Research',

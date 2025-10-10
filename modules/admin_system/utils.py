@@ -45,7 +45,10 @@ def get_database_stats():
     
     # Get total record count
     inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
+    all_tables = inspector.get_table_names()
+    
+    # Filter out SQLite system tables
+    tables = [t for t in all_tables if not t.startswith('sqlite_')]
     
     total_records = 0
     for table in tables:
@@ -68,7 +71,10 @@ def get_database_stats():
 def get_table_sizes():
     """Get row counts for all tables"""
     inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
+    all_tables = inspector.get_table_names()
+    
+    # Filter out SQLite system tables
+    tables = [t for t in all_tables if not t.startswith('sqlite_')]
     
     table_stats = []
     for table_name in sorted(tables):

@@ -161,51 +161,6 @@ CATEGORY_REGISTRY = {
 
 
     # =========================================================================
-    # PERSONAL PROJECTS MODULE
-    # =========================================================================
-    'persprojects': {
-        'display_name': 'Personal Projects',
-        'icon': '🏠',
-        'description': 'Personal goals and home improvement projects',
-        'categories': {
-            
-            'project_categories': {
-                'label': 'Project Categories',
-                'storage': 'file',
-                'file_path': 'modules/persprojects/constants.py',
-                'constant_name': 'PERSONAL_PROJECT_CATEGORIES',
-                'usage_checks': [
-                    {'table': 'personal_projects', 'column': 'category', 'label': 'Personal Projects'}
-                ],
-                'description': 'Types of personal projects (Home Improvement, Hobbies, etc.)'
-            },
-            
-            'project_statuses': {
-                'label': 'Project Statuses',
-                'storage': 'file',
-                'file_path': 'modules/persprojects/constants.py',
-                'constant_name': 'PROJECT_STATUSES',
-                'usage_checks': [
-                    {'table': 'personal_projects', 'column': 'status', 'label': 'Personal Projects'}
-                ],
-                'description': 'Project lifecycle states',
-                'note': 'Stored as tuples: (value, display_name)'
-            },
-            
-            'note_categories': {
-                'label': 'Note Categories',
-                'storage': 'file',
-                'file_path': 'modules/persprojects/constants.py',
-                'constant_name': 'NOTE_CATEGORIES',
-                'usage_checks': [
-                    {'table': 'personal_project_notes', 'column': 'category', 'label': 'Project Notes'}
-                ],
-                'description': 'Categories for project notes'
-            }
-        }
-    },
-    
-    # =========================================================================
     # EQUIPMENT MODULE
     # =========================================================================
     'equipment': {
