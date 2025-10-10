@@ -6,8 +6,17 @@ from urllib.parse import unquote_plus
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
 from . import persprojects_bp
-from .constants import PERSONAL_PROJECT_CATEGORIES, PROJECT_STATUSES, PRIORITY_LEVELS, IDEA_STATUSES, NOTE_CATEGORIES
 from models import db, PersonalProject, PersonalTask, PersonalIdea, PersonalMilestone, PersonalProjectNote, PersonalProjectFile
+
+from .constants import (
+    PERSONAL_PROJECT_CATEGORIES, 
+    PERSONAL_TASK_CATEGORIES,  # ADD THIS
+    PROJECT_STATUSES, 
+    PRIORITY_LEVELS, 
+    IDEA_STATUSES, 
+    NOTE_CATEGORIES
+)
+
 
 # ADD VAULT IMPORTS
 from modules.vault.vault_service import (
@@ -341,13 +350,12 @@ def capture_personal_post():
 @persprojects_bp.route('/<int:project_id>/task/add', methods=['POST'])
 def add_task(project_id):
     """Add task to project"""
-    from .constants import PERSONAL_PROJECT_CATEGORIES, PRIORITY_LEVELS
     def _coerce(v, allowed, default):
         v = (v or '').strip()
         return v if v in allowed else default
 
     content   = (request.form.get('content') or '').strip()
-    category  = _coerce(request.form.get('category'), PERSONAL_PROJECT_CATEGORIES, 'Other')
+    category  = _coerce(request.form.get('category'), PERSONAL_TASK_CATEGORIES, 'Other')  # FIXED
     priority  = _coerce(request.form.get('priority'), [p[0] for p in PRIORITY_LEVELS], 'medium')
     due_str   = request.form.get('due_date') or ''
     notes     = (request.form.get('notes') or '').strip()
@@ -403,13 +411,11 @@ def edit_task(task_id):
     project = PersonalProject.query.get_or_404(task.project_id)
     
     if request.method == 'POST':
-        # Update task fields
         task.content = request.form.get('content')
         task.category = request.form.get('category')
         task.priority = request.form.get('priority', 'medium')
         task.due_date_str = request.form.get('due_date')
         
-        # Handle due date
         if task.due_date_str:
             try:
                 task.due_date = datetime.strptime(task.due_date_str, '%Y-%m-%d').date()
@@ -418,20 +424,17 @@ def edit_task(task_id):
         else:
             task.due_date = None
         
-        # Update notes if provided
         task.notes = request.form.get('notes', '')
         
         db.session.commit()
         flash('Task updated successfully!', 'success')
         return redirect(url_for('persprojects.detail', id=project.id))
     
-    # GET request - show edit form
     return render_template('persprojects/edit_task.html', 
                          task=task, 
                          project=project,
-                         categories=['planning', 'research', 'development', 
-                                   'testing', 'documentation', 'other'],
-                         priorities=['low', 'medium', 'high'])
+                         categories=PERSONAL_TASK_CATEGORIES,  # FIXED
+                         priorities=[p[0] for p in PRIORITY_LEVELS])  # FIXED
 
 # ==================== IDEAS ====================
 

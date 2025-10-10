@@ -608,11 +608,41 @@ class CategoryService:
                 is_fk = check.get('is_fk', False)
                 
                 if is_fk:
-                    # Foreign key - need to join to get the name
-                    # This is more complex, skip for now - FK categories should use built-in counters
-                    continue
+                    # Foreign key relationship - need to look up category ID first
+                    # Get the model to find the category record
+                    model_name = config['model']
+                    name_column = config['name_column']
+                    id_column = config['id_column']
+                    
+                    # Get the model class
+                    if model_name == 'EventType':
+                        model = EventType
+                    elif model_name == 'SpendingCategory':
+                        model = SpendingCategory
+                    else:
+                        # Unknown model, skip this check
+                        continue
+                    
+                    # Find the category record by name
+                    category_record = model.query.filter_by(**{name_column: name}).first()
+                    
+                    if category_record:
+                        category_id = getattr(category_record, id_column)
+                        
+                        # Now count foreign key references using the ID
+                        query = text(f"SELECT COUNT(*) FROM {table} WHERE {column} = :category_id")
+                        result = db.session.execute(query, {'category_id': category_id})
+                        count = result.scalar() or 0
+                        
+                        if count > 0:
+                            details.append((check.get('label', table), count))
+                            total_count += count
+                    else:
+                        # Category not found in database, skip
+                        continue
+                        
                 else:
-                    # Direct string comparison
+                    # Direct string comparison (for non-FK columns)
                     query = text(f"SELECT COUNT(*) FROM {table} WHERE {column} = :name")
                     result = db.session.execute(query, {'name': name})
                     count = result.scalar() or 0
