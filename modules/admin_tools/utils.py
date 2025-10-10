@@ -42,6 +42,13 @@ import dns.reversename
 from dns.exception import DNSException
 
 from werkzeug.utils import secure_filename
+import requests
+import urllib3
+from urllib.parse import urlparse
+
+# Disable SSL warnings for testing
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from flask import current_app
 
 from .constants import TOOLS, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, DEFAULT_TOOL_PATHS, NMAP_SCAN_PRESETS
@@ -781,6 +788,374 @@ def parse_nmap(output):
     """
     # The actual parsing is done in execute_nmap_scan
     return None
+
+# ==================== HTTP/HTTPS TEST FUNCTIONS ====================
+
+def execute_http_test(url, parameters=None):
+    """
+    Execute HTTP/HTTPS connectivity test with SSL and hosting detection
+    
+    Args:
+        url: Website URL to test
+        parameters: Dict with follow_redirects, timeout
+        
+    Returns:
+        dict with: success, output, parsed_data, execution_time, command
+    """
+    from .constants import YOUR_NETWORK_CONFIG
+    
+    start_time = time.time()
+    parameters = parameters or {}
+    
+    # Normalize URL
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc or parsed_url.path
+    
+    results = {
+        'url': url,
+        'domain': domain,
+        'timestamp': datetime.utcnow().isoformat(),
+        'tests': {}
+    }
+    
+    timeout = parameters.get('timeout', 10)
+    follow_redirects = parameters.get('follow_redirects', True)
+    
+    try:
+        # DNS RESOLUTION
+        try:
+            ip_address = socket.gethostbyname(domain)
+            results['tests']['dns'] = {
+                'status': 'success',
+                'ip_address': ip_address,
+                'message': f'Resolved to {ip_address}'
+            }
+        except socket.gaierror as e:
+            results['tests']['dns'] = {
+                'status': 'error',
+                'message': f'DNS resolution failed: {str(e)}'
+            }
+            execution_time = time.time() - start_time
+            return {
+                'success': False,
+                'exit_code': 1,
+                'output': format_http_test_output(results),
+                'parsed_data': results,
+                'execution_time': execution_time,
+                'command': f'HTTP Test: {url}'
+            }
+        
+        # HOSTING DETECTION
+        hosting_info = detect_hosting(ip_address, domain, YOUR_NETWORK_CONFIG)
+        results['hosting'] = hosting_info
+        
+        # HTTP REQUEST
+        try:
+            response = requests.get(
+                url,
+                timeout=timeout,
+                allow_redirects=follow_redirects,
+                verify=False
+            )
+            
+            results['tests']['http'] = {
+                'status': 'success',
+                'status_code': response.status_code,
+                'status_text': response.reason,
+                'response_time_ms': int(response.elapsed.total_seconds() * 1000),
+                'final_url': response.url,
+                'redirected': response.url != url,
+                'headers': dict(response.headers)
+            }
+            
+            server_header = response.headers.get('Server', 'Unknown')
+            results['tests']['http']['server'] = server_header
+            
+            cdn_detected = detect_cdn(response.headers)
+            if cdn_detected:
+                results['tests']['http']['cdn'] = cdn_detected
+                
+        except requests.exceptions.Timeout:
+            results['tests']['http'] = {
+                'status': 'error',
+                'message': f'Connection timed out after {timeout} seconds'
+            }
+        except requests.exceptions.ConnectionError as e:
+            results['tests']['http'] = {
+                'status': 'error',
+                'message': f'Connection failed: {str(e)}'
+            }
+        except Exception as e:
+            results['tests']['http'] = {
+                'status': 'error',
+                'message': f'HTTP request failed: {str(e)}'
+            }
+        
+        # SSL CERTIFICATE CHECK
+        if url.startswith('https://'):
+            ssl_info = check_ssl_certificate(domain, 443)
+            results['tests']['ssl'] = ssl_info
+        
+        http_test = results['tests'].get('http', {})
+        overall_success = http_test.get('status') == 'success'
+        
+        execution_time = time.time() - start_time
+        
+        return {
+            'success': overall_success,
+            'exit_code': 0 if overall_success else 1,
+            'output': format_http_test_output(results),
+            'parsed_data': results,
+            'execution_time': execution_time,
+            'command': f'HTTP/HTTPS Test: {url}'
+        }
+        
+    except Exception as e:
+        execution_time = time.time() - start_time
+        return {
+            'success': False,
+            'exit_code': 1,
+            'output': f'HTTP test failed: {str(e)}',
+            'parsed_data': None,
+            'execution_time': execution_time,
+            'command': f'HTTP Test: {url}'
+        }
+
+
+def check_ssl_certificate(hostname, port=443):
+    """Check SSL certificate details"""
+    try:
+        context = ssl.create_default_context()
+        
+        with socket.create_connection((hostname, port), timeout=10) as sock:
+            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                
+                not_before = datetime.strptime(cert['notBefore'], '%b %d %H:%M:%S %Y %Z')
+                not_after = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
+                
+                now = datetime.utcnow()
+                days_until_expiry = (not_after - now).days
+                
+                if days_until_expiry < 0:
+                    status = 'expired'
+                    status_icon = '❌'
+                elif days_until_expiry < 30:
+                    status = 'expiring_soon'
+                    status_icon = '⚠️'
+                else:
+                    status = 'valid'
+                    status_icon = '✅'
+                
+                subject = dict(x[0] for x in cert['subject'])
+                issuer = dict(x[0] for x in cert['issuer'])
+                
+                san_list = []
+                for ext in cert.get('subjectAltName', []):
+                    if ext[0] == 'DNS':
+                        san_list.append(ext[1])
+                
+                return {
+                    'status': status,
+                    'status_icon': status_icon,
+                    'subject': subject.get('commonName', 'Unknown'),
+                    'issuer': issuer.get('commonName', 'Unknown'),
+                    'valid_from': not_before.strftime('%Y-%m-%d'),
+                    'valid_until': not_after.strftime('%Y-%m-%d'),
+                    'days_remaining': days_until_expiry,
+                    'sans': san_list,
+                    'message': f'Certificate valid for {days_until_expiry} more days'
+                }
+                
+    except Exception as e:
+        return {
+            'status': 'error',
+            'status_icon': '❌',
+            'message': f'SSL check failed: {str(e)}'
+        }
+
+
+def detect_hosting(ip_address, domain, network_config):
+    """
+    Detect where a site is hosted using YOUR whois_ip.exe tool
+    
+    Args:
+        ip_address: Resolved IP address
+        domain: Domain name
+        network_config: YOUR_NETWORK_CONFIG from constants
+        
+    Returns:
+        dict with hosting information
+    """
+    from .constants import DEFAULT_TOOL_PATHS
+    
+    hosting_info = {
+        'ip': ip_address,
+        'is_your_network': False,
+        'server_name': None,
+        'provider': 'Unknown',
+        'location': 'Unknown',
+        'network_name': None,
+        'cidr': None
+    }
+    
+    # First check if IP is in your configured network ranges
+    try:
+        ip_obj = ipaddress.ip_address(ip_address)
+        
+        for ip_range in network_config.get('ip_ranges', []):
+            network = ipaddress.ip_network(ip_range)
+            if ip_obj in network:
+                hosting_info['is_your_network'] = True
+                hosting_info['provider'] = network_config.get('company_name', 'Your Network')
+                hosting_info['server_name'] = network_config.get('server_names', {}).get(ip_address)
+                break
+    except:
+        pass
+    
+    # Use YOUR whois_ip.exe to get accurate ARIN data
+    try:
+        whois_ip_path = DEFAULT_TOOL_PATHS.get('whois_ip', 'C:\\Tools\\whois_ip.exe')
+        
+        result = subprocess.run(
+            [whois_ip_path, ip_address],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        )
+        
+        if result.returncode == 0 and result.stdout:
+            # Parse the whois output
+            lines = result.stdout.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                if line.startswith('Country:'):
+                    # Extract "USA - Michigan" format
+                    location = line.split(':', 1)[1].strip()
+                    hosting_info['location'] = location
+                
+                elif line.startswith('Owner Name:'):
+                    # Extract provider name
+                    owner = line.split(':', 1)[1].strip()
+                    hosting_info['provider'] = owner
+                    
+                    # Check if it's YOUR company
+                    company_name = network_config.get('company_name', '')
+                    if company_name and company_name.lower() in owner.lower():
+                        hosting_info['is_your_network'] = True
+                
+                elif line.startswith('Network Name:'):
+                    # Extract network name
+                    net_name = line.split(':', 1)[1].strip()
+                    hosting_info['network_name'] = net_name
+                
+                elif line.startswith('CIDR:'):
+                    # Extract CIDR
+                    cidr = line.split(':', 1)[1].strip()
+                    hosting_info['cidr'] = cidr
+                
+                elif line.startswith('Address:'):
+                    # Some additional context
+                    address = line.split(':', 1)[1].strip()
+                    # You could store this if you want
+    
+    except subprocess.TimeoutExpired:
+        pass
+    except FileNotFoundError:
+        # Fallback if whois_ip.exe not found
+        pass
+    except Exception:
+        pass
+    
+    return hosting_info
+
+
+def detect_cdn(headers):
+    """Detect if site is behind a CDN"""
+    headers_lower = {k.lower(): v for k, v in headers.items()}
+    
+    if 'cf-ray' in headers_lower or 'cf-cache-status' in headers_lower:
+        return 'Cloudflare'
+    
+    if 'x-amz-cf-id' in headers_lower or 'x-amz-cf-pop' in headers_lower:
+        return 'AWS CloudFront'
+    
+    if 'x-fastly-request-id' in headers_lower:
+        return 'Fastly'
+    
+    if 'x-akamai-transformed' in headers_lower or 'akamai' in headers_lower.get('server', '').lower():
+        return 'Akamai'
+    
+    if 'x-azure-ref' in headers_lower:
+        return 'Azure CDN'
+    
+    return None
+
+
+def format_http_test_output(results):
+    """Format HTTP test results as readable text"""
+    output = []
+    output.append("=" * 80)
+    output.append("HTTP/HTTPS CONNECTIVITY TEST")
+    output.append("=" * 80)
+    output.append(f"\nTarget: {results['url']}")
+    output.append(f"Domain: {results['domain']}")
+    
+    dns = results['tests'].get('dns', {})
+    if dns.get('status') == 'success':
+        output.append(f"\n✅ DNS: {dns['message']}")
+    else:
+        output.append(f"\n❌ DNS Failed: {dns.get('message')}")
+    
+    hosting = results.get('hosting', {})
+    output.append("\n" + "=" * 80)
+    output.append("🌐 HOSTING")
+    output.append("=" * 80)
+    output.append(f"IP: {hosting.get('ip')}")
+    
+    if hosting.get('is_your_network'):
+        output.append(f"\n✅ HOSTED ON YOUR NETWORK!")
+        output.append(f"Provider: {hosting.get('provider')}")
+        if hosting.get('server_name'):
+            output.append(f"Server: {hosting['server_name']}")
+    else:
+        output.append(f"\nProvider: {hosting.get('provider')}")
+        output.append(f"Location: {hosting.get('location')}")
+        output.append("\n⚠️ NOT on your network")
+    
+    http = results['tests'].get('http', {})
+    output.append("\n" + "=" * 80)
+    output.append("📡 HTTP")
+    output.append("=" * 80)
+    
+    if http.get('status') == 'success':
+        output.append(f"✅ Status: {http['status_code']} {http.get('status_text')}")
+        output.append(f"Response Time: {http['response_time_ms']}ms")
+        output.append(f"Server: {http.get('server')}")
+    else:
+        output.append(f"❌ {http.get('message')}")
+    
+    ssl = results['tests'].get('ssl', {})
+    if ssl:
+        output.append("\n" + "=" * 80)
+        output.append("🔒 SSL")
+        output.append("=" * 80)
+        
+        if ssl.get('status') == 'valid':
+            output.append(f"✅ Valid - {ssl['days_remaining']} days remaining")
+        elif ssl.get('status') == 'expired':
+            output.append(f"❌ EXPIRED!")
+        else:
+            output.append(f"❌ {ssl.get('message')}")
+    
+    output.append("\n" + "=" * 80)
+    return "\n".join(output)
 
 def _doc_for(category, name):
     """
@@ -1755,15 +2130,18 @@ def execute_tool(tool_name, target=None, parameters=None, timeout=None):
             
             # Set timeout based on scan type
             if scan_type == 'quick':
-                timeout = 120  # 2 minutes
+                timeout = 900  # 2 minutes
             elif scan_type == 'standard':
-                timeout = 300  # 5 minutes
+                timeout = 900  # 5 minutes
             elif scan_type == 'thorough':
-                timeout = 600  # 10 minutes
+                timeout = 1200  # 10 minutes
             else:
-                timeout = 300  # Default 5 minutes
+                timeout = 1200  # Default 5 minutes
             
             return execute_nmap_scan(target, scan_type, custom_ports, timeout)
+
+        if tool_name == 'http_test':
+            return execute_http_test(target, parameters)
 
         # Build and execute command for other tools
         cmd, command_string = build_tool_command(tool_name, target, parameters)

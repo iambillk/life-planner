@@ -478,6 +478,26 @@
             >
           </div>
           
+          {% elif param.type == 'select' %}
+          <!-- Select/Dropdown Parameter -->
+          <div>
+            <label class="form-label" for="{{ param.name }}">{{ param.label }}</label>
+            <select 
+              id="{{ param.name }}"
+              name="{{ param.name }}"
+              class="form-input"
+            >
+              {% for option in param.options %}
+              <option value="{{ option.value }}" {% if option.value == param.default %}selected{% endif %}>
+                {{ option.label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if param.get('placeholder') %}
+            <div class="form-help">{{ param.placeholder }}</div>
+            {% endif %}
+          </div>
+          
           {% else %}
           <!-- Text Parameter -->
           <div>

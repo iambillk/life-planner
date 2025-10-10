@@ -1,8 +1,14 @@
 {# =============================================================================
   FILE: templates/tch_project_detail.html
   PURPOSE: TCH Project — Detail (Tasks left; RHS stacked cards with full-screen modals)
-  TEMPLATE VERSION: v3.5.1
-  LAST UPDATED: 2025-09-27
+  TEMPLATE VERSION: v3.6.0
+  LAST UPDATED: 2025-10-09
+
+  v3.6.0
+  - REFACTOR: Professional modal UX matching personal projects
+  - Enhanced form styling with labels, focus states, animations
+  - Modern glassmorphism effects and smooth transitions
+  - Better accessibility and responsive design
 
   v3.5.1
   - Wire Task Category select to TASK_CATEGORIES (per-project constant, passed from route)
@@ -23,6 +29,244 @@
 
 {% block extra_css %}
 <style>
+  /* ==================== MODAL SYSTEM - PROFESSIONAL UX ==================== */
+  
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .modal-overlay.show {
+    display: flex;
+  }
+  
+  .modal-content {
+    background: linear-gradient(145deg, #0f1625 0%, #121a2a 100%);
+    border: 1px solid rgba(110, 168, 255, 0.2);
+    border-radius: 20px;
+    padding: 0;
+    max-width: 580px;
+    width: 92%;
+    max-height: 88vh;
+    overflow: hidden;
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+      0 4px 20px rgba(110, 168, 255, 0.15);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: center;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    border-bottom: 1px solid rgba(31, 42, 61, 0.8);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #e6eaf2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .close-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #e6eaf2;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+  
+  .close-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    transform: rotate(90deg);
+  }
+  
+  .modal-body {
+    padding: 28px;
+    overflow-y: auto;
+    max-height: calc(88vh - 140px);
+  }
+  
+  .modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+  }
+  
+  .modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  
+  .modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  /* Form Elements in Modals */
+  .modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-label {
+    color: #9fb0c8;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .form-label .required {
+    color: #ef4444;
+    font-size: 1.1rem;
+  }
+  
+  .modal-content input[type="text"],
+  .modal-content input[type="date"],
+  .modal-content input[type="file"],
+  .modal-content select,
+  .modal-content textarea {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(12, 19, 34, 0.6);
+    border: 1.5px solid rgba(31, 42, 61, 0.8);
+    border-radius: 12px;
+    color: #e6eaf2;
+    font-size: 0.98rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+  
+  .modal-content input[type="text"]::placeholder,
+  .modal-content textarea::placeholder {
+    color: rgba(159, 176, 200, 0.4);
+  }
+  
+  .modal-content input[type="text"]:focus,
+  .modal-content input[type="date"]:focus,
+  .modal-content select:focus,
+  .modal-content textarea:focus {
+    border-color: #6ea8ff;
+    background: rgba(12, 19, 34, 0.8);
+    box-shadow: 
+      0 0 0 3px rgba(110, 168, 255, 0.12),
+      0 4px 12px rgba(110, 168, 255, 0.15);
+  }
+  
+  .modal-content select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239fb0c8' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+  
+  .modal-content textarea {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+  }
+  
+  .modal-content input[type="file"] {
+    padding: 12px;
+    cursor: pointer;
+    font-size: 0.92rem;
+  }
+  
+  .modal-content input[type="file"]::file-selector-button {
+    padding: 8px 16px;
+    background: rgba(110, 168, 255, 0.12);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    border-radius: 8px;
+    color: #6ea8ff;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .modal-content input[type="file"]::file-selector-button:hover {
+    background: rgba(110, 168, 255, 0.2);
+    border-color: #6ea8ff;
+  }
+  
+  /* Modal Footer/Actions */
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+  
+  .modal-actions .btn {
+    min-width: 110px;
+  }
+  
+  /* Helper Text */
+  .form-helper {
+    font-size: 0.82rem;
+    color: rgba(159, 176, 200, 0.6);
+    margin-top: -12px;
+    line-height: 1.4;
+  }
+
+  /* ==================== BASE STYLES ==================== */
+
   :root{
     --pd-bg:#0b0f1a; --pd-panel:#121a2a; --pd-card:#0f1625; --pd-sub:#0c1322;
     --pd-line:#1f2a3d; --pd-text:#e6eaf2; --pd-muted:#9fb0c8;
@@ -70,12 +314,31 @@
   .anchor:hover{ border-color:var(--pd-primary); color:var(--pd-text); }
 
   /* Buttons */
-  .btn{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; background:#0c1322; color:var(--pd-text); border:1px solid var(--pd-line); border-radius:var(--pd-radius-sm); cursor:pointer; text-decoration:none; transition:.2s; font-size:.95rem; }
-  .btn:hover{ border-color:var(--pd-primary); transform:translateY(-1px); }
-  .btn-primary{ background:rgba(110,168,255,.18); border-color:rgba(110,168,255,.45); }
+  .btn{ 
+    display:inline-flex; align-items:center; gap:8px; padding:10px 18px; 
+    background:#0c1322; color:var(--pd-text); border:1.5px solid var(--pd-line); 
+    border-radius:12px; cursor:pointer; text-decoration:none; 
+    transition:all .2s ease; font-size:.95rem; font-weight:600;
+    justify-content: center;
+  }
+  .btn:hover{ 
+    border-color:var(--pd-primary); 
+    transform:translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(110, 168, 255, 0.2);
+  }
+  .btn-primary{ 
+    background:linear-gradient(135deg, #6ea8ff 0%, #5a8fdb 100%);
+    border-color:transparent; 
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(110, 168, 255, 0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(110, 168, 255, 0.4);
+  }
   .btn-outline{ background:transparent; }
   .btn-success{ background:#16351f; border-color:#1f6f3a; }
-  .btn-sm{ padding:6px 10px; font-size:.85rem; border-radius:10px; }
+  .btn-sm{ padding:7px 14px; font-size:.88rem; border-radius:10px; }
   .btn-icon{ background:transparent; border:1px solid var(--pd-line); color:var(--pd-text); border-radius:10px; padding:6px 8px; font-size:.9rem; cursor:pointer; }
   .btn-icon:hover{ border-color:var(--pd-primary); }
   .btn-icon.btn-delete:hover{ border-color:var(--pd-danger); color:var(--pd-danger); }
@@ -87,14 +350,14 @@
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:16px;
-    align-items:stretch;  /* <— stretch items to the tallest column */
+    align-items:stretch;
   }
 
   /* Left: Tasks card stretches full column height; internal area scrolls */
   .tasks-card{
     background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius);
     box-shadow:var(--pd-shadow); display:flex; flex-direction:column;
-    height:100%;               /* <— fill grid row height */
+    height:100%;
     min-height:480px;
   }
   .section-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 12px 8px; border-bottom:1px dashed var(--pd-line); flex-shrink:0; }
@@ -103,20 +366,17 @@
   .split-actions{ position:relative; display:flex; gap:2px; }
   .add-btn, .caret-btn{ border:none; cursor:pointer; }
   .add-btn{ padding:6px 10px; background:var(--pd-primary); color:#0a0f1a; border-radius:8px; font-size:.85rem; font-weight:700; }
-  .caret-btn{ display:none; } /* no inline dropdown for tasks; we use full-screen modal instead */
+  .caret-btn{ display:none; }
   .menu{ display:none; }
-
-  .add-panel{ display:none; } /* hide inline add panels for tasks */
+  .add-panel{ display:none; }
 
   /* Task filters */
   .task-toolbar{ display:flex; gap:8px; align-items:center; padding:0 12px 8px; border-bottom:1px dashed var(--pd-line); }
   .pill{ padding:6px 10px; border:1px solid var(--pd-line); border-radius:999px; font-size:.85rem; color:var(--pd-muted); background:var(--pd-sub); cursor:pointer; }
   .pill.is-active{ color:#0a0f1a; background:var(--pd-primary); border-color:transparent; }
 
-  /* Make task list scroll independently; max-height keeps it usable on tall RHS */
   .tasks-scroll{
     flex:1; min-height:0; overflow:auto; padding:12px;
-    /* reasonable max-height so it’s always scrolly even if the RHS column grows */
     max-height:calc(100vh - 260px);
   }
   .tasks-scroll::-webkit-scrollbar{ width:8px; }
@@ -137,7 +397,7 @@
   .task-meta{ display:flex; gap:10px; color:var(--pd-muted); font-size:.78rem; }
   .task-actions{ display:flex; gap:6px; flex-shrink:0; }
 
-  /* Right: stacked cards — fixed height + own scroll; same width as left */
+  /* Right: stacked cards */
   .rhs{ display:grid; gap:16px; align-items:start; }
   .card{
     background:var(--pd-card); border:1px solid var(--pd-line); border-radius:var(--pd-radius);
@@ -178,29 +438,11 @@
   .doc-name-cell{ font-weight:700; color:var(--pd-text); }
   .doc-type{ color:var(--pd-muted); font-size:.85rem; }
 
-  /* Full-screen (centered) modal */
-  .modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.65);
-    display:none; z-index:100; align-items:center; justify-content:center;
-  }
-  .modal-content{
-    width:min(980px,92vw); max-height:92vh; overflow:auto;
-    background:var(--pd-card); border:1px solid var(--pd-line);
-    border-radius:16px; box-shadow:var(--pd-shadow); padding:16px;
-  }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-  .modal-header h3{ margin:0; }
-  .close-btn{ border:none; background:transparent; color:var(--pd-text); font-size:1.3rem; cursor:pointer; }
-  .modal-content form input, .modal-content form textarea, .modal-content form select{
-    width:100%; background:#0b1120; color:var(--pd-text);
-    border:1px solid var(--pd-line); border-radius:10px; padding:10px; margin-bottom:10px; font-size:.95rem;
-  }
-
   @media (max-width:980px){
     .layout{ grid-template-columns:1fr; }
     .tasks-card{ min-height:420px; }
     .card{ height:auto; min-height:280px; }
-    .modal-content{ width:92vw; }
+    .modal-content{ width:96%; }
   }
 </style>
 {% endblock %}
@@ -300,7 +542,7 @@
             </div>
           </div>
           {% else %}
-          <p class="empty-state">No tasks yet. Click “Add Task”.</p>
+          <p class="empty-state">No tasks yet. Click "Add Task".</p>
           {% endfor %}
         </div>
       </section>
@@ -447,40 +689,59 @@
   </div>
 </div>
 
-<!-- ================= MODALS (full-screen forms) ================= -->
+<!-- ================= MODALS ================= -->
 
 <!-- TASK: Add -->
 <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="task-modal-title">Add Task</h3>
+      <h3 id="task-modal-title">✅ Add Task</h3>
       <button class="close-btn" onclick="closeModal('task-modal')" aria-label="Close">✖</button>
     </div>
-    <form method="POST" action="{{ url_for('projects.add_tch_task', project_id=project.id) }}">
-      <input type="text" name="title" placeholder="Task title" required>
-      <textarea name="description" rows="8" placeholder="Description"></textarea>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('projects.add_tch_task', project_id=project.id) }}">
+        <div class="form-group">
+          <label class="form-label">Task Title <span class="required">*</span></label>
+          <input type="text" name="title" placeholder="What needs to be done?" required>
+        </div>
 
-      {# Category: wired to TASK_CATEGORIES passed from route #}
-      <select name="category" required>
-        <option value="" disabled selected>Select category…</option>
-        {% for c in task_categories %}
-          <option value="{{ c }}">{{ c }}</option>
-        {% endfor %}
-      </select>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" rows="6" placeholder="Provide additional details..."></textarea>
+        </div>
 
-      <select name="priority">
-        <option value="low">Low</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">High</option>
-        <option value="critical">Critical</option>
-      </select>
+        <div class="form-group">
+          <label class="form-label">Category <span class="required">*</span></label>
+          <select name="category" required>
+            <option value="" disabled selected>Select category…</option>
+            {% for c in task_categories %}
+              <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-      <input type="date" name="due_date" placeholder="Due date">
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('task-modal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create Task</button>
-      </div>
-    </form>
+        <div class="form-group">
+          <label class="form-label">Priority <span class="required">*</span></label>
+          <select name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input type="date" name="due_date">
+          <div class="form-helper">📅 Optional: Set a deadline for this task</div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('task-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Task</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -488,22 +749,33 @@
 <div id="note-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="note-modal-title">Add Note</h3>
+      <h3 id="note-modal-title">📝 Add Note</h3>
       <button class="close-btn" onclick="closeModal('note-modal')" aria-label="Close">✖</button>
     </div>
-    <form method="POST" action="{{ url_for('projects.add_tch_note', project_id=project.id) }}">
-      <select name="category" required>
-        <option value="general">General</option>
-        <option value="meeting">Meeting</option>
-        <option value="technical">Technical</option>
-        <option value="idea">Idea</option>
-      </select>
-      <textarea name="content" rows="8" placeholder="Write your note…" required></textarea>
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('note-modal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Note</button>
-      </div>
-    </form>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('projects.add_tch_note', project_id=project.id) }}">
+        <div class="form-group">
+          <label class="form-label">Category <span class="required">*</span></label>
+          <select name="category" required>
+            <option value="general">General</option>
+            <option value="meeting">Meeting</option>
+            <option value="technical">Technical</option>
+            <option value="idea">Idea</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note Content <span class="required">*</span></label>
+          <textarea name="content" rows="8" placeholder="Write your note here..." required></textarea>
+          <div class="form-helper">💡 Capture important information and insights</div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('note-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Note</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -511,27 +783,42 @@
 <div id="doc-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="doc-modal-title">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="doc-modal-title">Add Document</h3>
+      <h3 id="doc-modal-title">📁 Add Document</h3>
       <button class="close-btn" onclick="closeModal('doc-modal')" aria-label="Close">✖</button>
     </div>
-    <form method="POST" action="{{ url_for('projects.upload_tch_vault_document', id=project.id) }}" enctype="multipart/form-data">
-      <input type="file" name="file" required accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.png,.jpg,.jpeg,.gif">
-      <input type="text" name="title" placeholder="Document title (optional)">
-      <select name="doc_type">
-        <option value="document">Document</option>
-        <option value="contract">Contract</option>
-        <option value="invoice">Invoice</option>
-        <option value="receipt">Receipt</option>
-        <option value="image">Image</option>
-        <option value="spreadsheet">Spreadsheet</option>
-        <option value="note">Note</option>
-        <option value="other">Other</option>
-      </select>
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('doc-modal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Upload</button>
-      </div>
-    </form>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('projects.upload_tch_vault_document', id=project.id) }}" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="form-label">Choose File <span class="required">*</span></label>
+          <input type="file" name="file" required accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.png,.jpg,.jpeg,.gif">
+          <div class="form-helper">📎 Supported: PDF, Word, Excel, Images, Text</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Document Title</label>
+          <input type="text" name="title" placeholder="Leave blank to use filename">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Document Type <span class="required">*</span></label>
+          <select name="doc_type">
+            <option value="document">📄 Document</option>
+            <option value="contract">📜 Contract</option>
+            <option value="invoice">🧾 Invoice</option>
+            <option value="receipt">🧾 Receipt</option>
+            <option value="image">🖼️ Image</option>
+            <option value="spreadsheet">📊 Spreadsheet</option>
+            <option value="note">📝 Note</option>
+            <option value="other">📎 Other</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('doc-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Upload Document</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -539,16 +826,23 @@
 <div id="idea-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="idea-modal-title">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="idea-modal-title">Add Idea</h3>
+      <h3 id="idea-modal-title">💡 Add Idea</h3>
       <button class="close-btn" onclick="closeModal('idea-modal')" aria-label="Close">✖</button>
     </div>
-    <form method="POST" action="{{ url_for('projects.add_tch_idea', project_id=project.id) }}">
-      <textarea name="content" rows="8" placeholder="Describe the idea…" required></textarea>
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('idea-modal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Idea</button>
-      </div>
-    </form>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('projects.add_tch_idea', project_id=project.id) }}">
+        <div class="form-group">
+          <label class="form-label">Idea Description <span class="required">*</span></label>
+          <textarea name="content" rows="8" placeholder="Describe your idea in detail..." required></textarea>
+          <div class="form-helper">💭 No idea is too big or too small!</div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('idea-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Idea</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -556,18 +850,33 @@
 <div id="milestone-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="milestone-modal-title">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="milestone-modal-title">Add Milestone</h3>
+      <h3 id="milestone-modal-title">🏁 Add Milestone</h3>
       <button class="close-btn" onclick="closeModal('milestone-modal')" aria-label="Close">✖</button>
     </div>
-    <form method="POST" action="{{ url_for('projects.add_tch_milestone', project_id=project.id) }}">
-      <input type="text" name="title" placeholder="Milestone title" required>
-      <textarea name="description" rows="6" placeholder="Description"></textarea>
-      <input type="date" name="target_date" placeholder="Target date">
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('milestone-modal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Milestone</button>
-      </div>
-    </form>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('projects.add_tch_milestone', project_id=project.id) }}">
+        <div class="form-group">
+          <label class="form-label">Milestone Title <span class="required">*</span></label>
+          <input type="text" name="title" placeholder="e.g., Launch Beta Version" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" rows="6" placeholder="What needs to be accomplished?"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target Date</label>
+          <input type="date" name="target_date">
+          <div class="form-helper">📅 Optional: Set a target completion date</div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('milestone-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Milestone</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -577,11 +886,48 @@
 /* Helpers */
 function qsa(root, sel){ return Array.from((root || document).querySelectorAll(sel)); }
 
-/* Modals */
-function openModal(id){ const m=document.getElementById(id); if(!m) return; m.style.display='flex'; document.body.style.overflow='hidden'; }
-function closeModal(id){ const m=document.getElementById(id); if(!m) return; m.style.display='none'; document.body.style.overflow=''; }
-document.addEventListener('click', e => { const ov=e.target.closest('.modal-overlay'); if(ov && e.target===ov){ ov.style.display='none'; document.body.style.overflow=''; }});
-document.addEventListener('keydown', e => { if(e.key==='Escape'){ qsa(document,'.modal-overlay').forEach(m=>m.style.display='none'); document.body.style.overflow=''; }});
+/* Modal System with Animations */
+function openModal(id){ 
+  const m=document.getElementById(id); 
+  if(!m) return; 
+  m.classList.add('show');
+  m.style.display='flex'; 
+  document.body.style.overflow='hidden'; 
+  // Focus first input
+  setTimeout(() => {
+    const firstInput = m.querySelector('input:not([type="hidden"]), textarea, select');
+    if(firstInput) firstInput.focus();
+  }, 100);
+}
+
+function closeModal(id){ 
+  const m=document.getElementById(id); 
+  if(!m) return; 
+  m.classList.remove('show');
+  setTimeout(() => {
+    m.style.display='none';
+  }, 200);
+  document.body.style.overflow=''; 
+}
+
+// Click outside to close
+document.addEventListener('click', e => { 
+  const ov=e.target.closest('.modal-overlay'); 
+  if(ov && e.target===ov){ 
+    const id = ov.getAttribute('id');
+    closeModal(id);
+  }
+});
+
+// ESC to close
+document.addEventListener('keydown', e => { 
+  if(e.key==='Escape'){ 
+    qsa(document,'.modal-overlay.show').forEach(m => {
+      const id = m.getAttribute('id');
+      closeModal(id);
+    });
+  }
+});
 
 /* Task checkbox -> POST toggle */
 (function(){

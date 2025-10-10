@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+
+{% block title %}HTTP Test Results - {{ parsed_data.domain }}{% endblock %}
+
+{% block header %}🌐 HTTP/HTTPS Test Results{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --admin-bg: #0b0f1a;
+    --admin-panel: #121a2a;
+    --admin-card: #0f1625;
+    --admin-line: #1f2a3d;
+    --admin-text: #e6eaf2;
+    --admin-muted: #9fb0c8;
+    --admin-primary: #6ea8ff;
+    --admin-success: #22c55e;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-radius: 14px;
+    --admin-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+
+  .result-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .result-header {
+    background: linear-gradient(135deg, rgba(110,168,255,0.15), rgba(110,168,255,0.05));
+    border: 1px solid rgba(110,168,255,0.3);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .result-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0 0 12px 0;
+  }
+
+  .result-url {
+    font-size: 1.2rem;
+    color: var(--admin-primary);
+    word-break: break-all;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .status-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .status-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .status-label {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .status-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+
+  .hosting-banner {
+    background: var(--admin-card);
+    border: 2px solid;
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .hosting-banner.your-network {
+    border-color: var(--admin-success);
+    background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05));
+  }
+
+  .hosting-banner.external {
+    border-color: var(--admin-warning);
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+  }
+
+  .hosting-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hosting-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .hosting-item {
+    padding: 12px;
+    background: var(--admin-panel);
+    border-radius: 8px;
+  }
+
+  .hosting-label {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    margin-bottom: 4px;
+  }
+
+  .hosting-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+  }
+
+  .info-section {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .info-item {
+    padding: 16px;
+    background: var(--admin-panel);
+    border-radius: 8px;
+    border: 1px solid var(--admin-line);
+  }
+
+  .info-label {
+    font-size: 0.9rem;
+    color: var(--admin-muted);
+    margin-bottom: 6px;
+  }
+
+  .info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text);
+  }
+
+  .ssl-valid {
+    color: var(--admin-success);
+  }
+
+  .ssl-warning {
+    color: var(--admin-warning);
+  }
+
+  .ssl-error {
+    color: var(--admin-danger);
+  }
+
+  .san-list {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--admin-panel);
+    border-radius: 8px;
+  }
+
+  .san-item {
+    padding: 6px 12px;
+    background: var(--admin-card);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: var(--admin-text);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 2px solid;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .btn-secondary:hover {
+    background: var(--admin-panel);
+    border-color: var(--admin-primary);
+  }
+
+  .raw-output {
+    background: var(--admin-panel);
+    border: 1px solid var(--admin-line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: var(--admin-text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+
+  <!-- Result Header -->
+  <div class="result-header">
+    <h1 class="result-title">HTTP/HTTPS Test Results</h1>
+    <div class="result-url">{{ parsed_data.url }}</div>
+  </div>
+
+  <!-- Quick Status Cards -->
+  <div class="status-grid">
+    <!-- DNS Status -->
+    <div class="status-card">
+      <div class="status-icon">
+        {% if parsed_data.tests.dns.status == 'success' %}✅{% else %}❌{% endif %}
+      </div>
+      <div class="status-label">DNS Resolution</div>
+      <div class="status-value">
+        {% if parsed_data.tests.dns.status == 'success' %}
+          {{ parsed_data.tests.dns.ip_address }}
+        {% else %}
+          Failed
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- HTTP Status -->
+    <div class="status-card">
+      <div class="status-icon">
+        {% if parsed_data.tests.http.status == 'success' %}
+          {% if parsed_data.tests.http.status_code == 200 %}✅
+          {% elif parsed_data.tests.http.status_code < 400 %}↪️
+          {% else %}⚠️{% endif %}
+        {% else %}❌{% endif %}
+      </div>
+      <div class="status-label">HTTP Response</div>
+      <div class="status-value">
+        {% if parsed_data.tests.http.status == 'success' %}
+          {{ parsed_data.tests.http.status_code }}
+        {% else %}
+          Error
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Response Time -->
+    {% if parsed_data.tests.http.status == 'success' %}
+    <div class="status-card">
+      <div class="status-icon">⚡</div>
+      <div class="status-label">Response Time</div>
+      <div class="status-value">{{ parsed_data.tests.http.response_time_ms }}ms</div>
+    </div>
+    {% endif %}
+
+    <!-- SSL Status -->
+    {% if parsed_data.tests.ssl %}
+    <div class="status-card">
+      <div class="status-icon">
+        {{ parsed_data.tests.ssl.status_icon }}
+      </div>
+      <div class="status-label">SSL Certificate</div>
+      <div class="status-value 
+        {% if parsed_data.tests.ssl.status == 'valid' %}ssl-valid
+        {% elif parsed_data.tests.ssl.status == 'expiring_soon' %}ssl-warning
+        {% else %}ssl-error{% endif %}">
+        {% if parsed_data.tests.ssl.status == 'valid' %}Valid
+        {% elif parsed_data.tests.ssl.status == 'expiring_soon' %}Expiring Soon
+        {% elif parsed_data.tests.ssl.status == 'expired' %}Expired
+        {% else %}Error{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Hosting Information Banner -->
+  <div class="hosting-banner {% if parsed_data.hosting.is_your_network %}your-network{% else %}external{% endif %}">
+    <div class="hosting-title">
+      <span>🌐</span>
+      <span>
+        {% if parsed_data.hosting.is_your_network %}
+          ✅ HOSTED ON YOUR NETWORK!
+        {% else %}
+          Hosting Information
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="hosting-grid">
+      <div class="hosting-item">
+        <div class="hosting-label">IP Address</div>
+        <div class="hosting-value">{{ parsed_data.hosting.ip }}</div>
+      </div>
+
+      <div class="hosting-item">
+        <div class="hosting-label">Provider</div>
+        <div class="hosting-value">{{ parsed_data.hosting.provider }}</div>
+      </div>
+
+      {% if parsed_data.hosting.is_your_network and parsed_data.hosting.server_name %}
+      <div class="hosting-item">
+        <div class="hosting-label">Server</div>
+        <div class="hosting-value">{{ parsed_data.hosting.server_name }}</div>
+      </div>
+      {% endif %}
+
+      {% if not parsed_data.hosting.is_your_network %}
+      <div class="hosting-item">
+        <div class="hosting-label">Location</div>
+        <div class="hosting-value">{{ parsed_data.hosting.location }}</div>
+      </div>
+      {% endif %}
+
+      {% if parsed_data.hosting.asn %}
+      <div class="hosting-item">
+        <div class="hosting-label">ASN</div>
+        <div class="hosting-value">{{ parsed_data.hosting.asn }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if parsed_data.hosting.is_your_network %}
+    <div style="margin-top: 16px; padding: 12px; background: rgba(34,197,94,0.2); border-radius: 8px; text-align: center;">
+      <strong style="color: var(--admin-success);">🎯 This is YOUR customer!</strong>
+    </div>
+    {% else %}
+    <div style="margin-top: 16px; padding: 12px; background: rgba(245,158,11,0.2); border-radius: 8px; text-align: center;">
+      <strong style="color: var(--admin-warning);">⚠️ This site is NOT hosted on your network</strong>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- HTTP Details -->
+  {% if parsed_data.tests.http.status == 'success' %}
+  <div class="info-section">
+    <h2 class="section-title">
+      <span>📡</span>
+      <span>HTTP Response Details</span>
+    </h2>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Status Code</div>
+        <div class="info-value">{{ parsed_data.tests.http.status_code }} {{ parsed_data.tests.http.status_text }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Response Time</div>
+        <div class="info-value">{{ parsed_data.tests.http.response_time_ms }}ms</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Server</div>
+        <div class="info-value">{{ parsed_data.tests.http.server }}</div>
+      </div>
+
+      {% if parsed_data.tests.http.cdn %}
+      <div class="info-item">
+        <div class="info-label">CDN Detected</div>
+        <div class="info-value">{{ parsed_data.tests.http.cdn }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if parsed_data.tests.http.redirected %}
+    <div style="margin-top: 16px; padding: 12px; background: var(--admin-panel); border-radius: 8px;">
+      <strong>↪️ Redirected to:</strong>
+      <div style="margin-top: 6px; color: var(--admin-primary);">{{ parsed_data.tests.http.final_url }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- SSL Certificate Details -->
+  {% if parsed_data.tests.ssl and parsed_data.tests.ssl.status in ['valid', 'expiring_soon', 'expired'] %}
+  <div class="info-section">
+    <h2 class="section-title">
+      <span>🔒</span>
+      <span>SSL Certificate Details</span>
+    </h2>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Subject (Issued To)</div>
+        <div class="info-value">{{ parsed_data.tests.ssl.subject }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Issuer (Certificate Authority)</div>
+        <div class="info-value">{{ parsed_data.tests.ssl.issuer }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Valid From</div>
+        <div class="info-value">{{ parsed_data.tests.ssl.valid_from }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Valid Until</div>
+        <div class="info-value 
+          {% if parsed_data.tests.ssl.status == 'valid' %}ssl-valid
+          {% elif parsed_data.tests.ssl.status == 'expiring_soon' %}ssl-warning
+          {% else %}ssl-error{% endif %}">
+          {{ parsed_data.tests.ssl.valid_until }}
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">Days Remaining</div>
+        <div class="info-value 
+          {% if parsed_data.tests.ssl.days_remaining > 30 %}ssl-valid
+          {% elif parsed_data.tests.ssl.days_remaining > 0 %}ssl-warning
+          {% else %}ssl-error{% endif %}">
+          {{ parsed_data.tests.ssl.days_remaining }} days
+        </div>
+      </div>
+    </div>
+
+    {% if parsed_data.tests.ssl.sans %}
+    <div class="san-list">
+      <strong>Subject Alternative Names (SANs):</strong>
+      {% for san in parsed_data.tests.ssl.sans %}
+      <div class="san-item">{{ san }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Raw Output -->
+  <div class="info-section">
+    <h2 class="section-title">
+      <span>📄</span>
+      <span>Raw Output</span>
+    </h2>
+    <div class="raw-output">{{ result.output }}</div>
+  </div>
+
+  <!-- Actions -->
+  <div class="btn-group">
+    <a href="{{ url_for('admin_tools.execute_tool_route', tool_name='http_test') }}" class="btn btn-primary">
+      <span>🔍</span>
+      <span>New Test</span>
+    </a>
+    <a href="{{ url_for('admin_tools.tool_history', tool='http_test') }}" class="btn btn-secondary">
+      <span>📋</span>
+      <span>Test History</span>
+    </a>
+    <a href="{{ url_for('admin_tools.dashboard') }}" class="btn btn-secondary">
+      <span>← Dashboard</span>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

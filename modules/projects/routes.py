@@ -402,6 +402,7 @@ def edit_tch_task(task_id):
     return render_template('tch_edit_task.html', 
                          task=task, 
                          project=project,
+                         task_categories=TASK_CATEGORIES,
                          priorities=PRIORITY_LEVELS)
 
 @projects_bp.route('/tch/task/<int:task_id>/delete', methods=['POST'])

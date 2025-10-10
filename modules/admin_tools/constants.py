@@ -223,6 +223,33 @@ TOOLS = {
         'warning': '⚠️ Only scan systems you are authorized to test. Unauthorized scanning may be illegal.',
         'requires_admin': False,
         'admin_note': 'OS detection requires administrator/root privileges'
+    },
+
+    'http_test': {
+        'name': 'HTTP/HTTPS Test',
+        'description': 'Test website connectivity, SSL certificates, and hosting information',
+        'category': 'connectivity',
+        'icon': '🌐',
+        'command': None,
+        'is_windows_builtin': False,
+        'accepts_target': True,
+        'target_label': 'Website URL (e.g., example.com or https://example.com)',
+        'parameters': [
+            {
+                'name': 'follow_redirects',
+                'label': 'Follow Redirects',
+                'type': 'checkbox',
+                'default': True
+            },
+            {
+                'name': 'timeout',
+                'label': 'Timeout (seconds)',
+                'type': 'number',
+                'default': 10
+            },
+        ],
+        'output_parser': None,
+        'requires_admin': False
     }
 }
 
@@ -309,7 +336,7 @@ DEFAULT_TOOL_PATHS = {
     'custom_tools_dir': 'C:\\Tools',  # Where user's .exe files live
     'whois_domain': 'C:\\Tools\\whois_domain.exe',
     'whois_ip': 'C:\\Tools\\whois_ip.exe',
-    'nmap': 'nmap',  # Assumes nmap is in PATH, or specify full path
+    'nmap': 'C:\\Program Files (x86)\\Nmap\\nmap.exe',
 }
 
 # Predefined tags for quick tagging
@@ -427,4 +454,11 @@ HISTORY_FILTERS = {
     'week': {'days': 7, 'label': 'This Week'},
     'month': {'days': 30, 'label': 'This Month'},
     'all': {'days': None, 'label': 'All Time'}
+}
+
+# Your Network Configuration for Hosting Detection
+YOUR_NETWORK_CONFIG = {
+    'company_name': 'TotalChoice Hosting',
+    'ip_ranges': [],
+    'server_names': {}
 }

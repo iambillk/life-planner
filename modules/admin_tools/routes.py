@@ -154,6 +154,15 @@ def execute_tool_route(tool_name):
                                  result=result,
                                  parsed_data=parsed_data,
                                  active='admin_tools')
+        # Use special template for HTTP/HTTPS Test results
+        if tool_name == 'http_test':
+            return render_template('admin_tools/http_test_result.html',
+                                 tool_name=tool_name,
+                                 tool_config=tool_config,
+                                 execution=execution,
+                                 result=result,
+                                 parsed_data=parsed_data,
+                                 active='admin_tools')
         
         # Use special template for DNS Health Check
         if tool_name == 'dns_health':
