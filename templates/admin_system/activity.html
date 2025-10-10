@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}Activity Timeline{% endblock %}
+{% block header %}📈 Activity Timeline{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --sys-bg: #0b0f1a;
+    --sys-panel: #121a2a;
+    --sys-card: #0f1625;
+    --sys-line: #1f2a3d;
+    --sys-text: #e6eaf2;
+    --sys-muted: #9fb0c8;
+    --sys-primary: #6ea8ff;
+    --sys-radius: 14px;
+    --sys-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--sys-bg);
+    color: var(--sys-text);
+  }
+
+  .system-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--sys-line);
+    padding-bottom: 12px;
+  }
+
+  .admin-nav a {
+    padding: 10px 20px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px 8px 0 0;
+    color: var(--sys-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .admin-nav a:hover,
+  .admin-nav a.active {
+    background: var(--sys-card);
+    color: var(--sys-primary);
+    border-color: var(--sys-primary);
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-subtitle {
+    color: var(--sys-muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 10px 18px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    color: var(--sys-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .filter-btn:hover,
+  .filter-btn.active {
+    background: var(--sys-primary);
+    color: #0a0f1a;
+    border-color: var(--sys-primary);
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--sys-line);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    left: -32px;
+    width: 32px;
+    height: 32px;
+    background: var(--sys-card);
+    border: 2px solid var(--sys-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    z-index: 1;
+  }
+
+  .timeline-content {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 20px;
+    box-shadow: var(--sys-shadow);
+    transition: all 0.2s ease;
+  }
+
+  .timeline-content:hover {
+    border-color: var(--sys-primary);
+    transform: translateX(4px);
+  }
+
+  .timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px;
+  }
+
+  .timeline-module {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(110, 168, 255, 0.2);
+    color: var(--sys-primary);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .timeline-time {
+    font-size: 12px;
+    color: var(--sys-muted);
+    font-family: 'Courier New', monospace;
+  }
+
+  .timeline-action {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--sys-text);
+    margin-bottom: 6px;
+  }
+
+  .timeline-details {
+    font-size: 13px;
+    color: var(--sys-muted);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    color: var(--sys-text);
+    margin-bottom: 8px;
+  }
+
+  .empty-message {
+    font-size: 14px;
+    color: var(--sys-muted);
+  }
+
+  .module-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .module-filter {
+    padding: 6px 14px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 6px;
+    color: var(--sys-muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .module-filter:hover,
+  .module-filter.active {
+    background: var(--sys-primary);
+    color: #0a0f1a;
+    border-color: var(--sys-primary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="system-container">
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="{{ url_for('admin_system.dashboard') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_system.database_explorer') }}">💾 Database</a>
+    <a href="{{ url_for('admin_system.category_manager') }}">🏷️ Categories</a>
+    <a href="{{ url_for('admin_system.storage_browser') }}">📁 Storage</a>
+    <a href="{{ url_for('admin_system.activity_timeline') }}" class="active">📈 Activity</a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>Activity Timeline</h1>
+    <p class="page-subtitle">Chronological view of all system activity across modules</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <a href="{{ url_for('admin_system.activity_timeline', days=7, module=module_filter if module_filter != 'all' else '') }}" 
+       class="filter-btn {% if days == 7 %}active{% endif %}">
+      Last 7 Days
+    </a>
+    <a href="{{ url_for('admin_system.activity_timeline', days=30, module=module_filter if module_filter != 'all' else '') }}" 
+       class="filter-btn {% if days == 30 %}active{% endif %}">
+      Last 30 Days
+    </a>
+    <a href="{{ url_for('admin_system.activity_timeline', days=90, module=module_filter if module_filter != 'all' else '') }}" 
+       class="filter-btn {% if days == 90 %}active{% endif %}">
+      Last 90 Days
+    </a>
+  </div>
+
+  <!-- Module Filters -->
+  <div class="module-filters" style="margin-bottom: 30px;">
+    <a href="{{ url_for('admin_system.activity_timeline', days=days, module='all') }}" 
+       class="module-filter {% if module_filter == 'all' %}active{% endif %}">
+      All Modules
+    </a>
+    {% for module in all_modules %}
+    <a href="{{ url_for('admin_system.activity_timeline', days=days, module=module|lower) }}" 
+       class="module-filter {% if module_filter|lower == module|lower %}active{% endif %}">
+      {{ module }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Timeline -->
+  {% if activities %}
+  <div class="timeline">
+    {% for activity in activities %}
+    <div class="timeline-item">
+      <div class="timeline-marker">{{ activity.icon }}</div>
+      <div class="timeline-content">
+        <div class="timeline-header">
+          <span class="timeline-module">{{ activity.module }}</span>
+          <span class="timeline-time">{{ activity.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</span>
+        </div>
+        <div class="timeline-action">{{ activity.action }}</div>
+        <div class="timeline-details">{{ activity.details }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <div class="empty-title">No Activity Found</div>
+    <div class="empty-message">
+      No activity recorded for the selected filters. Try adjusting your time range or module filter.
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}Category Manager{% endblock %}
+{% block header %}🏷️ Category Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --sys-bg: #0b0f1a;
+    --sys-panel: #121a2a;
+    --sys-card: #0f1625;
+    --sys-line: #1f2a3d;
+    --sys-text: #e6eaf2;
+    --sys-muted: #9fb0c8;
+    --sys-primary: #6ea8ff;
+    --sys-success: #22c55e;
+    --sys-radius: 14px;
+    --sys-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--sys-bg);
+    color: var(--sys-text);
+  }
+
+  .system-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--sys-line);
+    padding-bottom: 12px;
+  }
+
+  .admin-nav a {
+    padding: 10px 20px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px 8px 0 0;
+    color: var(--sys-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .admin-nav a:hover,
+  .admin-nav a.active {
+    background: var(--sys-card);
+    color: var(--sys-primary);
+    border-color: var(--sys-primary);
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-subtitle {
+    color: var(--sys-muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .category-section {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: var(--sys-shadow);
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--sys-line);
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sys-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .module-badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: rgba(110, 168, 255, 0.2);
+    color: var(--sys-primary);
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  .category-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .category-item:hover {
+    border-color: var(--sys-primary);
+    transform: translateX(4px);
+  }
+
+  .category-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sys-text);
+  }
+
+  .category-usage {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .usage-badge {
+    padding: 4px 12px;
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--sys-success);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .usage-badge.zero {
+    background: rgba(159, 176, 200, 0.2);
+    color: var(--sys-muted);
+  }
+
+  .info-box {
+    background: rgba(110, 168, 255, 0.1);
+    border: 1px solid rgba(110, 168, 255, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .info-box h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--sys-primary);
+    font-weight: 700;
+  }
+
+  .info-box p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--sys-muted);
+    line-height: 1.6;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .stat-box {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--sys-primary);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--sys-muted);
+    margin-top: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="system-container">
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="{{ url_for('admin_system.dashboard') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_system.database_explorer') }}">💾 Database</a>
+    <a href="{{ url_for('admin_system.category_manager') }}" class="active">🏷️ Categories</a>
+    <a href="{{ url_for('admin_system.storage_browser') }}">📁 Storage</a>
+    <a href="{{ url_for('admin_system.activity_timeline') }}">📈 Activity</a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>Category Manager</h1>
+    <p class="page-subtitle">View all category constants across modules • Future: Edit categories through UI</p>
+  </div>
+
+  <!-- Info Box -->
+  <div class="info-box">
+    <h3>📌 About Categories</h3>
+    <p>
+      Categories are currently defined in constants files (e.g., <code>modules/projects/constants.py</code>). 
+      This view shows all categories and their usage across the application. In a future version, 
+      you'll be able to add/edit/delete categories directly from this interface.
+    </p>
+  </div>
+
+  <!-- Category Sections -->
+  {% for section_name, section_data in categories.items() %}
+  <div class="category-section">
+    
+    <div class="section-header">
+      <div class="section-title">
+        <span>🏷️</span>
+        {{ section_name }}
+        <span class="module-badge">{{ section_data.module }}</span>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">{{ section_data.category_list|length }}</div>
+        <div class="stat-label">Total Categories</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{{ section_data.usage.values()|sum }}</div>
+        <div class="stat-label">Total Usage</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">
+          {{ section_data.usage.values()|select('eq', 0)|list|length }}
+        </div>
+        <div class="stat-label">Unused</div>
+      </div>
+    </div>
+
+    <ul class="category-list">
+      {% for category in section_data.category_list %}
+      <li class="category-item">
+        <div class="category-name">{{ category }}</div>
+        <div class="category-usage">
+          <span class="usage-badge {% if section_data.usage.get(category, 0) == 0 %}zero{% endif %}">
+            {{ section_data.usage.get(category, 0) }} items
+          </span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

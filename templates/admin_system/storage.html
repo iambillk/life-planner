@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block title %}Storage Browser{% endblock %}
+{% block header %}📁 Storage Browser{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --sys-bg: #0b0f1a;
+    --sys-panel: #121a2a;
+    --sys-card: #0f1625;
+    --sys-line: #1f2a3d;
+    --sys-text: #e6eaf2;
+    --sys-muted: #9fb0c8;
+    --sys-primary: #6ea8ff;
+    --sys-warning: #f59e0b;
+    --sys-radius: 14px;
+    --sys-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--sys-bg);
+    color: var(--sys-text);
+  }
+
+  .system-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--sys-line);
+    padding-bottom: 12px;
+  }
+
+  .admin-nav a {
+    padding: 10px 20px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px 8px 0 0;
+    color: var(--sys-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .admin-nav a:hover,
+  .admin-nav a.active {
+    background: var(--sys-card);
+    color: var(--sys-primary);
+    border-color: var(--sys-primary);
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-subtitle {
+    color: var(--sys-muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+  }
+
+  .summary-card {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--sys-shadow);
+  }
+
+  .summary-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--sys-primary);
+    margin-bottom: 8px;
+  }
+
+  .summary-label {
+    font-size: 12px;
+    color: var(--sys-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-input,
+  .filter-select {
+    padding: 10px 14px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    color: var(--sys-text);
+    font-size: 14px;
+  }
+
+  .filter-input {
+    flex: 1;
+    min-width: 300px;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--sys-primary);
+  }
+
+  .file-table {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    overflow: hidden;
+    box-shadow: var(--sys-shadow);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: var(--sys-panel);
+  }
+
+  th {
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--sys-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    border-bottom: 2px solid var(--sys-line);
+  }
+
+  td {
+    padding: 14px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--sys-line);
+  }
+
+  tbody tr {
+    transition: background 0.2s ease;
+  }
+
+  tbody tr:hover {
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .file-name {
+    font-family: 'Courier New', monospace;
+    color: var(--sys-text);
+    font-weight: 600;
+  }
+
+  .file-ext {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(110, 168, 255, 0.2);
+    color: var(--sys-primary);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 8px;
+  }
+
+  .category-badge {
+    padding: 4px 10px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--sys-muted);
+  }
+
+  .size-cell {
+    font-family: 'Courier New', monospace;
+    color: var(--sys-muted);
+  }
+
+  .date-cell {
+    color: var(--sys-muted);
+    font-size: 12px;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .pagination-info {
+    color: var(--sys-muted);
+    font-size: 13px;
+  }
+
+  .category-breakdown {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: var(--sys-shadow);
+  }
+
+  .category-breakdown h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--sys-text);
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .category-item {
+    padding: 12px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .category-item:hover {
+    border-color: var(--sys-primary);
+    transform: translateY(-2px);
+  }
+
+  .category-name {
+    font-size: 12px;
+    color: var(--sys-muted);
+    margin-bottom: 6px;
+  }
+
+  .category-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .category-count {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sys-primary);
+  }
+
+  .category-size {
+    font-size: 11px;
+    color: var(--sys-muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="system-container">
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="{{ url_for('admin_system.dashboard') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_system.database_explorer') }}">💾 Database</a>
+    <a href="{{ url_for('admin_system.category_manager') }}">🏷️ Categories</a>
+    <a href="{{ url_for('admin_system.storage_browser') }}" class="active">📁 Storage</a>
+    <a href="{{ url_for('admin_system.activity_timeline') }}">📈 Activity</a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>Storage Browser</h1>
+    <p class="page-subtitle">View all uploaded files and manage storage • Showing top 500 files by size</p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-value">{{ "{:,}".format(storage_summary.total_files) }}</div>
+      <div class="summary-label">Total Files</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value">{{ storage_summary.total_size }}</div>
+      <div class="summary-label">Total Size</div>
+    </div>
+  </div>
+
+  <!-- Category Breakdown -->
+  <div class="category-breakdown">
+    <h3>📊 Storage by Category</h3>
+    <div class="category-grid">
+      {% for category, stats in storage_summary.by_category.items() %}
+      <div class="category-item" onclick="filterByCategory('{{ category }}')">
+        <div class="category-name">{{ category|replace('_', ' ')|title }}</div>
+        <div class="category-stats">
+          <div class="category-count">{{ stats.count }}</div>
+          <div class="category-size">{{ stats.size }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <input type="text" class="filter-input" id="fileSearch" placeholder="🔍 Search files...">
+    <select class="filter-select" id="categoryFilter">
+      <option value="">All Categories</option>
+      {% for category in storage_summary.by_category.keys() %}
+      <option value="{{ category }}">{{ category|replace('_', ' ')|title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- File Table -->
+  <div class="file-table">
+    <table>
+      <thead>
+        <tr>
+          <th>File Name</th>
+          <th>Category</th>
+          <th>Size</th>
+          <th>Modified</th>
+        </tr>
+      </thead>
+      <tbody id="fileTableBody">
+        {% for file in files %}
+        <tr data-category="{{ file.category }}" data-filename="{{ file.name|lower }}">
+          <td>
+            <span class="file-name">{{ file.name|truncate(60) }}</span>
+            <span class="file-ext">{{ file.ext or 'unknown' }}</span>
+          </td>
+          <td>
+            <span class="category-badge">{{ file.category|replace('_', ' ')|title }}</span>
+          </td>
+          <td class="size-cell">{{ file.size_formatted }}</td>
+          <td class="date-cell">{{ file.modified.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing {{ files|length }} files (limited to top 500 by size)
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Filter by category
+function filterByCategory(category) {
+  document.getElementById('categoryFilter').value = category;
+  applyFilters();
+}
+
+// Search and filter functionality
+const searchInput = document.getElementById('fileSearch');
+const categoryFilter = document.getElementById('categoryFilter');
+
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+
+function applyFilters() {
+  const searchTerm = searchInput.value.toLowerCase();
+  const selectedCategory = categoryFilter.value;
+  const rows = document.querySelectorAll('#fileTableBody tr');
+  
+  let visibleCount = 0;
+  
+  rows.forEach(row => {
+    const filename = row.dataset.filename;
+    const category = row.dataset.category;
+    
+    const matchesSearch = filename.includes(searchTerm);
+    const matchesCategory = !selectedCategory || category === selectedCategory;
+    
+    if (matchesSearch && matchesCategory) {
+      row.style.display = '';
+      visibleCount++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  // Update pagination info
+  document.querySelector('.pagination-info').textContent = 
+    `Showing ${visibleCount} files` + (selectedCategory || searchTerm ? ' (filtered)' : '');
+}
+</script>
+
+{% endblock %}

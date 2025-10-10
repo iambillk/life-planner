@@ -209,6 +209,9 @@
                    class="nav-item {{ 'active' if active == 'network' }}">
                     <span class="icon">🖧</span><span>Network Command Center</span>
                 </a>
+                <a data-key="system" href="{{ url_for('admin_system.dashboard') }}" class="nav-item {{ 'active' if active == 'admin_system' }}">
+                    <span class="icon">🎮</span><span>System Health</span>
+                </a>
                 <a data-key="tasks" href="{{ url_for('tasks.index') }}" class="nav-item {{ 'active' if active == 'tasks' }}">
                   <span class="icon">✅</span><span>All Tasks</span>
                 </a>

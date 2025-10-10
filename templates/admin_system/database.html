@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% block title %}Database Explorer{% endblock %}
+{% block header %}💾 Database Explorer{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --sys-bg: #0b0f1a;
+    --sys-panel: #121a2a;
+    --sys-card: #0f1625;
+    --sys-line: #1f2a3d;
+    --sys-text: #e6eaf2;
+    --sys-muted: #9fb0c8;
+    --sys-primary: #6ea8ff;
+    --sys-radius: 14px;
+    --sys-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--sys-bg);
+    color: var(--sys-text);
+  }
+
+  .system-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--sys-line);
+    padding-bottom: 12px;
+  }
+
+  .admin-nav a {
+    padding: 10px 20px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px 8px 0 0;
+    color: var(--sys-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .admin-nav a:hover,
+  .admin-nav a.active {
+    background: var(--sys-card);
+    color: var(--sys-primary);
+    border-color: var(--sys-primary);
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-subtitle {
+    color: var(--sys-muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .table-grid {
+    display: grid;
+    gap: 20px;
+  }
+
+  .table-card {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 20px;
+    box-shadow: var(--sys-shadow);
+    transition: all 0.2s ease;
+  }
+
+  .table-card:hover {
+    border-color: var(--sys-primary);
+    transform: translateX(4px);
+  }
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--sys-line);
+  }
+
+  .table-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--sys-text);
+    font-family: 'Courier New', monospace;
+  }
+
+  .table-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+  }
+
+  .stat-item {
+    color: var(--sys-muted);
+  }
+
+  .stat-item strong {
+    color: var(--sys-primary);
+  }
+
+  .columns-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+  }
+
+  .column-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .column-name {
+    font-weight: 600;
+    color: var(--sys-text);
+    flex: 1;
+  }
+
+  .column-type {
+    font-size: 11px;
+    color: var(--sys-muted);
+    text-transform: uppercase;
+  }
+
+  .column-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(110, 168, 255, 0.2);
+    color: var(--sys-primary);
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .toggle-btn {
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    color: var(--sys-text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .toggle-btn:hover {
+    background: var(--sys-primary);
+    color: #0a0f1a;
+    border-color: var(--sys-primary);
+  }
+
+  .columns-hidden {
+    display: none;
+  }
+
+  .search-box {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    width: 100%;
+    font-size: 14px;
+    color: var(--sys-text);
+  }
+
+  .search-box:focus {
+    outline: none;
+    border-color: var(--sys-primary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="system-container">
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="{{ url_for('admin_system.dashboard') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_system.database_explorer') }}" class="active">💾 Database</a>
+    <a href="{{ url_for('admin_system.category_manager') }}">🏷️ Categories</a>
+    <a href="{{ url_for('admin_system.storage_browser') }}">📁 Storage</a>
+    <a href="{{ url_for('admin_system.activity_timeline') }}">📈 Activity</a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>Database Explorer</h1>
+    <p class="page-subtitle">Browse all tables, view schemas, and inspect data structures</p>
+  </div>
+
+  <!-- Search -->
+  <input type="text" class="search-box" id="tableSearch" placeholder="🔍 Search tables...">
+
+  <!-- Tables Grid -->
+  <div class="table-grid" id="tablesGrid">
+    {% for table in tables %}
+    <div class="table-card" data-table-name="{{ table.name }}">
+      
+      <div class="table-header">
+        <div class="table-name">{{ table.name }}</div>
+        <button class="toggle-btn" onclick="toggleColumns(this)">Show Columns</button>
+      </div>
+
+      <div class="table-stats">
+        <div class="stat-item">
+          <strong>{{ "{:,}".format(table.row_count) }}</strong> rows
+        </div>
+        <div class="stat-item">
+          <strong>{{ table.column_count }}</strong> columns
+        </div>
+      </div>
+
+      <div class="columns-list columns-hidden" style="margin-top: 16px;">
+        {% for column in table.columns %}
+        <div class="column-item">
+          <div class="column-name">{{ column.name }}</div>
+          <div class="column-type">{{ column.type|truncate(15) }}</div>
+          {% if column.primary_key %}
+          <span class="column-badge">PK</span>
+          {% endif %}
+          {% if not column.nullable %}
+          <span class="column-badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">NOT NULL</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+// Toggle column visibility
+function toggleColumns(btn) {
+  const card = btn.closest('.table-card');
+  const columns = card.querySelector('.columns-list');
+  
+  if (columns.classList.contains('columns-hidden')) {
+    columns.classList.remove('columns-hidden');
+    btn.textContent = 'Hide Columns';
+  } else {
+    columns.classList.add('columns-hidden');
+    btn.textContent = 'Show Columns';
+  }
+}
+
+// Search functionality
+document.getElementById('tableSearch').addEventListener('input', function(e) {
+  const searchTerm = e.target.value.toLowerCase();
+  const tables = document.querySelectorAll('.table-card');
+  
+  tables.forEach(table => {
+    const tableName = table.dataset.tableName.toLowerCase();
+    if (tableName.includes(searchTerm)) {
+      table.style.display = 'block';
+    } else {
+      table.style.display = 'none';
+    }
+  });
+});
+</script>
+
+{% endblock %}

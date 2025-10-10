@@ -36,6 +36,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup   # pip install beautifulsoup4
 
 
+
 def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
@@ -382,6 +383,7 @@ def register_blueprints(app):
     from modules.network.routes import network_bp
     from modules.ops_center.routes import ops_center_bp
     from modules.admin_tools import admin_tools_bp
+    from modules.admin_system import admin_system_bp
 
     app.register_blueprint(daily_bp, url_prefix='/daily')
     app.register_blueprint(equipment_bp, url_prefix='/equipment')
@@ -399,10 +401,8 @@ def register_blueprints(app):
     app.register_blueprint(network_bp)
     app.register_blueprint(ops_center_bp)
     app.register_blueprint(admin_tools_bp, url_prefix='/admin')
-
-    # Important: do NOT pass url_prefix again here
     app.register_blueprint(realestate_bp)
-
+    app.register_blueprint(admin_system_bp)
 
 if __name__ == '__main__':
     app = create_app()
