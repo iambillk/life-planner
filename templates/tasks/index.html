@@ -161,7 +161,7 @@
         <div class="proj">
           {% if r.project_id %}
             {% if r.source=='tch' %}
-              <a href="{{ url_for('projects.detail', id=r.project_id) }}">{{ r.project_name }}</a>
+              <a href="{{ url_for('projects.tch_detail', id=r.project_id) }}">{{ r.project_name }}</a>
             {% elif r.source=='personal' %}
               <a href="{{ url_for('persprojects.detail', id=r.project_id) }}">{{ r.project_name }}</a>
             {% endif %}

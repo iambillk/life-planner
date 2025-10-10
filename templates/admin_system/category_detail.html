@@ -1,0 +1,964 @@
+<!-- templates/admin_system/category_detail.html -->
+<!--
+TEMPLATE: Category Detail - Full Management Interface
+FILE: templates/admin_system/category_detail.html
+VERSION: 1.0.0
+CREATED: 2025-01-10
+AUTHOR: Billas
+
+CHANGELOG:
+----------
+v1.0.0 (2025-01-10)
+- Initial template creation
+- Full CRUD interface for categories
+- Add new category modal
+- Edit category modal
+- Delete confirmation with usage warning
+- Usage statistics display
+- Storage type indicator
+- Restart warning for file-based categories
+- Real-time validation feedback
+
+FEATURES:
+---------
+- Add new categories with validation
+- Edit existing category names
+- Delete unused categories (with protection)
+- View usage statistics per category
+- Visual feedback for actions
+- Modals for all operations
+- Responsive design
+- Dark theme consistency
+-->
+
+{% extends "base.html" %}
+{% block title %}{{ category_label }} - {{ module_name }}{% endblock %}
+{% block header %}🏷️ {{ category_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Color scheme */
+  :root {
+    --sys-bg: #0b0f1a;
+    --sys-panel: #121a2a;
+    --sys-card: #0f1625;
+    --sys-line: #1f2a3d;
+    --sys-text: #e6eaf2;
+    --sys-muted: #9fb0c8;
+    --sys-primary: #6ea8ff;
+    --sys-success: #22c55e;
+    --sys-warning: #f59e0b;
+    --sys-danger: #ef4444;
+    --sys-radius: 14px;
+    --sys-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--sys-bg);
+    color: var(--sys-text);
+  }
+
+  .system-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Navigation */
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--sys-line);
+    padding-bottom: 12px;
+  }
+
+  .admin-nav a {
+    padding: 10px 20px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px 8px 0 0;
+    color: var(--sys-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+
+  .admin-nav a:hover,
+  .admin-nav a.active {
+    background: var(--sys-card);
+    color: var(--sys-primary);
+    border-color: var(--sys-primary);
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: var(--sys-muted);
+  }
+
+  .breadcrumb a {
+    color: var(--sys-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    margin: 0 8px;
+    color: var(--sys-line);
+  }
+
+  /* Page Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 24px;
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+  }
+
+  .header-info {
+    flex: 1;
+  }
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 8px 0;
+  }
+
+  .header-title h1 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--sys-text);
+  }
+
+  .storage-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .storage-badge.file {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .storage-badge.database {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .header-description {
+    font-size: 14px;
+    color: var(--sys-muted);
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--sys-primary);
+    color: #0a0f1a;
+  }
+
+  .btn-primary:hover {
+    background: #5a96e8;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--sys-panel);
+    color: var(--sys-text);
+    border: 1px solid var(--sys-line);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--sys-primary);
+    color: var(--sys-primary);
+  }
+
+  /* Warning Banner (for file-based categories) */
+  .warning-banner {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: var(--sys-radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .warning-banner-icon {
+    font-size: 24px;
+  }
+
+  .warning-banner-content {
+    flex: 1;
+  }
+
+  .warning-banner-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sys-warning);
+    margin: 0 0 4px 0;
+  }
+
+  .warning-banner-text {
+    font-size: 13px;
+    color: var(--sys-muted);
+    margin: 0;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--sys-primary);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--sys-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Categories List */
+  .categories-section {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    padding: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--sys-text);
+    margin: 0;
+  }
+
+  /* Category Table */
+  .category-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .category-table thead {
+    border-bottom: 2px solid var(--sys-line);
+  }
+
+  .category-table th {
+    text-align: left;
+    padding: 12px;
+    font-size: 12px;
+    color: var(--sys-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .category-table tbody tr {
+    border-bottom: 1px solid var(--sys-line);
+    transition: background 0.2s ease;
+  }
+
+  .category-table tbody tr:hover {
+    background: rgba(110, 168, 255, 0.05);
+  }
+
+  .category-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .category-table td {
+    padding: 14px 12px;
+    font-size: 14px;
+    color: var(--sys-text);
+  }
+
+  .category-name {
+    font-weight: 600;
+  }
+
+  .usage-count {
+    color: var(--sys-muted);
+  }
+
+  .usage-count.used {
+    color: var(--sys-primary);
+    font-weight: 600;
+  }
+
+  .usage-details {
+    font-size: 12px;
+    color: var(--sys-muted);
+    font-style: italic;
+  }
+
+  /* Action Buttons */
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--sys-line);
+    background: var(--sys-panel);
+    color: var(--sys-muted);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--sys-primary);
+    color: var(--sys-primary);
+    transform: scale(1.1);
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .icon-btn:disabled:hover {
+    border-color: var(--sys-line);
+    color: var(--sys-muted);
+    transform: none;
+  }
+
+  .icon-btn.delete:hover:not(:disabled) {
+    border-color: var(--sys-danger);
+    color: var(--sys-danger);
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--sys-muted);
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+
+  .empty-message {
+    font-size: 14px;
+    margin: 0 0 20px 0;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal {
+    background: var(--sys-card);
+    border: 1px solid var(--sys-line);
+    border-radius: var(--sys-radius);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: auto;
+    animation: slideUp 0.3s ease;
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--sys-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--sys-text);
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--sys-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close:hover {
+    background: var(--sys-panel);
+    color: var(--sys-text);
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--sys-line);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  /* Form Styles */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sys-text);
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--sys-panel);
+    border: 1px solid var(--sys-line);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--sys-text);
+    transition: all 0.2s ease;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--sys-primary);
+    background: var(--sys-card);
+  }
+
+  .form-help {
+    font-size: 12px;
+    color: var(--sys-muted);
+    margin-top: 6px;
+  }
+
+  .form-error {
+    font-size: 12px;
+    color: var(--sys-danger);
+    margin-top: 6px;
+  }
+
+  /* Delete Warning */
+  .delete-warning {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .delete-warning-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sys-danger);
+    margin: 0 0 8px 0;
+  }
+
+  .delete-warning-text {
+    font-size: 13px;
+    color: var(--sys-text);
+    margin: 0;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+    }
+
+    .header-actions {
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .stats-bar {
+      grid-template-columns: 1fr;
+    }
+
+    .category-table {
+      font-size: 12px;
+    }
+
+    .category-table th,
+    .category-table td {
+      padding: 8px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="system-container">
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="{{ url_for('admin_system.dashboard') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_system.database_explorer') }}">💾 Database</a>
+    <a href="{{ url_for('admin_system.category_manager') }}" class="active">🏷️ Categories</a>
+    <a href="{{ url_for('admin_system.storage_browser') }}">📁 Storage</a>
+    <a href="{{ url_for('admin_system.activity_timeline') }}">📈 Activity</a>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="{{ url_for('admin_system.category_manager') }}">Category Manager</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>{{ module_name }}</span>
+    <span class="breadcrumb-separator">›</span>
+    <span>{{ category_label }}</span>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-info">
+      <div class="header-title">
+        <h1>{{ module_icon }} {{ category_label }}</h1>
+        <span class="storage-badge {{ storage_type }}">
+          {% if storage_type == 'database' %}💾 Database{% else %}📁 File{% endif %}
+        </span>
+      </div>
+      <p class="header-description">{{ category_description }}</p>
+    </div>
+    <div class="header-actions">
+      <button onclick="openAddModal()" class="btn btn-primary">
+        ➕ Add Category
+      </button>
+      <a href="{{ url_for('admin_system.category_manager') }}" class="btn btn-secondary">
+        ← Back
+      </a>
+    </div>
+  </div>
+
+  <!-- Warning Banner (File-based only) -->
+  {% if storage_type == 'file' %}
+  <div class="warning-banner">
+    <div class="warning-banner-icon">⚠️</div>
+    <div class="warning-banner-content">
+      <h3 class="warning-banner-title">Restart Required for Changes</h3>
+      <p class="warning-banner-text">
+        These categories are stored in a Python file. After adding, editing, or deleting categories,
+        you must restart the application for changes to take effect throughout the system.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-value">{{ categories|length }}</span>
+      <span class="stat-label">Total Categories</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ categories|selectattr('usage_count', 'gt', 0)|list|length }}</span>
+      <span class="stat-label">In Use</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ categories|selectattr('usage_count', 'eq', 0)|list|length }}</span>
+      <span class="stat-label">Unused</span>
+    </div>
+  </div>
+
+  <!-- Categories Section -->
+  <div class="categories-section">
+    
+    <div class="section-header">
+      <h2 class="section-title">All Categories</h2>
+    </div>
+
+    {% if categories %}
+    <!-- Category Table -->
+    <table class="category-table">
+      <thead>
+        <tr>
+          <th>Category Name</th>
+          <th>Usage</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td>
+            <span class="category-name">{{ category.name }}</span>
+          </td>
+          <td>
+            <span class="usage-count {% if category.usage_count > 0 %}used{% endif %}">
+              {% if category.usage_count > 0 %}
+                {{ category.usage_count }} items
+              {% else %}
+                Not used
+              {% endif %}
+            </span>
+            {% if category.usage_details %}
+            <div class="usage-details">
+              {% for table, count in category.usage_details %}
+                {{ count }} in {{ table }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            <div class="action-buttons">
+              <button onclick="openEditModal('{{ category.name }}')" 
+                      class="icon-btn" 
+                      title="Edit category">
+                ✏️
+              </button>
+              <button onclick="openDeleteModal('{{ category.name }}', {{ category.usage_count }})" 
+                      class="icon-btn delete"
+                      {% if category.usage_count > 0 %}disabled{% endif %}
+                      title="{% if category.usage_count > 0 %}Cannot delete - in use{% else %}Delete category{% endif %}">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+      <div class="empty-icon">📦</div>
+      <h3 class="empty-title">No Categories Yet</h3>
+      <p class="empty-message">Click "Add Category" to create your first category</p>
+      <button onclick="openAddModal()" class="btn btn-primary">
+        ➕ Add First Category
+      </button>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+
+<!-- Add Category Modal -->
+<div id="addModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Category</h3>
+      <button onclick="closeAddModal()" class="modal-close">×</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_system.add_category', module_key=module_key, category_key=category_key) }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add-name">Category Name</label>
+          <input type="text" 
+                 id="add-name" 
+                 name="name" 
+                 class="form-input" 
+                 placeholder="Enter category name"
+                 required
+                 maxlength="50"
+                 pattern="[A-Za-z0-9 &\-]+"
+                 oninput="validateCategoryName(this)">
+          <p class="form-help">2-50 characters, letters and numbers only</p>
+          <p id="add-error" class="form-error" style="display: none;"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeAddModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Category</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Category</h3>
+      <button onclick="closeEditModal()" class="modal-close">×</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_system.edit_category', module_key=module_key, category_key=category_key) }}">
+      <div class="modal-body">
+        <input type="hidden" id="edit-old-name" name="old_name">
+        <div class="form-group">
+          <label class="form-label" for="edit-new-name">New Category Name</label>
+          <input type="text" 
+                 id="edit-new-name" 
+                 name="new_name" 
+                 class="form-input" 
+                 placeholder="Enter new category name"
+                 required
+                 maxlength="50"
+                 pattern="[A-Za-z0-9 &\-]+"
+                 oninput="validateCategoryName(this)">
+          <p class="form-help">2-50 characters, letters and numbers only</p>
+          <p id="edit-error" class="form-error" style="display: none;"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Category Modal -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Category</h3>
+      <button onclick="closeDeleteModal()" class="modal-close">×</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_system.delete_category', module_key=module_key, category_key=category_key) }}">
+      <div class="modal-body">
+        <input type="hidden" id="delete-name" name="name">
+        
+        <div class="delete-warning">
+          <h4 class="delete-warning-title">⚠️ Are you sure?</h4>
+          <p class="delete-warning-text">
+            This will permanently delete the category "<strong id="delete-category-name"></strong>".
+            This action cannot be undone.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: var(--sys-muted);">
+          Type the category name to confirm deletion:
+        </p>
+        <input type="text" 
+               id="delete-confirm" 
+               class="form-input" 
+               placeholder="Type category name"
+               oninput="validateDeleteConfirm()">
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" id="delete-submit-btn" class="btn" style="background: var(--sys-danger); color: white;" disabled>
+          Delete Category
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Modal Management
+function openAddModal() {
+  document.getElementById('addModal').classList.add('active');
+  document.getElementById('add-name').focus();
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('active');
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-error').style.display = 'none';
+}
+
+function openEditModal(categoryName) {
+  document.getElementById('edit-old-name').value = categoryName;
+  document.getElementById('edit-new-name').value = categoryName;
+  document.getElementById('editModal').classList.add('active');
+  document.getElementById('edit-new-name').focus();
+  document.getElementById('edit-new-name').select();
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('active');
+  document.getElementById('edit-error').style.display = 'none';
+}
+
+function openDeleteModal(categoryName, usageCount) {
+  if (usageCount > 0) {
+    alert('Cannot delete this category - it is currently in use by ' + usageCount + ' items.');
+    return;
+  }
+  
+  document.getElementById('delete-name').value = categoryName;
+  document.getElementById('delete-category-name').textContent = categoryName;
+  document.getElementById('delete-confirm').value = '';
+  document.getElementById('delete-submit-btn').disabled = true;
+  document.getElementById('deleteModal').classList.add('active');
+  document.getElementById('delete-confirm').focus();
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('active');
+}
+
+// Validation
+function validateCategoryName(input) {
+  const value = input.value.trim();
+  const errorEl = document.getElementById(input.id.includes('add') ? 'add-error' : 'edit-error');
+  
+  // Check length
+  if (value.length > 0 && value.length < 2) {
+    errorEl.textContent = 'Category name must be at least 2 characters';
+    errorEl.style.display = 'block';
+    return false;
+  }
+  
+  // Check for forbidden characters
+  const forbidden = /[\/\\:*?"<>|';]/;
+  if (forbidden.test(value)) {
+    errorEl.textContent = 'Category name contains invalid characters';
+    errorEl.style.display = 'block';
+    return false;
+  }
+  
+  errorEl.style.display = 'none';
+  return true;
+}
+
+function validateDeleteConfirm() {
+  const categoryName = document.getElementById('delete-name').value;
+  const confirmValue = document.getElementById('delete-confirm').value;
+  const submitBtn = document.getElementById('delete-submit-btn');
+  
+  submitBtn.disabled = (confirmValue !== categoryName);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.remove('active');
+    }
+  });
+});
+
+// Close modals on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.classList.remove('active');
+    });
+  }
+});
+
+console.log('Category Detail page loaded');
+</script>
+{% endblock %}

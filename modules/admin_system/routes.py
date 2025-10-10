@@ -3,11 +3,25 @@
 Admin System Health Routes
 Complete application monitoring and management
 
+FILE: modules/admin_system/routes.py
+VERSION: 2.0.0
+UPDATED: 2025-01-10
+AUTHOR: Billas
+
 CHANGELOG:
+----------
+v2.0.0 (2025-01-10)
+- MAJOR UPDATE: Integrated CategoryService for unified category management
+- Added new routes for category CRUD operations
+- Added API endpoints for category management
+- Improved category_manager view with usage stats
+- Added backup management routes
+- Better error handling and user feedback
+
 v1.0.0 (2025-01-10)
 - Main dashboard with system health overview
 - Database explorer with table stats
-- Category manager for editing constants
+- Category manager for viewing constants
 - Storage browser for file management
 - Activity timeline
 - Real-time API endpoints
@@ -21,6 +35,13 @@ import os
 
 from models.base import db
 from . import admin_system_bp
+
+# Import our new services
+from .category_service import CategoryService, get_all_modules_with_categories, get_category_summary
+from .category_registry import CATEGORY_REGISTRY, get_module_categories
+from .file_handler import FileHandler
+
+# Import utilities
 from .utils import (
     get_database_stats,
     get_table_sizes,
@@ -30,13 +51,17 @@ from .utils import (
     format_bytes
 )
 
-# Import all models
+# Import models for health checks
 from models import (
     Equipment, MaintenanceRecord, TCHProject, PersonalProject,
     CalendarEvent, WeightEntry, Transaction, Property,
     TodoList, Goal, Contact, Company
 )
 
+
+# =============================================================================
+# DASHBOARD
+# =============================================================================
 
 @admin_system_bp.route('/')
 @admin_system_bp.route('/dashboard')
@@ -130,6 +155,10 @@ def dashboard():
                          active='admin_system')
 
 
+# =============================================================================
+# DATABASE EXPLORER
+# =============================================================================
+
 @admin_system_bp.route('/database')
 def database_explorer():
     """
@@ -177,100 +206,276 @@ def database_explorer():
                          active='admin_system')
 
 
+# =============================================================================
+# CATEGORY MANAGER - NEW IMPLEMENTATION
+# =============================================================================
+
 @admin_system_bp.route('/categories')
 def category_manager():
     """
-    Category Manager
-    View all category constants across modules
+    Category Manager - Main View
+    Shows all modules and their categories with usage stats
+    Uses new CategoryService for unified management
     """
     
-    # Gather all categories from different modules
-    from modules.projects.constants import PROJECT_CATEGORIES as TCH_CATEGORIES
-    from modules.persprojects.constants import PERSONAL_PROJECT_CATEGORIES
-    from modules.equipment.constants import EQUIPMENT_CATEGORIES
-    from modules.realestate.constants import PROPERTY_TYPES, MAINTENANCE_CATEGORIES
-    from models.daily_planner import EventType
-    from models.financial import SpendingCategory
+    # Get all modules from registry
+    modules = get_all_modules_with_categories()
     
-    # Network categories
-    NETWORK_ROLES = [
-        "NAS", "Switch", "Router", "AP", "Server", "IoT", "UPS", "Camera",
-        "Printer", "IPS", "Workstation", "Hypervisor"
-    ]
-    NETWORK_STATUS = ["active", "retired", "lab", "spare"]
-    NETWORK_LOCATIONS = [
-        "Bedroom", "Closet", "Server Rack", "Upstairs Den", "Music Room",
-        "Pool Room", "Garage", "Kids Game Desk", "Front Room",
-        "Barn", "TCH SFJ"
-    ]
+    # Build category data for each module
+    module_data = []
     
-    # Get event types from database
-    event_types = [et.type_name for et in EventType.query.order_by(EventType.type_name).all()]
-    event_type_usage = {et.type_name: et.usage_count for et in EventType.query.all()}
+    for module in modules:
+        module_key = module['key']
+        module_config = CATEGORY_REGISTRY[module_key]
+        
+        # Get all category types for this module
+        category_types = []
+        for cat_key, cat_config in module_config['categories'].items():
+            
+            # Get categories and usage
+            summary = get_category_summary(module_key, cat_key)
+            
+            if summary['success']:
+                category_types.append({
+                    'key': cat_key,
+                    'label': cat_config['label'],
+                    'description': cat_config.get('description', ''),
+                    'storage_type': summary['storage_type'],
+                    'categories': summary['categories'],
+                    'total_count': len(summary['categories']),
+                    'used_count': sum(1 for c in summary['categories'] if c['usage_count'] > 0)
+                })
+        
+        module_data.append({
+            'key': module_key,
+            'name': module['name'],
+            'icon': module['icon'],
+            'description': module['description'],
+            'category_types': category_types
+        })
     
-    # Get spending categories from database
-    spending_cats = SpendingCategory.query.order_by(SpendingCategory.name).all()
-    spending_cat_names = [cat.name for cat in spending_cats]
-    spending_cat_usage = {cat.name: cat.usage_count for cat in spending_cats}
-    
-    # Get usage stats for each category
-    categories = {
-        'TCH Projects': {
-            'category_list': TCH_CATEGORIES,
-            'usage': _get_category_usage('tch_projects', 'category', TCH_CATEGORIES),
-            'module': 'projects'
-        },
-        'Personal Projects': {
-            'category_list': PERSONAL_PROJECT_CATEGORIES,
-            'usage': _get_category_usage('personal_projects', 'category', PERSONAL_PROJECT_CATEGORIES),
-            'module': 'persprojects'
-        },
-        'Equipment': {
-            'category_list': EQUIPMENT_CATEGORIES,
-            'usage': _get_category_usage('equipment', 'category', EQUIPMENT_CATEGORIES),
-            'module': 'equipment'
-        },
-        'Property Types': {
-            'category_list': PROPERTY_TYPES,
-            'usage': _get_category_usage('properties', 'property_type', PROPERTY_TYPES),
-            'module': 'realestate'
-        },
-        'Maintenance Categories': {
-            'category_list': MAINTENANCE_CATEGORIES,
-            'usage': _get_category_usage('property_maintenance', 'category', MAINTENANCE_CATEGORIES),
-            'module': 'realestate'
-        },
-        'Network Device Roles': {
-            'category_list': NETWORK_ROLES,
-            'usage': _get_category_usage('devices', 'role', NETWORK_ROLES),
-            'module': 'network'
-        },
-        'Network Device Status': {
-            'category_list': NETWORK_STATUS,
-            'usage': _get_category_usage('devices', 'status', NETWORK_STATUS),
-            'module': 'network'
-        },
-        'Network Locations': {
-            'category_list': NETWORK_LOCATIONS,
-            'usage': _get_category_usage('devices', 'location', NETWORK_LOCATIONS),
-            'module': 'network'
-        },
-        'Spending Categories': {
-            'category_list': spending_cat_names,
-            'usage': spending_cat_usage,
-            'module': 'financial (database)'
-        },
-        'Calendar Event Types': {
-            'category_list': event_types,
-            'usage': event_type_usage,
-            'module': 'daily (database)'
-        }
-    }
-    
-    return render_template('admin_system/categories.html',
-                         categories=categories,
+    return render_template('admin_system/categories_new.html',
+                         modules=module_data,
                          active='admin_system')
 
+
+@admin_system_bp.route('/categories/<module_key>/<category_key>')
+def category_detail(module_key, category_key):
+    """
+    Detailed view of a specific category type
+    Shows all categories with usage stats and management options
+    """
+    
+    try:
+        # Get category summary
+        summary = get_category_summary(module_key, category_key)
+        
+        if not summary['success']:
+            flash(f"Error loading categories: {summary.get('message', 'Unknown error')}", 'error')
+            return redirect(url_for('admin_system.category_manager'))
+        
+        # Get module info
+        module_config = CATEGORY_REGISTRY[module_key]
+        category_config = module_config['categories'][category_key]
+        
+        return render_template('admin_system/category_detail.html',
+                             module_key=module_key,
+                             module_name=module_config['display_name'],
+                             module_icon=module_config['icon'],
+                             category_key=category_key,
+                             category_label=category_config['label'],
+                             category_description=category_config.get('description', ''),
+                             storage_type=summary['storage_type'],
+                             categories=summary['categories'],
+                             metadata=summary.get('metadata'),
+                             active='admin_system')
+        
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('admin_system.category_manager'))
+
+
+# =============================================================================
+# CATEGORY CRUD OPERATIONS
+# =============================================================================
+
+@admin_system_bp.route('/categories/<module_key>/<category_key>/add', methods=['POST'])
+def add_category(module_key, category_key):
+    """
+    Add a new category
+    Works for both file-based and database-based categories
+    """
+    
+    category_name = request.form.get('name', '').strip()
+    
+    if not category_name:
+        flash('Category name is required', 'error')
+        return redirect(url_for('admin_system.category_detail', 
+                               module_key=module_key, category_key=category_key))
+    
+    # Use CategoryService to add
+    result = CategoryService.add_category(module_key, category_key, category_name)
+    
+    if result['success']:
+        if result.get('needs_restart'):
+            flash(f"✅ Category '{category_name}' added! ⚠️ Restart application to see changes.", 'warning')
+        else:
+            flash(f"✅ Category '{category_name}' added successfully!", 'success')
+    else:
+        flash(f"❌ {result['message']}", 'error')
+    
+    return redirect(url_for('admin_system.category_detail', 
+                           module_key=module_key, category_key=category_key))
+
+
+@admin_system_bp.route('/categories/<module_key>/<category_key>/edit', methods=['POST'])
+def edit_category(module_key, category_key):
+    """
+    Edit an existing category name
+    """
+    
+    old_name = request.form.get('old_name', '').strip()
+    new_name = request.form.get('new_name', '').strip()
+    
+    if not old_name or not new_name:
+        flash('Both old and new names are required', 'error')
+        return redirect(url_for('admin_system.category_detail', 
+                               module_key=module_key, category_key=category_key))
+    
+    # Use CategoryService to edit
+    result = CategoryService.edit_category(module_key, category_key, old_name, new_name)
+    
+    if result['success']:
+        if result.get('needs_restart'):
+            flash(f"✅ Category renamed! ⚠️ Restart application to see changes.", 'warning')
+        else:
+            flash(f"✅ Category '{old_name}' renamed to '{new_name}'!", 'success')
+    else:
+        flash(f"❌ {result['message']}", 'error')
+    
+    return redirect(url_for('admin_system.category_detail', 
+                           module_key=module_key, category_key=category_key))
+
+
+@admin_system_bp.route('/categories/<module_key>/<category_key>/delete', methods=['POST'])
+def delete_category(module_key, category_key):
+    """
+    Delete a category (with safety checks)
+    """
+    
+    category_name = request.form.get('name', '').strip()
+    
+    if not category_name:
+        flash('Category name is required', 'error')
+        return redirect(url_for('admin_system.category_detail', 
+                               module_key=module_key, category_key=category_key))
+    
+    # Use CategoryService to delete
+    result = CategoryService.delete_category(module_key, category_key, category_name)
+    
+    if result['success']:
+        if result.get('needs_restart'):
+            flash(f"✅ Category '{category_name}' deleted! ⚠️ Restart application to see changes.", 'warning')
+        else:
+            flash(f"✅ Category '{category_name}' deleted successfully!", 'success')
+    else:
+        flash(f"❌ {result['message']}", 'error')
+    
+    return redirect(url_for('admin_system.category_detail', 
+                           module_key=module_key, category_key=category_key))
+
+
+# =============================================================================
+# BACKUP MANAGEMENT
+# =============================================================================
+
+@admin_system_bp.route('/categories/backups/<path:file_path>')
+def view_backups(file_path):
+    """
+    View available backups for a constants file
+    """
+    
+    try:
+        backups = FileHandler.list_backups(file_path)
+        
+        return render_template('admin_system/backups.html',
+                             file_path=file_path,
+                             backups=backups,
+                             active='admin_system')
+        
+    except Exception as e:
+        flash(f'Error listing backups: {str(e)}', 'error')
+        return redirect(url_for('admin_system.category_manager'))
+
+
+@admin_system_bp.route('/categories/backups/restore', methods=['POST'])
+def restore_backup():
+    """
+    Restore a file from backup
+    """
+    
+    backup_path = request.form.get('backup_path')
+    
+    if not backup_path:
+        flash('Backup path is required', 'error')
+        return redirect(url_for('admin_system.category_manager'))
+    
+    # Restore using FileHandler
+    result = FileHandler.restore_backup(backup_path)
+    
+    if result['success']:
+        flash(f"✅ {result['message']} ⚠️ Restart application to see changes.", 'warning')
+    else:
+        flash(f"❌ {result['message']}", 'error')
+    
+    return redirect(url_for('admin_system.category_manager'))
+
+
+# =============================================================================
+# API ENDPOINTS
+# =============================================================================
+
+@admin_system_bp.route('/api/categories/<module_key>/<category_key>')
+def api_get_categories(module_key, category_key):
+    """
+    API endpoint to get categories
+    Returns JSON for AJAX requests
+    """
+    
+    try:
+        result = CategoryService.get_categories(module_key, category_key)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+@admin_system_bp.route('/api/categories/<module_key>/<category_key>/usage/<name>')
+def api_get_usage(module_key, category_key, name):
+    """
+    API endpoint to get usage count for a specific category
+    """
+    
+    try:
+        count, details = CategoryService.get_usage_count(module_key, category_key, name)
+        return jsonify({
+            'success': True,
+            'category': name,
+            'usage_count': count,
+            'usage_details': [{'table': table, 'count': cnt} for table, cnt in details]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+# =============================================================================
+# STORAGE BROWSER
+# =============================================================================
 
 @admin_system_bp.route('/storage')
 def storage_browser():
@@ -345,6 +550,10 @@ def storage_browser():
                          active='admin_system')
 
 
+# =============================================================================
+# ACTIVITY TIMELINE
+# =============================================================================
+
 @admin_system_bp.route('/activity')
 def activity_timeline():
     """
@@ -378,24 +587,9 @@ def activity_timeline():
                          active='admin_system')
 
 
-# ==================== HELPER FUNCTIONS ====================
-
-def _get_category_usage(table_name, column_name, categories):
-    """Count how many records use each category"""
-    usage = {}
-    for cat in categories:
-        try:
-            count = db.session.execute(
-                text(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} = :cat"),
-                {'cat': cat}
-            ).scalar()
-            usage[cat] = count or 0
-        except:
-            usage[cat] = 0
-    return usage
-
-
-# ==================== API ENDPOINTS ====================
+# =============================================================================
+# REAL-TIME API ENDPOINTS
+# =============================================================================
 
 @admin_system_bp.route('/api/stats')
 def api_stats():
