@@ -151,7 +151,7 @@
         </div>
         <div class="title">
           {% if r.source=='tch' %}
-            <a href="{{ url_for('projects.edit_task', task_id=r.raw_id) }}">{{ r.title }}</a>
+            <a href="{{ url_for('projects.edit_tch_task', task_id=r.raw_id) }}">{{ r.title }}</a>
           {% elif r.source=='personal' %}
             <a href="{{ url_for('persprojects.edit_task', task_id=r.raw_id) }}">{{ r.title }}</a>
           {% else %}

@@ -188,6 +188,30 @@ def category_manager():
     from modules.projects.constants import PROJECT_CATEGORIES as TCH_CATEGORIES
     from modules.persprojects.constants import PERSONAL_PROJECT_CATEGORIES
     from modules.equipment.constants import EQUIPMENT_CATEGORIES
+    from modules.realestate.constants import PROPERTY_TYPES, MAINTENANCE_CATEGORIES
+    from models.daily_planner import EventType
+    from models.financial import SpendingCategory
+    
+    # Network categories
+    NETWORK_ROLES = [
+        "NAS", "Switch", "Router", "AP", "Server", "IoT", "UPS", "Camera",
+        "Printer", "IPS", "Workstation", "Hypervisor"
+    ]
+    NETWORK_STATUS = ["active", "retired", "lab", "spare"]
+    NETWORK_LOCATIONS = [
+        "Bedroom", "Closet", "Server Rack", "Upstairs Den", "Music Room",
+        "Pool Room", "Garage", "Kids Game Desk", "Front Room",
+        "Barn", "TCH SFJ"
+    ]
+    
+    # Get event types from database
+    event_types = [et.type_name for et in EventType.query.order_by(EventType.type_name).all()]
+    event_type_usage = {et.type_name: et.usage_count for et in EventType.query.all()}
+    
+    # Get spending categories from database
+    spending_cats = SpendingCategory.query.order_by(SpendingCategory.name).all()
+    spending_cat_names = [cat.name for cat in spending_cats]
+    spending_cat_usage = {cat.name: cat.usage_count for cat in spending_cats}
     
     # Get usage stats for each category
     categories = {
@@ -205,6 +229,41 @@ def category_manager():
             'category_list': EQUIPMENT_CATEGORIES,
             'usage': _get_category_usage('equipment', 'category', EQUIPMENT_CATEGORIES),
             'module': 'equipment'
+        },
+        'Property Types': {
+            'category_list': PROPERTY_TYPES,
+            'usage': _get_category_usage('properties', 'property_type', PROPERTY_TYPES),
+            'module': 'realestate'
+        },
+        'Maintenance Categories': {
+            'category_list': MAINTENANCE_CATEGORIES,
+            'usage': _get_category_usage('property_maintenance', 'category', MAINTENANCE_CATEGORIES),
+            'module': 'realestate'
+        },
+        'Network Device Roles': {
+            'category_list': NETWORK_ROLES,
+            'usage': _get_category_usage('devices', 'role', NETWORK_ROLES),
+            'module': 'network'
+        },
+        'Network Device Status': {
+            'category_list': NETWORK_STATUS,
+            'usage': _get_category_usage('devices', 'status', NETWORK_STATUS),
+            'module': 'network'
+        },
+        'Network Locations': {
+            'category_list': NETWORK_LOCATIONS,
+            'usage': _get_category_usage('devices', 'location', NETWORK_LOCATIONS),
+            'module': 'network'
+        },
+        'Spending Categories': {
+            'category_list': spending_cat_names,
+            'usage': spending_cat_usage,
+            'module': 'financial (database)'
+        },
+        'Calendar Event Types': {
+            'category_list': event_types,
+            'usage': event_type_usage,
+            'module': 'daily (database)'
         }
     }
     
